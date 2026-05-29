@@ -1,0 +1,49 @@
+/* Reverse YouTube Playlist — injected button styling.
+   Uses a solid background with white text so it is clearly visible in BOTH
+   YouTube light and dark themes (white-on-light was invisible before). */
+
+#ryp-reverse-toggle.ryp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 12px;
+  padding: 7px 14px;
+  font-family: "Roboto", "Arial", sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.6rem;
+  color: #ffffff;
+  background: #606060;
+  border: none;
+  border-radius: 18px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+#ryp-reverse-toggle.ryp-btn:hover {
+  background: #787878;
+}
+
+#ryp-reverse-toggle.ryp-btn .ryp-icon {
+  font-size: 1.5rem;
+  transform: rotate(90deg);
+  display: inline-block;
+}
+
+/* Active (reverse ON) state — clearly highlighted. */
+#ryp-reverse-toggle.ryp-btn.ryp-active {
+  color: #0f0f0f;
+  background: #3ea6ff;
+}
+
+#ryp-reverse-toggle.ryp-btn.ryp-active:hover {
+  background: #5cb4ff;
+}
+
+/* Cosmetic only: visually flip the playlist sidebar so the last video shows on
+   top. This does NOT drive playback — the reversal logic lives in content.js. */
+ytd-playlist-panel-renderer #items.ryp-reversed {
+  display: flex;
+  flex-direction: column-reverse;
+}

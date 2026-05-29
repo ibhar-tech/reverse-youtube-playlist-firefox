@@ -1,0 +1,3 @@
+# Packaged build artifact (built from source; attach to GitHub Releases instead)
+reverse-playlist.zip
+*.zip
