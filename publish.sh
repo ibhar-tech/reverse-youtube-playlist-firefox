@@ -181,10 +181,10 @@ VERSION_ID=$(echo "$VERSION_RESPONSE" | jq -r '.id // empty')
 ok "Version $VERSION created (version id: $VERSION_ID)"
 
 # ── Step 6: PATCH listing metadata ───────────────────────────────────────────
-log "Updating listing name, summary, and description..."
+log "Updating listing name, summary, and description (en-US and fr)..."
 JWT=$(make_jwt)
 
-LONG_DESC="🎬 REVERSE YouTube playlists — play oldest-first, newest-first, or any custom order.
+LONG_DESC_EN="🎬 REVERSE YouTube playlists — play oldest-first, newest-first, or any custom order.
 🔀 SHUFFLE playlists with a persistent random order that survives in-app navigation.
 ↕️ DRAG & REORDER videos in the sidebar without touching YouTube's servers.
 💾 SAVE custom playlists locally — no Google login, no data sent anywhere.
@@ -203,11 +203,31 @@ anything outside your browser's own storage.local.
 • Creating a custom viewing sequence for a curated playlist
 • Resuming exactly where you left off in a long educational series"
 
+LONG_DESC_FR="🎬 INVERSEZ les playlists YouTube — lisez du plus ancien au plus récent, du plus récent au plus ancien, ou dans n'importe quel ordre personnalisé.
+🔀 MÉLANGEZ les playlists avec un ordre aléatoire persistant qui survit à la navigation.
+↕️ GLISSEZ & RÉORGANISEZ les vidéos dans la barre latérale sans toucher aux serveurs de YouTube.
+💾 SAUVEGARDEZ des playlists personnalisées localement — pas de connexion Google, aucune donnée envoyée.
+✅ MARQUEZ les vidéos comme lues et voyez un badge ✓ s'afficher automatiquement.
+
+✨ Entièrement gratuit. Zéro publicité. Zéro suivi. Open source.
+
+--- COMMENT ÇA MARCHE ---
+Tout s'exécute dans votre navigateur sous forme de script de contenu côté client. Nous ne nous connectons jamais à l'API de YouTube, ne lisons jamais votre compte Google et ne stockons rien en dehors de votre propre storage.local.
+
+--- IDÉAL POUR ---
+• Regarder une playlist de cours dans l'ordre chronologique de mise en ligne
+• Regarder une série en continu du plus récent au plus ancien épisode
+• Créer une séquence de visionnage personnalisée pour une playlist sélectionnée
+• Reprendre exactement là où vous vous étiez arrêté dans une longue série éducative"
+
 PATCH_PAYLOAD=$(jq -n \
-  --arg name    "YouTube Playlist Tools — Reverse & Reorder" \
-  --arg summary "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking." \
-  --arg desc    "$LONG_DESC" \
-  '{"name": {"en-US": $name}, "summary": {"en-US": $summary}, "description": {"en-US": $desc}}')
+  --arg name_en    "YouTube Playlist Tools — Reverse & Reorder" \
+  --arg summary_en "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking." \
+  --arg desc_en    "$LONG_DESC_EN" \
+  --arg name_fr    "YouTube Playlist Tools — Reverse & Reorder" \
+  --arg summary_fr "Inversez, mélangez, réorganisez par glisser-déposer et sauvegardez vos playlists YouTube localement. Sans connexion ni suivi." \
+  --arg desc_fr    "$LONG_DESC_FR" \
+  '{"name": {"en-US": $name_en, "fr": $name_fr}, "summary": {"en-US": $summary_en, "fr": $summary_fr}, "description": {"en-US": $desc_en, "fr": $desc_fr}}')
 
 PATCH_RESPONSE=$(curl -sS \
   -X PATCH "$AMO_API/addons/addon/$AMO_ADDON_ID/" \
@@ -216,7 +236,7 @@ PATCH_RESPONSE=$(curl -sS \
   -d "$PATCH_PAYLOAD")
 
 echo "$PATCH_RESPONSE" | jq '{name, summary} // .'
-ok "Listing metadata updated"
+ok "Listing metadata updated (en-US & fr)"
 
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo ""
