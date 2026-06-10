@@ -200,7 +200,17 @@ curl -sS \
 ok "Arabic release notes added to version $VERSION"
 
 # ── Step 6: PATCH listing metadata ───────────────────────────────────────────
-log "Updating listing name, summary, and description (en-US, fr, and ar)..."
+log "Fetching enabled locales for the add-on..."
+JWT=$(make_jwt)
+ADDON_DETAILS=$(curl -sS \
+  "$AMO_API/addons/addon/$AMO_ADDON_ID/" \
+  -H "Authorization: JWT $JWT")
+
+# Extract enabled locales (keys of name translation dictionary)
+ENABLED_LOCALES=$(echo "$ADDON_DETAILS" | jq -r '.name | keys[]? // empty')
+log "Enabled locales: $(echo "$ENABLED_LOCALES" | tr '\n' ' ')"
+
+log "Updating listing name, summary, and description..."
 JWT=$(make_jwt)
 
 LONG_DESC_EN="🎬 REVERSE YouTube playlists — play oldest-first, newest-first, or any custom order.
@@ -256,17 +266,41 @@ LONG_DESC_AR="🎬 اعكس قوائم تشغيل يوتيوب — شغّل من
 • إنشاء تسلسل مشاهدة مخصص لقائمة تشغيل منسقة
 • استئناف المشاهدة من حيث توقفت تمامًا في سلسلة تعليمية طويلة"
 
-PATCH_PAYLOAD=$(jq -n \
-  --arg name_en    "YouTube Playlist Tools — Reverse & Reorder" \
-  --arg summary_en "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking." \
-  --arg desc_en    "$LONG_DESC_EN" \
-  --arg name_fr    "YouTube Playlist Tools — Reverse & Reorder" \
-  --arg summary_fr "Inversez, mélangez, réorganisez par glisser-déposer et sauvegardez vos playlists YouTube localement. Sans connexion ni suivi." \
-  --arg desc_fr    "$LONG_DESC_FR" \
-  --arg name_ar    "YouTube Playlist Tools — Reverse & Reorder" \
-  --arg summary_ar "اعكس، اخلط، أعد ترتيب قوائم تشغيل يوتيوب بالسحب، واحفظها محليًا. بدون تسجيل دخول، وبدون تتبع." \
-  --arg desc_ar    "$LONG_DESC_AR" \
-  '{"name": {"en-US": $name_en, "fr": $name_fr, "ar": $name_ar}, "summary": {"en-US": $summary_en, "fr": $summary_fr, "ar": $summary_ar}, "description": {"en-US": $desc_en, "fr": $desc_fr, "ar": $desc_ar}}')
+EXPORT_DESC_EN="$LONG_DESC_EN"
+EXPORT_DESC_FR="$LONG_DESC_FR"
+EXPORT_DESC_AR="$LONG_DESC_AR"
+
+PATCH_PAYLOAD=$(export EXPORT_DESC_EN EXPORT_DESC_FR EXPORT_DESC_AR; python3 -c '
+import os, sys, json
+enabled_locales = sys.argv[1].split()
+payload = {"name": {}, "summary": {}, "description": {}}
+
+translations = {
+  "en-US": {
+    "name": "YouTube Playlist Tools — Reverse & Reorder",
+    "summary": "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking.",
+    "desc": os.environ.get("EXPORT_DESC_EN", "")
+  },
+  "fr": {
+    "name": "YouTube Playlist Tools — Reverse & Reorder",
+    "summary": "Inversez, mélangez, réorganisez par glisser-déposer et sauvegardez vos playlists YouTube localement. Sans connexion ni suivi.",
+    "desc": os.environ.get("EXPORT_DESC_FR", "")
+  },
+  "ar": {
+    "name": "YouTube Playlist Tools — Reverse & Reorder",
+    "summary": "اعكس، اخلط، أعد ترتيب قوائم تشغيل يوتيوب بالسحب، واحفظها محليًا. بدون تسجيل دخول، وبدون تتبع.",
+    "desc": os.environ.get("EXPORT_DESC_AR", "")
+  }
+}
+
+for locale in enabled_locales:
+  if locale in translations:
+    payload["name"][locale] = translations[locale]["name"]
+    payload["summary"][locale] = translations[locale]["summary"]
+    payload["description"][locale] = translations[locale]["desc"]
+
+print(json.dumps(payload))
+' "$ENABLED_LOCALES")
 
 PATCH_RESPONSE=$(curl -sS \
   -X PATCH "$AMO_API/addons/addon/$AMO_ADDON_ID/" \
@@ -274,8 +308,8 @@ PATCH_RESPONSE=$(curl -sS \
   -H "Content-Type: application/json" \
   -d "$PATCH_PAYLOAD")
 
-echo "$PATCH_RESPONSE" | jq '{name, summary} // .'
-ok "Listing metadata updated (en-US & fr)"
+echo "$PATCH_RESPONSE" | jq '{name, summary, detail} // .'
+ok "Listing metadata updated"
 
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo ""
