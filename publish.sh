@@ -162,12 +162,14 @@ done
 log "Creating version $VERSION on the listing..."
 JWT=$(make_jwt)
 
-RELEASE_NOTES="v${VERSION}: Shuffle mode, drag-to-reorder sidebar, save snapshots locally, watched badges, in-page panel. Full modular rewrite. 0 lint errors."
+RELEASE_NOTES_EN="v${VERSION}: Shuffle mode, drag-to-reorder sidebar, save snapshots locally, watched badges, in-page panel. Full modular rewrite. 0 lint errors."
+RELEASE_NOTES_FR="v${VERSION}: Mode aléatoire, réorganisation par glisser-déposer, sauvegarde locale des listes, badges des vidéos visionnées, panneau latéral intégré. Réécriture modulaire complète. 0 erreur."
 
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
-  --arg notes "$RELEASE_NOTES" \
-  '{"upload": $uuid, "release_notes": {"en-US": $notes}}')
+  --arg notes_en "$RELEASE_NOTES_EN" \
+  --arg notes_fr "$RELEASE_NOTES_FR" \
+  '{"upload": $uuid, "release_notes": {"en-US": $notes_en, "fr": $notes_fr}}')
 
 VERSION_RESPONSE=$(curl -sS \
   -X POST "$AMO_API/addons/addon/$AMO_ADDON_ID/versions/" \
