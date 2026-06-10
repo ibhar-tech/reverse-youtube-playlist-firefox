@@ -38,21 +38,78 @@
     return node;
   }
 
+  // ── SVG Helper & Icons ────────────────────────────────────────────────────
+  function svg(className, viewBox, strokeWidth, paths) {
+    const ns = "http://www.w3.org/2000/svg";
+    const node = document.createElementNS(ns, "svg");
+    node.setAttribute("class", className);
+    node.setAttribute("viewBox", viewBox);
+    node.setAttribute("fill", "none");
+    node.setAttribute("stroke", "currentColor");
+    node.setAttribute("stroke-width", String(strokeWidth));
+    node.setAttribute("stroke-linecap", "round");
+    node.setAttribute("stroke-linejoin", "round");
+    
+    for (const p of paths) {
+      const pNode = document.createElementNS(ns, p.tag);
+      for (const [attr, val] of Object.entries(p.attrs)) {
+        pNode.setAttribute(attr, val);
+      }
+      node.appendChild(pNode);
+    }
+    return node;
+  }
+
+  const ICONS = {
+    panel: () => svg("ryp-panel-icon-svg", "0 0 24 24", 2.2, [
+      { tag: "polyline", attrs: { points: "17 1 21 5 17 9" } },
+      { tag: "path", attrs: { d: "M3 11V9a4 4 0 0 1 4-4h14" } },
+      { tag: "polyline", attrs: { points: "7 23 3 19 7 15" } },
+      { tag: "path", attrs: { d: "M21 13v2a4 4 0 0 1-4 4H3" } }
+    ]),
+    close: () => svg("ryp-close-icon-svg", "0 0 24 24", 2, [
+      { tag: "line", attrs: { x1: "18", y1: "6", x2: "6", y2: "18" } },
+      { tag: "line", attrs: { x1: "6", y1: "6", x2: "18", y2: "18" } }
+    ]),
+    save: () => svg("ryp-save-icon-svg", "0 0 24 24", 2.2, [
+      { tag: "path", attrs: { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" } },
+      { tag: "polyline", attrs: { points: "17 21 17 13 7 13 7 21" } },
+      { tag: "polyline", attrs: { points: "7 3 7 8 15 8" } }
+    ]),
+    clear: () => svg("ryp-clear-icon-svg", "0 0 24 24", 2, [
+      { tag: "polyline", attrs: { points: "3 6 5 6 21 6" } },
+      { tag: "path", attrs: { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" } }
+    ]),
+    play: () => svg("ryp-play-icon-svg", "0 0 24 24", 2, [
+      { tag: "polygon", attrs: { points: "5 3 19 12 5 21 5 3" } }
+    ]),
+    trash: () => svg("ryp-trash-icon-svg", "0 0 24 24", 2, [
+      { tag: "polyline", attrs: { points: "3 6 5 6 21 6" } },
+      { tag: "path", attrs: { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" } },
+      { tag: "line", attrs: { x1: "10", y1: "11", x2: "10", y2: "17" } },
+      { tag: "line", attrs: { x1: "14", y1: "11", x2: "14", y2: "17" } }
+    ]),
+    folder: () => svg("ryp-folder-icon-svg", "0 0 24 24", 2, [
+      { tag: "path", attrs: { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" } }
+    ])
+  };
+
   // ── Panel injection ───────────────────────────────────────────────────────
 
   function injectPanel() {
     if (document.getElementById(PANEL_ID)) return;
 
     // Header
-    const iconSpan = el("span", { className: "ryp-panel-icon", textContent: "⮃" });
+    const iconSpan = el("span", { className: "ryp-panel-icon" });
+    iconSpan.appendChild(ICONS.panel());
     const titleSpan = el("span", { className: "ryp-panel-title" }, [iconSpan, " Playlist Tools"]);
     const closeBtn = el("button", {
       className: "ryp-panel-close",
       id: "ryp-panel-close",
       title: "Close panel",
       "aria-label": "Close",
-      textContent: "✕",
     });
+    closeBtn.appendChild(ICONS.close());
     const header = el("div", { className: "ryp-panel-header" }, [titleSpan, closeBtn]);
 
     // Save section
@@ -68,15 +125,19 @@
       className: "ryp-save-confirm",
       id: "ryp-save-confirm",
       title: "Save snapshot",
-      textContent: "💾 Save",
     });
+    saveConfirmBtn.appendChild(ICONS.save());
+    saveConfirmBtn.appendChild(document.createTextNode(" Save"));
+
     const saveRow = el("div", { className: "ryp-save-row" }, [saveInput, saveConfirmBtn]);
     const clearWatchedBtn = el("button", {
       className: "ryp-clear-watched",
       id: "ryp-clear-watched",
       title: "Remove all watched badges for this playlist",
-      textContent: "✕ Clear watched badges",
     });
+    clearWatchedBtn.appendChild(ICONS.clear());
+    clearWatchedBtn.appendChild(document.createTextNode(" Clear watched badges"));
+
     const saveSection = el("div", { className: "ryp-panel-save-section" }, [
       saveLabel, saveRow, clearWatchedBtn,
     ]);
@@ -181,7 +242,8 @@
     listEl.replaceChildren(); // clear safely without innerHTML
 
     if (playlists.length === 0) {
-      const emptyIcon = el("div", { className: "ryp-empty-icon", textContent: "🎵" });
+      const emptyIcon = el("div", { className: "ryp-empty-icon" });
+      emptyIcon.appendChild(ICONS.folder());
       const emptyText = el("p", { textContent: "No snapshots yet." });
       const hint = el("p", { className: "ryp-empty-hint" });
       hint.appendChild(document.createTextNode("Enter a name above and hit "));
@@ -212,16 +274,17 @@
       const playBtn = el("button", {
         className: "ryp-action-play",
         title: "Open and play this snapshot",
-        textContent: "▶ Play",
       });
+      playBtn.appendChild(ICONS.play());
+      playBtn.appendChild(document.createTextNode(" Play"));
       playBtn.dataset.id = pl.id;
 
       const deleteBtn = el("button", {
         className: "ryp-action-delete",
         title: "Delete this snapshot",
-        textContent: "✕",
       });
       deleteBtn.setAttribute("aria-label", `Delete ${pl.name}`);
+      deleteBtn.appendChild(ICONS.trash());
       deleteBtn.dataset.id = pl.id;
 
       const actionsCol = el("div", { className: "ryp-saved-actions" }, [playBtn, deleteBtn]);
