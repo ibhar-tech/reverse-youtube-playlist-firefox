@@ -594,6 +594,8 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
 
 /* ── Premium Toast Notification ─────────────────────────────────────────── */
 
+/* ── Premium Toast Notification ─────────────────────────────────────────── */
+
 #ryp-toast {
   position: fixed;
   bottom: 32px;
@@ -621,3 +623,159 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* ── Icon Constraint Fixes ──────────────────────────────────────────────── */
+
+.ryp-clear-watched svg {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0;
+}
+
+.ryp-empty-icon svg {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0;
+}
+
+/* ── Premium Custom Modal Dialogs ───────────────────────────────────────── */
+
+.ryp-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: ryp-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.ryp-modal-content {
+  background: var(--ryp-bg-solid);
+  border: 1px solid var(--ryp-border);
+  border-radius: 24px;
+  padding: 24px;
+  width: 320px;
+  box-shadow: var(--ryp-shadow-hover);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: scale(0.9) translateY(10px);
+  animation: ryp-modal-scale-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes ryp-fade-in {
+  to { opacity: 1; }
+}
+
+@keyframes ryp-modal-scale-up {
+  to { transform: scale(1) translateY(0); }
+}
+
+.ryp-modal-overlay.ryp-modal-closing {
+  animation: ryp-fade-out 0.2s ease forwards;
+}
+
+.ryp-modal-overlay.ryp-modal-closing .ryp-modal-content {
+  animation: ryp-modal-scale-down 0.2s ease forwards;
+}
+
+@keyframes ryp-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes ryp-modal-scale-down {
+  to { transform: scale(0.9) translateY(10px); }
+}
+
+.ryp-modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ryp-text);
+  letter-spacing: -0.01em;
+}
+
+.ryp-modal-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--ryp-font);
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-md);
+  color: var(--ryp-text);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+html[dark] .ryp-modal-input,
+[dark] .ryp-modal-input {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ryp-modal-input:focus {
+  background: var(--ryp-bg-solid);
+  border-color: var(--ryp-accent-start);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.ryp-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ryp-modal-btn {
+  padding: 8px 16px;
+  font-family: var(--ryp-font);
+  font-weight: 600;
+  font-size: 12.5px;
+  border-radius: var(--ryp-radius-md);
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.ryp-modal-btn-cancel {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ryp-sub);
+}
+
+html[dark] .ryp-modal-btn-cancel,
+[dark] .ryp-modal-btn-cancel {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ryp-sub);
+}
+
+.ryp-modal-btn-cancel:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--ryp-text);
+}
+
+html[dark] .ryp-modal-btn-cancel:hover,
+[dark] .ryp-modal-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ryp-text);
+}
+
+.ryp-modal-btn-confirm {
+  background: var(--ryp-accent-grad);
+  color: #ffffff;
+  box-shadow: 0 2px 6px var(--ryp-accent-glow);
+}
+
+.ryp-modal-btn-confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px var(--ryp-accent-glow);
+}
+

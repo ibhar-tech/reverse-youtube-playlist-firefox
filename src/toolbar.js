@@ -224,19 +224,19 @@
       const listId = Playlist.getPlaylistId();
       if (!listId) return;
 
-      const name = prompt("Enter a name to save the current playlist state:");
-      if (name === null) return; // user cancelled
-      const trimmed = name.trim();
-      if (!trimmed) {
-        alert("Playlist name cannot be empty.");
-        return;
-      }
-
-      await Panel.saveCurrentOrder(trimmed);
-      if (Panel.isPanelVisible()) {
-        await Panel.renderList();
-      }
-      Panel.showToast("✓ Playlist snapshot saved!");
+      Panel.showSaveModal({
+        title: "Save Playlist Snapshot",
+        placeholder: "e.g. My Custom Sort",
+        defaultValue: "",
+        confirmLabel: "Save",
+        onConfirm: async (name) => {
+          await Panel.saveCurrentOrder(name);
+          if (Panel.isPanelVisible()) {
+            await Panel.renderList();
+          }
+          Panel.showToast("✓ Playlist snapshot saved!");
+        }
+      });
     });
 
     playlistsBtn.addEventListener("click", (e) => {

@@ -85,6 +85,107 @@
     return node;
   }
 
+  // ── Custom Popup Modals ───────────────────────────────────────────────────
+
+  function showPopupModal({ title, placeholder, defaultValue, confirmLabel, onConfirm }) {
+    const existing = document.getElementById("ryp-popup-modal");
+    if (existing) existing.remove();
+
+    const overlay = el("div", { id: "ryp-popup-modal", className: "ryp-modal-overlay" });
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: title });
+    
+    const input = el("input", {
+      type: "text",
+      className: "ryp-modal-input",
+      placeholder: placeholder || "",
+      maxlength: "80"
+    });
+    input.value = defaultValue || "";
+
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: "Cancel" });
+    const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: confirmLabel || "Confirm" });
+    
+    const buttonsRow = el("div", { className: "ryp-modal-buttons" }, [cancelBtn, confirmBtn]);
+    const modal = el("div", { className: "ryp-modal-content" }, [
+      titleEl,
+      input,
+      buttonsRow
+    ]);
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+
+    const close = () => {
+      overlay.classList.add("ryp-modal-closing");
+      setTimeout(() => overlay.remove(), 220);
+    };
+
+    cancelBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+
+    const handleConfirm = () => {
+      const val = input.value.trim();
+      if (!val) {
+        input.classList.add("input-error");
+        input.focus();
+        setTimeout(() => input.classList.remove("input-error"), 1200);
+        return;
+      }
+      onConfirm(val);
+      close();
+    };
+
+    confirmBtn.addEventListener("click", handleConfirm);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleConfirm();
+      if (e.key === "Escape") close();
+    });
+  }
+
+  function showConfirmModal(text, onConfirm) {
+    const existing = document.getElementById("ryp-popup-modal");
+    if (existing) existing.remove();
+
+    const overlay = el("div", { id: "ryp-popup-modal", className: "ryp-modal-overlay" });
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: "Confirm Action" });
+    const textEl = el("p", { className: "ryp-modal-text", textContent: text });
+    
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: "Cancel" });
+    const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: "Confirm" });
+    
+    const buttonsRow = el("div", { className: "ryp-modal-buttons" }, [cancelBtn, confirmBtn]);
+    const modal = el("div", { className: "ryp-modal-content" }, [
+      titleEl,
+      textEl,
+      buttonsRow
+    ]);
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const close = () => {
+      overlay.classList.add("ryp-modal-closing");
+      setTimeout(() => overlay.remove(), 220);
+    };
+
+    cancelBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+
+    confirmBtn.addEventListener("click", () => {
+      onConfirm();
+      close();
+    });
+  }
+
   // Check if active tab is a YouTube playlist page and show the save section
   api.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const activeTab = tabs[0];
@@ -208,21 +309,21 @@
 
       // Rename action (Update)
       renameBtn.addEventListener("click", () => {
-        const newName = prompt("Rename this playlist snapshot to:", pl.name);
-        if (newName === null) return; // cancelled
-        const trimmed = newName.trim();
-        if (!trimmed) {
-          alert("Playlist name cannot be empty.");
-          return;
-        }
-
-        api.storage.local.get("savedPlaylists", (res) => {
-          const saved = res.savedPlaylists || [];
-          const index = saved.findIndex((p) => p.id === pl.id);
-          if (index !== -1) {
-            saved[index].name = trimmed;
-            api.storage.local.set({ savedPlaylists: saved }, () => {
-              renderPlaylists();
+        showPopupModal({
+          title: "Rename Snapshot",
+          placeholder: "Enter new name",
+          defaultValue: pl.name,
+          confirmLabel: "Rename",
+          onConfirm: (trimmed) => {
+            api.storage.local.get("savedPlaylists", (res) => {
+              const saved = res.savedPlaylists || [];
+              const index = saved.findIndex((p) => p.id === pl.id);
+              if (index !== -1) {
+                saved[index].name = trimmed;
+                api.storage.local.set({ savedPlaylists: saved }, () => {
+                  renderPlaylists();
+                });
+              }
             });
           }
         });
@@ -230,7 +331,7 @@
 
       // Delete action (Delete)
       deleteBtn.addEventListener("click", () => {
-        if (confirm(`Delete "${pl.name}"?`)) {
+        showConfirmModal(`Delete "${pl.name}"?`, () => {
           api.storage.local.get("savedPlaylists", (res) => {
             let saved = res.savedPlaylists || [];
             saved = saved.filter((p) => p.id !== pl.id);
@@ -238,7 +339,7 @@
               renderPlaylists();
             });
           });
-        }
+        });
       });
 
       listContainer.appendChild(card);
@@ -247,11 +348,11 @@
 
   // Delete all action (Delete All)
   deleteAllBtn.addEventListener("click", () => {
-    if (confirm("Are you sure you want to delete all saved playlist snapshots? This cannot be undone.")) {
+    showConfirmModal("Are you sure you want to delete all saved playlist snapshots? This cannot be undone.", () => {
       api.storage.local.set({ savedPlaylists: [] }, () => {
         renderPlaylists();
       });
-    }
+    });
   });
 
   renderPlaylists();

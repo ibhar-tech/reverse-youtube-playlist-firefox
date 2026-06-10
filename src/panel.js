@@ -337,6 +337,70 @@
     setTimeout(() => toast.remove(), 3200);
   }
 
+  // ── Custom Modal ──────────────────────────────────────────────────────────
+
+  function showSaveModal({ title, placeholder, defaultValue, confirmLabel, onConfirm }) {
+    const existing = document.getElementById("ryp-custom-modal");
+    if (existing) existing.remove();
+
+    const overlay = el("div", { id: "ryp-custom-modal", className: "ryp-modal-overlay" });
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: title });
+    
+    const input = el("input", {
+      type: "text",
+      className: "ryp-modal-input",
+      placeholder: placeholder || "",
+      maxlength: "80"
+    });
+    input.value = defaultValue || "";
+
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: "Cancel" });
+    const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: confirmLabel || "Confirm" });
+    
+    const buttonsRow = el("div", { className: "ryp-modal-buttons" }, [cancelBtn, confirmBtn]);
+    const modal = el("div", { className: "ryp-modal-content" }, [
+      titleEl,
+      input,
+      buttonsRow
+    ]);
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+
+    const close = () => {
+      overlay.classList.add("ryp-modal-closing");
+      setTimeout(() => overlay.remove(), 220);
+    };
+
+    cancelBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+
+    const handleConfirm = () => {
+      const val = input.value.trim();
+      if (!val) {
+        input.classList.add("ryp-input-error");
+        input.focus();
+        setTimeout(() => input.classList.remove("ryp-input-error"), 1200);
+        return;
+      }
+      onConfirm(val);
+      close();
+    };
+
+    confirmBtn.addEventListener("click", handleConfirm);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleConfirm();
+      if (e.key === "Escape") close();
+    });
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   window.RYP.Panel = {
@@ -346,5 +410,6 @@
     showToast,
     saveCurrentOrder,
     renderList,
+    showSaveModal,
   };
 })();
