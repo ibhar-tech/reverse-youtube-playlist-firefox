@@ -281,5 +281,7 @@
     togglePanel,
     isPanelVisible: () => panelVisible,
     showToast,
+    saveCurrentOrder,
+    renderList,
   };
 })();

@@ -67,6 +67,26 @@
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
 
+  // ── Message Listener ──────────────────────────────────────────────────────
+  const api = typeof browser !== "undefined" ? browser : chrome;
+  api.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "SAVE_PLAYLIST") {
+      if (Playlist.isPlaylistWatchPage()) {
+        Panel.saveCurrentOrder(request.name).then(() => {
+          if (Panel.isPanelVisible()) {
+            Panel.renderList();
+          }
+          sendResponse({ success: true });
+        }).catch(err => {
+          sendResponse({ success: false, error: err.message });
+        });
+        return true;
+      } else {
+        sendResponse({ success: false, error: "Not on a playlist page" });
+      }
+    }
+  });
+
   window.addEventListener("yt-navigate-finish", onNavigate);
   document.addEventListener("yt-navigate-finish", onNavigate);
   onNavigate();

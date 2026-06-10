@@ -9,9 +9,19 @@
       <span class="popup-title">
         <span class="popup-icon">⮃</span> Playlist Tools
       </span>
+      <button id="delete-all-btn" class="delete-all-btn" title="Delete all saved snapshots" style="display: none;">Delete All</button>
     </header>
 
     <main class="popup-main">
+      <!-- Save current playlist section, only visible on YouTube playlist watch pages -->
+      <div id="save-current-section" class="save-current-section" style="display: none;">
+        <label for="save-input-popup" class="save-label">Save current playlist state:</label>
+        <div class="save-row">
+          <input type="text" id="save-input-popup" class="save-input" placeholder="e.g. My Custom Sort" maxlength="80">
+          <button id="save-confirm-popup" class="save-confirm">💾 Save</button>
+        </div>
+      </div>
+
       <div id="playlist-list" class="playlist-list">
         <!-- Playlists will be loaded dynamically here -->
       </div>

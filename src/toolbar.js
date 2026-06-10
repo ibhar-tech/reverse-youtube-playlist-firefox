@@ -72,16 +72,20 @@
       "ryp-btn-reorder", "⠿", "Reorder",
       "Drag sidebar items to set a custom play order"
     );
+    const saveBtn = makeButton(
+      "ryp-btn-save", "💾", "Save",
+      "Save the current playlist order as a local snapshot"
+    );
     const playlistsBtn = makeButton(
       "ryp-btn-playlists", "🎵", "My Lists",
       "Open saved playlist snapshots"
     );
 
-    toolbar.append(reverseBtn, shuffleBtn, reorderBtn, playlistsBtn);
+    toolbar.append(reverseBtn, shuffleBtn, reorderBtn, saveBtn, playlistsBtn);
     container.appendChild(toolbar);
 
     syncButtonStates();
-    bindEvents(reverseBtn, shuffleBtn, reorderBtn, playlistsBtn);
+    bindEvents(reverseBtn, shuffleBtn, reorderBtn, saveBtn, playlistsBtn);
     return true;
   }
 
@@ -124,7 +128,7 @@
 
   // ── Events ────────────────────────────────────────────────────────────────
 
-  function bindEvents(reverseBtn, shuffleBtn, reorderBtn, playlistsBtn) {
+  function bindEvents(reverseBtn, shuffleBtn, reorderBtn, saveBtn, playlistsBtn) {
     reverseBtn.addEventListener("click", async (e) => {
       e.preventDefault(); e.stopPropagation();
       const listId = Playlist.getPlaylistId();
@@ -160,6 +164,26 @@
       e.preventDefault(); e.stopPropagation();
       Sidebar.toggleReorderMode();
       syncButtonStates();
+    });
+
+    saveBtn.addEventListener("click", async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const listId = Playlist.getPlaylistId();
+      if (!listId) return;
+
+      const name = prompt("Enter a name to save the current playlist state:");
+      if (name === null) return; // user cancelled
+      const trimmed = name.trim();
+      if (!trimmed) {
+        alert("Playlist name cannot be empty.");
+        return;
+      }
+
+      await Panel.saveCurrentOrder(trimmed);
+      if (Panel.isPanelVisible()) {
+        await Panel.renderList();
+      }
+      Panel.showToast("✓ Playlist snapshot saved!");
     });
 
     playlistsBtn.addEventListener("click", (e) => {
