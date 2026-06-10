@@ -164,9 +164,7 @@ JWT=$(make_jwt)
 
 RELEASE_NOTES_EN="v${VERSION}: Shuffle mode, drag-to-reorder sidebar, save snapshots locally, watched badges, in-page panel. Full modular rewrite. 0 lint errors."
 RELEASE_NOTES_FR="v${VERSION}: Mode aléatoire, réorganisation par glisser-déposer, sauvegarde locale des listes, badges des vidéos visionnées, panneau latéral intégré. Réécriture modulaire complète. 0 erreur."
-RELEASE_NOTES_AR="v${VERSION}: وضع الخلط العشوائي، إعادة ترتيب الشريط الجانبي بالسحب والإفلات، حفظ لقطات قوائم التشغيل محليًا، شارات المشاهدة، لوحة مدمجة. إعادة كتابة برمجية كاملة. 0 أخطاء."
 
-# Create version with currently registered locales first (en-US, fr)
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
   --arg notes_en "$RELEASE_NOTES_EN" \
@@ -183,21 +181,6 @@ echo "$VERSION_RESPONSE" | jq .
 VERSION_ID=$(echo "$VERSION_RESPONSE" | jq -r '.id // empty')
 [[ -n "$VERSION_ID" ]] || fail "Version creation failed. Response: $VERSION_RESPONSE"
 ok "Version $VERSION created (version id: $VERSION_ID)"
-
-# Now that the version has been created with the zip, the new locales are registered!
-# We can PATCH the version to include the Arabic release notes.
-log "Adding Arabic release notes to version $VERSION..."
-JWT=$(make_jwt)
-VERSION_PATCH_BODY=$(jq -n \
-  --arg notes_ar "$RELEASE_NOTES_AR" \
-  '{"release_notes": {"ar": $notes_ar}}')
-
-curl -sS \
-  -X PATCH "$AMO_API/addons/addon/$AMO_ADDON_ID/versions/$VERSION_ID/" \
-  -H "Authorization: JWT $JWT" \
-  -H "Content-Type: application/json" \
-  -d "$VERSION_PATCH_BODY" > /dev/null
-ok "Arabic release notes added to version $VERSION"
 
 # ── Step 6: PATCH listing metadata ───────────────────────────────────────────
 log "Fetching enabled locales for the add-on..."
@@ -249,28 +232,10 @@ Tout s'exécute dans votre navigateur sous forme de script de contenu côté cli
 • Créer une séquence de visionnage personnalisée pour une playlist sélectionnée
 • Reprendre exactement là où vous vous étiez arrêté dans une longue série éducative"
 
-LONG_DESC_AR="🎬 اعكس قوائم تشغيل يوتيوب — شغّل من الأقدم إلى الأحدث، أو من الأحدث إلى الأقدم، أو بأي ترتيب مخصص.
-🔀 اخلط قوائم التشغيل بترتيب عشوائي مستمر يحافظ على ترتيبه أثناء التنقل في التطبيق.
-↕️ اسحب وأعد ترتيب مقاطع الفيديو في الشريط الجانبي دون لمس خوادم يوتيوب.
-💾 احفظ قوائم التشغيل المخصصة محليًا — بدون تسجيل دخول Google، ولا يتم إرسال أي بيانات إلى أي مكان.
-✅ وضع علامة \"تمت المشاهدة\" على مقاطع الفيديو لترى شارة ✓ تلقائيًا.
-
-✨ مجاني تمامًا. بدون إعلانات. بدون تتبع. مفتوح المصدر.
-
---- كيف يعمل ---
-كل شيء يعمل في متصفحك كبرمجة نصية جانبية للعميل. لا نتصل أبدًا بـ API الخاص بيوتيوب، ولا نقرأ حساب Google الخاص بك، ولا نخزن أي شيء خارج storage.local لمتصفحك.
-
---- مثالي لـ ---
-• مشاهدة قائمة تشغيل لدورة تعليمية بترتيب الرفع الزمني
-• متابعة مسلسل أو برنامج من أحدث حلقة إلى الأقدم
-• إنشاء تسلسل مشاهدة مخصص لقائمة تشغيل منسقة
-• استئناف المشاهدة من حيث توقفت تمامًا في سلسلة تعليمية طويلة"
-
 EXPORT_DESC_EN="$LONG_DESC_EN"
 EXPORT_DESC_FR="$LONG_DESC_FR"
-EXPORT_DESC_AR="$LONG_DESC_AR"
 
-PATCH_PAYLOAD=$(export EXPORT_DESC_EN EXPORT_DESC_FR EXPORT_DESC_AR; python3 -c '
+PATCH_PAYLOAD=$(export EXPORT_DESC_EN EXPORT_DESC_FR; python3 -c '
 import os, sys, json
 enabled_locales = sys.argv[1].split()
 payload = {"name": {}, "summary": {}, "description": {}}
@@ -285,11 +250,6 @@ translations = {
     "name": "YouTube Playlist Tools — Reverse & Reorder",
     "summary": "Inversez, mélangez, réorganisez par glisser-déposer et sauvegardez vos playlists YouTube localement. Sans connexion ni suivi.",
     "desc": os.environ.get("EXPORT_DESC_FR", "")
-  },
-  "ar": {
-    "name": "YouTube Playlist Tools — Reverse & Reorder",
-    "summary": "اعكس، اخلط، أعد ترتيب قوائم تشغيل يوتيوب بالسحب، واحفظها محليًا. بدون تسجيل دخول، وبدون تتبع.",
-    "desc": os.environ.get("EXPORT_DESC_AR", "")
   }
 }
 
