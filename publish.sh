@@ -162,8 +162,8 @@ done
 log "Creating version $VERSION on the listing..."
 JWT=$(make_jwt)
 
-RELEASE_NOTES_EN="v${VERSION}: Shuffle mode, drag-to-reorder sidebar, save snapshots locally, watched badges, in-page panel. Full modular rewrite. 0 lint errors."
-RELEASE_NOTES_FR="v${VERSION}: Mode aléatoire, réorganisation par glisser-déposer, sauvegarde locale des listes, badges des vidéos visionnées, panneau latéral intégré. Réécriture modulaire complète. 0 erreur."
+RELEASE_NOTES_EN="v${VERSION}: Added dynamic localization (EN/FR/AR), reactive settings panel in popup (language, auto-skip watched, compact layout, watched badges), safe playback redirection from any tab, and premium UI visual polish."
+RELEASE_NOTES_FR="v${VERSION}: Ajout de la localisation dynamique (EN/FR/AR), panneau de paramètres réactif dans le popup (langue, saut des vidéos vues, mode compact, badges), redirection de lecture sécurisée depuis n'importe quel onglet et polissage visuel premium."
 
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
@@ -201,6 +201,10 @@ LONG_DESC_EN="🎬 REVERSE YouTube playlists — play oldest-first, newest-first
 ↕️ DRAG & REORDER videos in the sidebar without touching YouTube's servers.
 💾 SAVE custom playlists locally — no Google login, no data sent anywhere.
 ✅ MARK videos as watched and see a ✓ badge automatically.
+⏭️ AUTO-SKIP already watched videos automatically to save time.
+🌐 MULTI-LANGUAGE UI — switch dynamically between English, French, and Arabic (العربية) with full RTL support.
+📐 COMPACT LAYOUT mode for a cleaner, distraction-free view.
+🚀 LAUNCH FROM ANYWHERE — play your saved playlists directly from the browser popup on any website.
 
 ✨ Completely free. Zero ads. Zero tracking. Open source.
 
@@ -220,6 +224,10 @@ LONG_DESC_FR="🎬 INVERSEZ les playlists YouTube — lisez du plus ancien au pl
 ↕️ GLISSEZ & RÉORGANISEZ les vidéos dans la barre latérale sans toucher aux serveurs de YouTube.
 💾 SAUVEGARDEZ des playlists personnalisées localement — pas de connexion Google, aucune donnée envoyée.
 ✅ MARQUEZ les vidéos comme lues et voyez un badge ✓ s'afficher automatiquement.
+⏭️ PASSEZ AUTOMATIQUEMENT les vidéos déjà vues pour gagner du temps.
+🌐 INTERFACE MULTILINGUE — basculez dynamiquement entre l'anglais, le français et l'arabe (العربية) avec support RTL complet.
+📐 MODE COMPACT pour une vue épurée et sans distraction.
+🚀 LANCEZ DEPUIS N'IMPORTE OÙ — lancez vos playlists sauvegardées directement depuis le popup sur n'importe quel site.
 
 ✨ Entièrement gratuit. Zéro publicité. Zéro suivi. Open source.
 
@@ -242,13 +250,13 @@ payload = {"name": {}, "summary": {}, "description": {}}
 
 translations = {
   "en-US": {
-    "name": "YouTube Playlist Tools — Reverse & Reorder",
-    "summary": "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking.",
+    "name": "YT Playlist Tools — Reverse, Shuffle & Reorder",
+    "summary": "Reverse, shuffle, drag-reorder, and save YouTube playlists. Supports watched badges, auto-skip, compact layout, and multi-language UI (EN/FR/AR).",
     "desc": os.environ.get("EXPORT_DESC_EN", "")
   },
   "fr": {
-    "name": "YouTube Playlist Tools — Reverse & Reorder",
-    "summary": "Inversez, mélangez, réorganisez par glisser-déposer et sauvegardez vos playlists YouTube localement. Sans connexion ni suivi.",
+    "name": "YT Playlist Tools — Reverse, Shuffle & Reorder",
+    "summary": "Inversez, mélangez, réorganisez et sauvegardez vos playlists YouTube. Badges de vidéos vues, passage automatique, mode compact et interface multilingue (EN/FR/AR).",
     "desc": os.environ.get("EXPORT_DESC_FR", "")
   }
 }

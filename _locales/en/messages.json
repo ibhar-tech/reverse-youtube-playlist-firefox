@@ -1,10 +1,10 @@
 {
   "extensionName": {
-    "message": "YouTube Playlist Tools — Reverse & Reorder",
+    "message": "YT Playlist Tools — Reverse, Shuffle & Reorder",
     "description": "The name of the extension"
   },
   "extensionDescription": {
-    "message": "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking. Privacy-first playlist power.",
+    "message": "Reverse, shuffle, drag-reorder, and save YouTube playlists. Supports watched badges, auto-skip, compact layout, and multi-language UI (EN/FR/AR).",
     "description": "The description of the extension"
   }
 }
