@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Reverse YouTube Playlist",
-  "version": "1.0.6",
-  "description": "Play YouTube playlists in reverse order (bottom to top). Adds a Reverse toggle button to the playlist panel.",
+  "name": "YouTube Playlist Tools — Reverse & Reorder",
+  "version": "2.0.0",
+  "description": "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking. Privacy-first playlist power.",
   "browser_specific_settings": {
     "gecko": {
       "id": "reverse-playlist@benmoussa",
-      "strict_min_version": "115.0",
+      "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": ["none"]
       }
@@ -21,7 +21,15 @@
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],
-      "js": ["src/content.js"],
+      "js": [
+        "src/state.js",
+        "src/playlist.js",
+        "src/playback.js",
+        "src/sidebar.js",
+        "src/panel.js",
+        "src/toolbar.js",
+        "src/content.js"
+      ],
       "css": ["src/button.css"],
       "run_at": "document_idle"
     }

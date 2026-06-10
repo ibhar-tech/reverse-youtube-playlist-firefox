@@ -1,49 +1,463 @@
-/* Reverse YouTube Playlist — injected button styling.
-   Uses a solid background with white text so it is clearly visible in BOTH
-   YouTube light and dark themes (white-on-light was invisible before). */
+/*
+ * YouTube Playlist Tools — button.css
+ *
+ * Styles for all injected UI: toolbar buttons, drag-and-drop states,
+ * the in-page saved-playlists panel, watched badges, and toast notifications.
+ * Uses YouTube's CSS variables where possible so light/dark themes both work.
+ */
 
-#ryp-reverse-toggle.ryp-btn {
+/* ── Design tokens ──────────────────────────────────────────────────────── */
+
+:root {
+  --ryp-accent:        #3ea6ff;
+  --ryp-accent-hover:  #5cb4ff;
+  --ryp-btn-bg:        rgba(255, 255, 255, 0.08);
+  --ryp-btn-hover:     rgba(255, 255, 255, 0.15);
+  --ryp-btn-text:      #e8e8e8;
+  --ryp-btn-active-bg: #3ea6ff;
+  --ryp-btn-active-text: #0f0f0f;
+  --ryp-panel-bg:      #212121;
+  --ryp-panel-border:  rgba(255, 255, 255, 0.12);
+  --ryp-panel-text:    #e8e8e8;
+  --ryp-panel-sub:     #aaa;
+  --ryp-radius:        20px;
+  --ryp-shadow:        0 8px 32px rgba(0, 0, 0, 0.55);
+  --ryp-font:          "Roboto", "Arial", sans-serif;
+}
+
+/* ── Toolbar container ──────────────────────────────────────────────────── */
+
+#ryp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  align-items: center;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.ryp-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin: 8px 12px;
-  padding: 7px 14px;
-  font-family: "Roboto", "Arial", sans-serif;
-  font-size: 1.3rem;
+  gap: 5px;
+  padding: 6px 13px;
+  font-family: var(--ryp-font);
+  font-size: 1.25rem;
   font-weight: 600;
-  line-height: 1.6rem;
-  color: #ffffff;
-  background: #606060;
-  border: none;
-  border-radius: 18px;
+  line-height: 1.5rem;
+  color: var(--ryp-btn-text);
+  background: var(--ryp-btn-bg);
+  border: 1px solid var(--ryp-panel-border);
+  border-radius: var(--ryp-radius);
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    transform 0.1s ease;
+  white-space: nowrap;
 }
 
-#ryp-reverse-toggle.ryp-btn:hover {
-  background: #787878;
+.ryp-btn:hover {
+  background: var(--ryp-btn-hover);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
 }
 
-#ryp-reverse-toggle.ryp-btn .ryp-icon {
-  font-size: 1.5rem;
-  transform: rotate(90deg);
+.ryp-btn:active {
+  transform: translateY(0);
+}
+
+.ryp-btn .ryp-icon {
+  font-size: 1.4rem;
   display: inline-block;
+  transition: transform 0.2s ease;
 }
 
-/* Active (reverse ON) state — clearly highlighted. */
-#ryp-reverse-toggle.ryp-btn.ryp-active {
-  color: #0f0f0f;
-  background: #3ea6ff;
+/* Reverse button icon rotated to look like ↕ */
+#ryp-btn-reverse .ryp-icon { transform: rotate(90deg); }
+#ryp-btn-reverse.ryp-active .ryp-icon { transform: rotate(90deg) scale(1.15); }
+
+/* Shuffle button — gentle spin on hover */
+#ryp-btn-shuffle:hover .ryp-icon { transform: rotate(20deg); }
+
+/* ── Active (engaged) state ─────────────────────────────────────────────── */
+
+.ryp-btn.ryp-active {
+  color: var(--ryp-btn-active-text);
+  background: var(--ryp-btn-active-bg);
+  border-color: var(--ryp-btn-active-bg);
 }
 
-#ryp-reverse-toggle.ryp-btn.ryp-active:hover {
-  background: #5cb4ff;
+.ryp-btn.ryp-active:hover {
+  background: var(--ryp-accent-hover);
+  border-color: var(--ryp-accent-hover);
+  transform: translateY(-1px);
 }
 
-/* Cosmetic only: visually flip the playlist sidebar so the last video shows on
-   top. This does NOT drive playback — the reversal logic lives in content.js. */
+/* ── Cosmetic sidebar: column-reverse for reverse mode ──────────────────── */
+
 ytd-playlist-panel-renderer #items.ryp-reversed {
   display: flex;
   flex-direction: column-reverse;
+}
+
+/* ── Reorder mode: drag-and-drop states ─────────────────────────────────── */
+
+ytd-playlist-panel-renderer #items.ryp-reorder-mode {
+  display: flex;
+  flex-direction: column;
+}
+
+.ryp-draggable {
+  cursor: grab;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  border-left: 3px solid transparent;
+}
+
+.ryp-draggable:hover {
+  background: rgba(62, 166, 255, 0.06);
+  border-left-color: rgba(62, 166, 255, 0.3);
+}
+
+.ryp-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.ryp-drag-over {
+  background: rgba(62, 166, 255, 0.14) !important;
+  border-left: 3px solid var(--ryp-accent) !important;
+  border-radius: 4px;
+}
+
+/* ── Watched badge ──────────────────────────────────────────────────────── */
+
+.ryp-watched {
+  position: relative;
+}
+
+.ryp-watched::after {
+  content: "✓";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  background: #3ea6ff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ── In-page saved-playlists panel ─────────────────────────────────────── */
+
+#ryp-saved-panel {
+  position: fixed;
+  top: 56px;         /* below YouTube's top nav */
+  right: 0;
+  width: 360px;
+  max-height: calc(100vh - 72px);
+  overflow-y: auto;
+  background: var(--ryp-panel-bg);
+  border-left: 1px solid var(--ryp-panel-border);
+  box-shadow: var(--ryp-shadow);
+  color: var(--ryp-panel-text);
+  font-family: var(--ryp-font);
+  font-size: 1.3rem;
+  z-index: 2500;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px 0 0 12px;
+}
+
+#ryp-saved-panel.ryp-panel-visible {
+  transform: translateX(0);
+}
+
+.ryp-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--ryp-panel-border);
+  position: sticky;
+  top: 0;
+  background: var(--ryp-panel-bg);
+  z-index: 1;
+}
+
+.ryp-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ryp-panel-text);
+  letter-spacing: -0.01em;
+}
+
+.ryp-panel-icon {
+  font-size: 1.8rem;
+  color: var(--ryp-accent);
+}
+
+.ryp-panel-close {
+  background: transparent;
+  border: none;
+  color: var(--ryp-panel-sub);
+  font-size: 1.6rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 50%;
+  line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ryp-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ryp-panel-text);
+}
+
+/* Save section */
+.ryp-panel-save-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ryp-panel-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ryp-save-label {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--ryp-panel-sub);
+}
+
+.ryp-save-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ryp-save-input {
+  flex: 1;
+  padding: 8px 12px;
+  font-family: var(--ryp-font);
+  font-size: 1.25rem;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--ryp-panel-border);
+  border-radius: 8px;
+  color: var(--ryp-panel-text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ryp-save-input:focus {
+  border-color: var(--ryp-accent);
+  box-shadow: 0 0 0 2px rgba(62, 166, 255, 0.25);
+}
+
+.ryp-save-input.ryp-input-error {
+  border-color: #ff6b6b;
+  animation: ryp-shake 0.35s ease;
+}
+
+@keyframes ryp-shake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-5px); }
+  75%       { transform: translateX(5px); }
+}
+
+.ryp-save-confirm {
+  padding: 8px 14px;
+  font-family: var(--ryp-font);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--ryp-btn-active-text);
+  background: var(--ryp-accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.ryp-save-confirm:hover {
+  background: var(--ryp-accent-hover);
+  transform: translateY(-1px);
+}
+
+.ryp-clear-watched {
+  background: transparent;
+  border: 1px solid var(--ryp-panel-border);
+  border-radius: 8px;
+  color: var(--ryp-panel-sub);
+  font-family: var(--ryp-font);
+  font-size: 1.15rem;
+  padding: 6px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ryp-clear-watched:hover {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #ff9191;
+}
+
+/* Section title */
+.ryp-panel-section-title {
+  padding: 12px 16px 6px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ryp-panel-sub);
+}
+
+/* Saved playlist list */
+.ryp-panel-list {
+  flex: 1;
+  padding: 0 8px 12px;
+}
+
+.ryp-saved-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  transition: background 0.15s ease;
+}
+
+.ryp-saved-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ryp-saved-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ryp-saved-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--ryp-panel-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ryp-saved-meta {
+  font-size: 1.1rem;
+  color: var(--ryp-panel-sub);
+  margin-top: 2px;
+}
+
+.ryp-saved-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ryp-action-play {
+  padding: 6px 12px;
+  font-family: var(--ryp-font);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--ryp-btn-active-text);
+  background: var(--ryp-accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.ryp-action-play:hover {
+  background: var(--ryp-accent-hover);
+  transform: translateY(-1px);
+}
+
+.ryp-action-delete {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--ryp-panel-border);
+  border-radius: 8px;
+  color: var(--ryp-panel-sub);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.ryp-action-delete:hover {
+  background: rgba(255, 107, 107, 0.15);
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #ff9191;
+}
+
+/* Empty state */
+.ryp-empty-state {
+  text-align: center;
+  padding: 32px 20px;
+  color: var(--ryp-panel-sub);
+}
+
+.ryp-empty-icon {
+  font-size: 3.2rem;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.ryp-empty-state p {
+  margin: 4px 0;
+  font-size: 1.3rem;
+}
+
+.ryp-empty-hint {
+  font-size: 1.15rem !important;
+  opacity: 0.75;
+}
+
+/* ── Toast notification ─────────────────────────────────────────────────── */
+
+#ryp-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1a1a2e;
+  color: #e8e8e8;
+  font-family: var(--ryp-font);
+  font-size: 1.3rem;
+  font-weight: 500;
+  padding: 12px 22px;
+  border-radius: 24px;
+  box-shadow: var(--ryp-shadow);
+  border: 1px solid rgba(62, 166, 255, 0.3);
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+#ryp-toast.ryp-toast-show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
