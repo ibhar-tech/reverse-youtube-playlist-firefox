@@ -115,7 +115,7 @@ ok "Lint passed"
 # ── Step 2: Build zip ────────────────────────────────────────────────────────
 log "Building $ZIP_NAME..."
 rm -f "$ZIP_PATH"
-(cd "$SOURCE_DIR" && zip -r "$ZIP_PATH" manifest.json icons/ src/ _locales/ \
+(cd "$SOURCE_DIR" && zip -r "$ZIP_PATH" manifest.json icons/ src/ _locales/ popup/ \
   --exclude "*.DS_Store" --exclude "*/.git/*")
 ok "Built $ZIP_PATH ($(du -h "$ZIP_PATH" | cut -f1))"
 
