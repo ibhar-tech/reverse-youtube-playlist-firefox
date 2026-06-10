@@ -15,6 +15,97 @@
   const { Playlist, Playback, Sidebar, Panel } = window.RYP;
 
   const TOOLBAR_ID = "ryp-toolbar";
+  const api = typeof browser !== "undefined" ? browser : chrome;
+
+  let activeLang = "en";
+
+  // ── Translations Dictionary ────────────────────────────────────────────────
+
+  const TRANSLATIONS = {
+    en: {
+      reverse: "Reverse",
+      reverseOn: "Reverse: ON",
+      shuffle: "Shuffle",
+      shuffleOn: "Shuffle: ON",
+      reorder: "Reorder",
+      reorderOn: "Reorder: ON",
+      save: "Save",
+      myLists: "My Lists",
+      reverseTitle: "Play playlist in reverse — last video first",
+      reverseOnTitle: "Reverse is ON — playing last to first (click to turn off)",
+      shuffleTitle: "Play playlist in a random order",
+      shuffleOnTitle: "Shuffle is ON — random order (click to turn off)",
+      reorderTitle: "Drag sidebar items to set a custom play order",
+      reorderOnTitle: "Reorder ON — drag to rearrange (click to exit)",
+      saveTitle: "Save the current playlist order as a local snapshot",
+      myListsTitle: "Open saved playlist snapshots",
+      myListsOnTitle: "Close saved snapshots panel",
+      saveModalTitle: "Save Playlist Snapshot",
+      saveModalPlaceholder: "e.g. My Custom Sort",
+      saveConfirmToast: "✓ Playlist snapshot saved!"
+    },
+    fr: {
+      reverse: "Inverser",
+      reverseOn: "Inverse : ON",
+      shuffle: "Mélanger",
+      shuffleOn: "Mélange : ON",
+      reorder: "Réorganiser",
+      reorderOn: "Réorgan. : ON",
+      save: "Enregistrer",
+      myLists: "Mes Listes",
+      reverseTitle: "Lire la playlist à l'envers — dernière vidéo en premier",
+      reverseOnTitle: "Inverse est ACTIF — lecture de fin à début (cliquez pour désactiver)",
+      shuffleTitle: "Lire la playlist dans un ordre aléatoire",
+      shuffleOnTitle: "Mélange est ACTIF — ordre aléatoire (cliquez pour désactiver)",
+      reorderTitle: "Faites glisser les éléments pour personnaliser l'ordre de lecture",
+      reorderOnTitle: "Réorganisation ACTIVE — glissez pour réordonner (cliquez pour quitter)",
+      saveTitle: "Enregistrer l'ordre actuel comme instantané local",
+      myListsTitle: "Ouvrir les instantanés de playlist sauvegardés",
+      myListsOnTitle: "Fermer le panneau des instantanés",
+      saveModalTitle: "Enregistrer un instantané",
+      saveModalPlaceholder: "ex: Cours inversé",
+      saveConfirmToast: "✓ Instantané enregistré !"
+    },
+    ar: {
+      reverse: "عكس",
+      reverseOn: "عكس: مفعل",
+      shuffle: "خلط عشوائي",
+      shuffleOn: "خلط: مفعل",
+      reorder: "ترتيب يدوي",
+      reorderOn: "ترتيب: مفعل",
+      save: "حفظ",
+      myLists: "قوائمي",
+      reverseTitle: "تشغيل قائمة التشغيل بالعكس — الفيديو الأخير أولاً",
+      reverseOnTitle: "العكس مفعل — التشغيل من الآخر للأول (انقر للإلغاء)",
+      shuffleTitle: "تشغيل قائمة التشغيل بترتيب عشوائي",
+      shuffleOnTitle: "الخلط العشوائي مفعل — ترتيب عشوائي (انقر للإلغاء)",
+      reorderTitle: "اسحب عناصر الشريط الجانبي لترتيب مخصص",
+      reorderOnTitle: "الترتيب اليدوي مفعل — اسحب لإعادة الترتيب (انقر للخروج)",
+      saveTitle: "حفظ الترتيب الحالي كلقطة محلية",
+      myListsTitle: "فتح لقطات قوائم التشغيل المحفوظة",
+      myListsOnTitle: "إغلاق لوحة القوائم المحفوظة",
+      saveModalTitle: "حفظ لقطة قائمة التشغيل",
+      saveModalPlaceholder: "مثال: ترتيب عكسي",
+      saveConfirmToast: "✓ تم حفظ لقطة قائمة التشغيل!"
+    }
+  };
+
+  function applyToolbarSettings(settings) {
+    activeLang = settings?.lang || "en";
+    syncButtonStates();
+  }
+
+  // Listen for settings changes from the popup
+  api.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.ryp_settings) {
+      applyToolbarSettings(changes.ryp_settings.newValue);
+    }
+  });
+
+  // Load and apply settings on startup
+  api.storage.local.get("ryp_settings", (res) => {
+    applyToolbarSettings(res.ryp_settings);
+  });
 
   // ── SVG Helpers & Icons ───────────────────────────────────────────────────
 
@@ -108,30 +199,27 @@
     const container = Playlist.findHeaderContainer();
     if (!container) return false;
 
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+
     const toolbar = document.createElement("div");
     toolbar.id = TOOLBAR_ID;
     toolbar.setAttribute("role", "toolbar");
     toolbar.setAttribute("aria-label", "Playlist Tools");
 
     const reverseBtn = makeButton(
-      "ryp-btn-reverse", "reverse", "Reverse",
-      "Play playlist in reverse — last video first"
+      "ryp-btn-reverse", "reverse", dict.reverse, dict.reverseTitle
     );
     const shuffleBtn = makeButton(
-      "ryp-btn-shuffle", "shuffle", "Shuffle",
-      "Play playlist in a random order"
+      "ryp-btn-shuffle", "shuffle", dict.shuffle, dict.shuffleTitle
     );
     const reorderBtn = makeButton(
-      "ryp-btn-reorder", "reorder", "Reorder",
-      "Drag sidebar items to set a custom play order"
+      "ryp-btn-reorder", "reorder", dict.reorder, dict.reorderTitle
     );
     const saveBtn = makeButton(
-      "ryp-btn-save", "save", "Save",
-      "Save the current playlist order as a local snapshot"
+      "ryp-btn-save", "save", dict.save, dict.saveTitle
     );
     const playlistsBtn = makeButton(
-      "ryp-btn-playlists", "playlists", "My Lists",
-      "Open saved playlist snapshots"
+      "ryp-btn-playlists", "playlists", dict.myLists, dict.myListsTitle
     );
 
     toolbar.append(reverseBtn, shuffleBtn, reorderBtn, saveBtn, playlistsBtn);
@@ -148,34 +236,40 @@
     const { reverseOn, shuffleOn } = Playback.getState();
     const reorderOn = Sidebar.isReorderModeOn();
     const panelOn = Panel.isPanelVisible();
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
 
     setActive(
       document.getElementById("ryp-btn-reverse"),
       reverseOn,
-      "Reverse: ON", "Reverse",
-      "Reverse is ON — playing last to first (click to turn off)",
-      "Play playlist in reverse — last video first"
+      dict.reverseOn, dict.reverse,
+      dict.reverseOnTitle, dict.reverseTitle
     );
     setActive(
       document.getElementById("ryp-btn-shuffle"),
       shuffleOn,
-      "Shuffle: ON", "Shuffle",
-      "Shuffle is ON — random order (click to turn off)",
-      "Play playlist in a random order"
+      dict.shuffleOn, dict.shuffle,
+      dict.shuffleOnTitle, dict.shuffleTitle
     );
     setActive(
       document.getElementById("ryp-btn-reorder"),
       reorderOn,
-      "Reorder: ON", "Reorder",
-      "Reorder ON — drag to rearrange (click to exit)",
-      "Drag sidebar items to set a custom play order"
+      dict.reorderOn, dict.reorder,
+      dict.reorderOnTitle, dict.reorderTitle
     );
+
+    // Save button needs translated label & title updated
+    const saveBtn = document.getElementById("ryp-btn-save");
+    if (saveBtn) {
+      saveBtn.title = dict.saveTitle;
+      const labelEl = saveBtn.querySelector(".ryp-label");
+      if (labelEl) labelEl.textContent = dict.save;
+    }
+
     setActive(
       document.getElementById("ryp-btn-playlists"),
       panelOn,
-      "My Lists", "My Lists",
-      "Close saved snapshots panel",
-      "Open saved playlist snapshots"
+      dict.myLists, dict.myLists,
+      dict.myListsOnTitle, dict.myListsTitle
     );
   }
 
@@ -190,7 +284,6 @@
       if (reverseOn) {
         await Playback.disableReverse(listId);
       } else {
-        // Turning on reverse disables shuffle/custom order.
         await Playback.enableReverse(listId);
       }
       Sidebar.applyVisualOrder();
@@ -206,7 +299,6 @@
         await Playback.disableShuffle(listId);
         Sidebar.applyVisualOrder();
       } else {
-        // enableShuffle also jumps to first in shuffled order.
         await Playback.enableShuffle(listId);
         Sidebar.applyVisualOrder();
       }
@@ -224,17 +316,19 @@
       const listId = Playlist.getPlaylistId();
       if (!listId) return;
 
+      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+
       Panel.showSaveModal({
-        title: "Save Playlist Snapshot",
-        placeholder: "e.g. My Custom Sort",
+        title: dict.saveModalTitle,
+        placeholder: dict.saveModalPlaceholder,
         defaultValue: "",
-        confirmLabel: "Save",
+        confirmLabel: dict.save,
         onConfirm: async (name) => {
           await Panel.saveCurrentOrder(name);
           if (Panel.isPanelVisible()) {
             await Panel.renderList();
           }
-          Panel.showToast("✓ Playlist snapshot saved!");
+          Panel.showToast(dict.saveConfirmToast);
         }
       });
     });

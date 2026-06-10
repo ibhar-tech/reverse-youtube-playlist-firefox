@@ -22,6 +22,8 @@
   window.RYP = window.RYP || {};
   const { State, Playlist } = window.RYP;
 
+  const api = (typeof browser !== "undefined" ? browser : chrome);
+
   // How many seconds before the true end we pre-empt YouTube's autoplay.
   const END_LEAD = 0.35;
 
@@ -31,6 +33,24 @@
   let lastIndex = null;
   let navigating = false;
   let endHandled = false;
+  
+  let autoSkipEnabled = false;
+  let cachedWatched = [];
+
+  // Load autoSkip initially and on storage onChanged
+  function updateAutoSkip(settings) {
+    autoSkipEnabled = !!settings?.autoSkip;
+  }
+
+  api.storage.local.get("ryp_settings", (res) => {
+    updateAutoSkip(res.ryp_settings);
+  });
+
+  api.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.ryp_settings) {
+      updateAutoSkip(changes.ryp_settings.newValue);
+    }
+  });
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -38,17 +58,27 @@
     return reverseOn || shuffleOn || customOrder !== null;
   }
 
-  /** Returns the index to navigate to after currentIdx, or null to stop. */
-  function nextIndexInMode(currentIdx) {
+  function getRawNextIndex(idx) {
     if (customOrder && customOrder.length > 0) {
-      const pos = customOrder.indexOf(currentIdx);
+      const pos = customOrder.indexOf(idx);
       if (pos === -1 || pos + 1 >= customOrder.length) return null;
       return customOrder[pos + 1];
     }
     if (reverseOn) {
-      return currentIdx - 1 >= 1 ? currentIdx - 1 : null;
+      return idx - 1 >= 1 ? idx - 1 : null;
     }
     return null;
+  }
+
+  /** Returns the index to navigate to after currentIdx, or null to stop. */
+  function nextIndexInMode(currentIdx) {
+    let target = getRawNextIndex(currentIdx);
+    if (!autoSkipEnabled) return target;
+
+    while (target !== null && cachedWatched.includes(target)) {
+      target = getRawNextIndex(target);
+    }
+    return target;
   }
 
   function stepTo(targetIndex) {
@@ -89,9 +119,11 @@
 
   async function markAsWatched(listId, index) {
     const watched = (await State.get(State.keys.watched(listId))) || [];
-    if (watched.includes(index)) return;
-    watched.push(index);
-    await State.set(State.keys.watched(listId), watched);
+    if (!watched.includes(index)) {
+      watched.push(index);
+      await State.set(State.keys.watched(listId), watched);
+    }
+    cachedWatched = watched;
     // Refresh sidebar badges if Sidebar is already loaded.
     window.RYP.Sidebar?.applyWatchedBadges();
   }
@@ -106,6 +138,7 @@
       reverseOn = !!(await State.get(State.keys.reverse(listId)));
       const savedShuffle = !!(await State.get(State.keys.shuffle(listId)));
       const savedOrder = (await State.get(State.keys.customOrder(listId))) || null;
+      cachedWatched = (await State.get(State.keys.watched(listId))) || [];
 
       // Shuffle requires a custom order to have been stored; if it's gone, reset.
       shuffleOn = savedShuffle && savedOrder !== null;

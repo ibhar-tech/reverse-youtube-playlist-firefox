@@ -2,14 +2,135 @@
   "use strict";
 
   const api = typeof browser !== "undefined" ? browser : chrome;
+  
+  // DOM Elements
   const listContainer = document.getElementById("playlist-list");
   const deleteAllBtn = document.getElementById("delete-all-btn");
+  const settingsBtn = document.getElementById("settings-btn");
+  const settingsPanel = document.getElementById("settings-panel");
   const saveSection = document.getElementById("save-current-section");
   const saveInput = document.getElementById("save-input-popup");
   const saveConfirmBtn = document.getElementById("save-confirm-popup");
   const logoContainer = document.getElementById("popup-title-icon");
+  
+  // Settings controls
+  const langSelect = document.getElementById("lang-select");
+  const skipToggle = document.getElementById("skip-watched-toggle");
+  const badgesToggle = document.getElementById("show-badges-toggle");
+  const compactToggle = document.getElementById("compact-toggle");
 
   let activeTabId = null;
+  let currentSettings = { lang: "en", autoSkip: false, showBadges: true, compact: false };
+
+  // ── Translations Dictionary ────────────────────────────────────────────────
+
+  const TRANSLATIONS = {
+    en: {
+      extensionName: "Playlist Tools",
+      reverse: "Reverse",
+      reverseOn: "Reverse: ON",
+      shuffle: "Shuffle",
+      shuffleOn: "Shuffle: ON",
+      reorder: "Reorder",
+      reorderOn: "Reorder: ON",
+      save: "Save",
+      myLists: "My Lists",
+      saveLabel: "Save current play order as a snapshot:",
+      saveInputPlaceholder: "e.g. My Custom Sort",
+      clearWatched: "Clear watched badges",
+      savedSnapshots: "Saved Snapshots",
+      noSnapshots: "No snapshots saved yet.",
+      emptyHint: "Open a YouTube playlist and use the Save button or panel to add one.",
+      play: "Play",
+      delete: "Delete",
+      rename: "Rename",
+      cancel: "Cancel",
+      confirm: "Confirm",
+      deleteAll: "Delete All",
+      settings: "Settings",
+      autoSkip: "Auto-skip watched",
+      showBadges: "Show watched badges",
+      compact: "Compact layout",
+      language: "Language",
+      renamePrompt: "Rename this snapshot to:",
+      nameEmpty: "Playlist name cannot be empty.",
+      deleteConfirm: "Delete this playlist snapshot?",
+      deleteAllConfirm: "Are you sure you want to delete all saved playlist snapshots? This cannot be undone.",
+      saveConfirm: "✓ Playlist snapshot saved!",
+      clearWatchedConfirm: "Watched badges cleared.",
+      saveCurrentSectionLabel: "Save current playlist state:"
+    },
+    fr: {
+      extensionName: "Outils Playlist",
+      reverse: "Inverser",
+      reverseOn: "Inverse : ON",
+      shuffle: "Mélanger",
+      shuffleOn: "Mélange : ON",
+      reorder: "Réorganiser",
+      reorderOn: "Réorgan. : ON",
+      save: "Enregistrer",
+      myLists: "Mes Listes",
+      saveLabel: "Enregistrer l'ordre de lecture actuel :",
+      saveInputPlaceholder: "ex: Cours inversé",
+      clearWatched: "Effacer vidéos vues",
+      savedSnapshots: "Instantannés",
+      noSnapshots: "Aucun instantané enregistré.",
+      emptyHint: "Ouvrez une playlist YouTube et utilisez le bouton d'enregistrement.",
+      play: "Lire",
+      delete: "Supprimer",
+      rename: "Renommer",
+      cancel: "Annuler",
+      confirm: "Confirmer",
+      deleteAll: "Tout suppr.",
+      settings: "Paramètres",
+      autoSkip: "Passer vidéos vues",
+      showBadges: "Afficher badges vus",
+      compact: "Mode compact",
+      language: "Langue",
+      renamePrompt: "Renommer l'instantané sous :",
+      nameEmpty: "Le nom ne peut pas être vide.",
+      deleteConfirm: "Supprimer cet instantané ?",
+      deleteAllConfirm: "Voulez-vous supprimer tous les instantanés ? Cette action est irréversible.",
+      saveConfirm: "✓ Instantané enregistré !",
+      clearWatchedConfirm: "Badges de vidéos vues effacés.",
+      saveCurrentSectionLabel: "Enregistrer l'état actuel :"
+    },
+    ar: {
+      extensionName: "أدوات قائمة التشغيل",
+      reverse: "عكس",
+      reverseOn: "عكس: مفعل",
+      shuffle: "خلط عشوائي",
+      shuffleOn: "خلط: مفعل",
+      reorder: "ترتيب يدوي",
+      reorderOn: "ترتيب: مفعل",
+      save: "حفظ",
+      myLists: "قوائمي",
+      saveLabel: "حفظ الترتيب الحالي كلقطة:",
+      saveInputPlaceholder: "مثال: ترتيب عكسي",
+      clearWatched: "مسح شارات المشاهدة",
+      savedSnapshots: "اللقطات المحفوظة",
+      noSnapshots: "لا توجد لقطات بعد.",
+      emptyHint: "افتح قائمة تشغيل يوتيوب واستخدم زر الحفظ للإضافة.",
+      play: "تشغيل",
+      delete: "حذف",
+      rename: "تسمية",
+      cancel: "إلغاء",
+      confirm: "تأكيد",
+      deleteAll: "حذف الكل",
+      settings: "الإعدادات",
+      autoSkip: "تخطي الفيديوهات المشاهدة",
+      showBadges: "إظهار شارات المشاهدة",
+      compact: "مظهر مدمج",
+      language: "اللغة",
+      renamePrompt: "إعادة تسمية لقطة قائمة التشغيل إلى:",
+      nameEmpty: "لا يمكن أن يكون الاسم فارغًا.",
+      deleteConfirm: "حذف هذه اللقطة؟",
+      deleteAllConfirm: "هل أنت متأكد من حذف جميع لقطات قوائم التشغيل؟ لا يمكن التراجع عن هذا.",
+      saveConfirm: "✓ تم حفظ لقطة قائمة التشغيل!",
+      clearWatchedConfirm: "تمت إزالة شارات المشاهدة.",
+      saveCurrentSectionLabel: "حفظ حالة قائمة التشغيل الحالية:"
+    }
+  };
 
   // ── SVG Helper & Icons ────────────────────────────────────────────────────
   function svg(className, viewBox, strokeWidth, paths) {
@@ -60,15 +181,16 @@
       { tag: "path", attrs: { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" } },
       { tag: "line", attrs: { x1: "10", y1: "11", x2: "10", y2: "17" } },
       { tag: "line", attrs: { x1: "14", y1: "11", x2: "14", y2: "17" } }
+    ]),
+    settings: () => svg("settings-icon-svg", "0 0 24 24", 2, [
+      { tag: "circle", attrs: { cx: "12", cy: "12", r: "3" } },
+      { tag: "path", attrs: { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" } }
     ])
   };
 
   // Initialize static layout elements
   if (logoContainer) logoContainer.appendChild(ICONS.logo());
-  if (saveConfirmBtn) {
-    saveConfirmBtn.appendChild(ICONS.save());
-    saveConfirmBtn.appendChild(document.createTextNode(" Save"));
-  }
+  if (settingsBtn) settingsBtn.appendChild(ICONS.settings());
 
   // DOM creation helper (safe from XSS)
   function el(tag, attrs = {}, children = []) {
@@ -85,25 +207,55 @@
     return node;
   }
 
+  // ── Localization System ───────────────────────────────────────────────────
+
+  function getDict() {
+    return TRANSLATIONS[currentSettings.lang] || TRANSLATIONS.en;
+  }
+
+  function translateUI() {
+    const dict = getDict();
+    document.body.dir = currentSettings.lang === "ar" ? "rtl" : "ltr";
+    
+    document.querySelectorAll("[data-i18n]").forEach((element) => {
+      const key = element.getAttribute("data-i18n");
+      if (dict[key]) {
+        if (element.tagName === "INPUT" && element.type === "text") {
+          element.placeholder = dict[key];
+        } else {
+          element.textContent = dict[key];
+        }
+      }
+    });
+
+    // Rebuild save confirm button to ensure translation + icon are matched
+    if (saveConfirmBtn) {
+      saveConfirmBtn.replaceChildren();
+      saveConfirmBtn.appendChild(ICONS.save());
+      saveConfirmBtn.appendChild(document.createTextNode(" " + dict.save));
+    }
+  }
+
   // ── Custom Popup Modals ───────────────────────────────────────────────────
 
-  function showPopupModal({ title, placeholder, defaultValue, confirmLabel, onConfirm }) {
+  function showPopupModal({ titleKey, placeholderKey, defaultValue, confirmLabelKey, onConfirm }) {
     const existing = document.getElementById("ryp-popup-modal");
     if (existing) existing.remove();
 
+    const dict = getDict();
     const overlay = el("div", { id: "ryp-popup-modal", className: "ryp-modal-overlay" });
-    const titleEl = el("h3", { className: "ryp-modal-title", textContent: title });
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: dict[titleKey] || titleKey });
     
     const input = el("input", {
       type: "text",
       className: "ryp-modal-input",
-      placeholder: placeholder || "",
+      placeholder: dict[placeholderKey] || placeholderKey || "",
       maxlength: "80"
     });
     input.value = defaultValue || "";
 
-    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: "Cancel" });
-    const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: confirmLabel || "Confirm" });
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
+    const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: dict[confirmLabelKey] || confirmLabelKey });
     
     const buttonsRow = el("div", { className: "ryp-modal-buttons" }, [cancelBtn, confirmBtn]);
     const modal = el("div", { className: "ryp-modal-content" }, [
@@ -149,16 +301,17 @@
     });
   }
 
-  function showConfirmModal(text, onConfirm) {
+  function showConfirmModal(textKey, onConfirm) {
     const existing = document.getElementById("ryp-popup-modal");
     if (existing) existing.remove();
 
+    const dict = getDict();
     const overlay = el("div", { id: "ryp-popup-modal", className: "ryp-modal-overlay" });
-    const titleEl = el("h3", { className: "ryp-modal-title", textContent: "Confirm Action" });
-    const textEl = el("p", { className: "ryp-modal-text", textContent: text });
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: dict.confirm });
+    const textEl = el("p", { className: "ryp-modal-text", textContent: dict[textKey] || textKey });
     
-    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: "Cancel" });
-    const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: "Confirm" });
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
+    const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: dict.confirm });
     
     const buttonsRow = el("div", { className: "ryp-modal-buttons" }, [cancelBtn, confirmBtn]);
     const modal = el("div", { className: "ryp-modal-content" }, [
@@ -186,17 +339,89 @@
     });
   }
 
-  // Check if active tab is a YouTube playlist page and show the save section
-  api.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const activeTab = tabs[0];
-    if (activeTab && activeTab.url) {
-      const url = activeTab.url;
-      if (url.includes("youtube.com/") && (url.includes("list=") || url.includes("playlist?"))) {
-        activeTabId = activeTab.id;
-        saveSection.style.display = "block";
-      }
-    }
+  // ── Settings Handler ──────────────────────────────────────────────────────
+
+  async function loadSettings() {
+    return new Promise((resolve) => {
+      api.storage.local.get("ryp_settings", (res) => {
+        const defaultLang = api.i18n.getUILanguage().startsWith("ar") ? "ar" : (api.i18n.getUILanguage().startsWith("fr") ? "fr" : "en");
+        const loaded = res.ryp_settings || {};
+        currentSettings = {
+          lang: loaded.lang || defaultLang,
+          autoSkip: loaded.autoSkip ?? false,
+          showBadges: loaded.showBadges ?? true,
+          compact: loaded.compact ?? false,
+        };
+        resolve(currentSettings);
+      });
+    });
+  }
+
+  async function saveSettings() {
+    await new Promise((resolve) => {
+      api.storage.local.set({ ryp_settings: currentSettings }, resolve);
+    });
+    applySettingsUI();
+  }
+
+  function applySettingsUI() {
+    // Sync settings controls
+    langSelect.value = currentSettings.lang;
+    skipToggle.checked = currentSettings.autoSkip;
+    badgesToggle.checked = currentSettings.showBadges;
+    compactToggle.checked = currentSettings.compact;
+
+    // Apply translation & direction
+    translateUI();
+
+    // Toggle compact class
+    document.body.classList.toggle("ryp-compact", currentSettings.compact);
+  }
+
+  // Bind settings panel toggle
+  settingsBtn.addEventListener("click", () => {
+    const isVisible = settingsPanel.style.display === "flex" || settingsPanel.style.display === "block";
+    settingsPanel.style.display = isVisible ? "none" : "flex";
   });
+
+  // Bind settings changes
+  langSelect.addEventListener("change", (e) => {
+    currentSettings.lang = e.target.value;
+    saveSettings().then(() => renderPlaylists());
+  });
+
+  skipToggle.addEventListener("change", (e) => {
+    currentSettings.autoSkip = e.target.checked;
+    saveSettings();
+  });
+
+  badgesToggle.addEventListener("change", (e) => {
+    currentSettings.showBadges = e.target.checked;
+    saveSettings();
+  });
+
+  compactToggle.addEventListener("change", (e) => {
+    currentSettings.compact = e.target.checked;
+    saveSettings();
+  });
+
+  // ── Tab Management & URL Queries ──────────────────────────────────────────
+
+  // Check if active tab is a YouTube playlist page and show the save section
+  api.tabs.query({ active: true, currentWindow: true })
+    .then((tabs) => {
+      const activeTab = tabs && tabs[0];
+      if (activeTab && activeTab.url) {
+        const url = activeTab.url;
+        if (url.includes("youtube.com/") && (url.includes("list=") || url.includes("playlist?"))) {
+          activeTabId = activeTab.id;
+          saveSection.style.display = "block";
+        }
+      }
+    })
+    .catch((err) => {
+      console.warn("Could not query active tab on startup:", err);
+    });
 
   // Save current playlist state via message to content script (Create)
   saveConfirmBtn.addEventListener("click", () => {
@@ -209,24 +434,26 @@
       return;
     }
 
-    api.tabs.sendMessage(activeTabId, { action: "SAVE_PLAYLIST", name: name }, (response) => {
-      if (api.runtime.lastError) {
+    api.tabs.sendMessage(activeTabId, { action: "SAVE_PLAYLIST", name: name })
+      .then((response) => {
+        if (response && response.success) {
+          saveInput.value = "";
+          renderPlaylists();
+        } else {
+          alert(response?.error || "Failed to save playlist state.");
+        }
+      })
+      .catch((err) => {
+        console.error("Error sending message to content script:", err);
         alert("Cannot communicate with the YouTube tab. Please refresh the page and try again.");
-        return;
-      }
-      if (response && response.success) {
-        saveInput.value = "";
-        renderPlaylists();
-      } else {
-        alert(response?.error || "Failed to save playlist state.");
-      }
-    });
+      });
   });
 
   // Render playlists list (Read)
   async function renderPlaylists() {
     listContainer.replaceChildren();
 
+    const dict = getDict();
     const data = await new Promise((resolve) => {
       api.storage.local.get("savedPlaylists", (res) => {
         resolve(res.savedPlaylists || []);
@@ -237,8 +464,8 @@
       deleteAllBtn.style.display = "none";
       const emptyIcon = el("div", { className: "empty-icon" });
       emptyIcon.appendChild(ICONS.folder());
-      const emptyText = el("p", { className: "empty-text", textContent: "No snapshots saved yet." });
-      const emptyHint = el("p", { className: "empty-hint", textContent: "Open a YouTube playlist and use the Save button or panel to add one." });
+      const emptyText = el("p", { className: "empty-text", textContent: dict.noSnapshots });
+      const emptyHint = el("p", { className: "empty-hint", textContent: dict.emptyHint });
       listContainer.appendChild(el("div", { className: "empty-state" }, [emptyIcon, emptyText, emptyHint]));
       return;
     }
@@ -246,7 +473,7 @@
     deleteAllBtn.style.display = "block";
 
     for (const pl of data) {
-      const date = new Date(pl.savedAt).toLocaleDateString(undefined, {
+      const date = new Date(pl.savedAt).toLocaleDateString(currentSettings.lang, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -262,20 +489,20 @@
 
       const playBtn = el("button", {
         className: "action-play",
-        title: "Play this playlist",
+        title: dict.play,
       });
       playBtn.appendChild(ICONS.play());
-      playBtn.appendChild(document.createTextNode(" Play"));
+      playBtn.appendChild(document.createTextNode(" " + dict.play));
 
       const renameBtn = el("button", {
         className: "action-rename",
-        title: "Rename snapshot",
+        title: dict.rename,
       });
       renameBtn.appendChild(ICONS.edit());
 
       const deleteBtn = el("button", {
         className: "action-delete",
-        title: "Delete snapshot",
+        title: dict.delete,
       });
       deleteBtn.appendChild(ICONS.trash());
 
@@ -291,29 +518,34 @@
 
         const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}&list=${pl.sourceListId}&index=${firstIndex}`;
 
-        api.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          const activeTab = tabs[0];
-          if (
-            activeTab &&
-            (activeTab.url === "about:blank" ||
-              activeTab.url === "about:newtab" ||
-              activeTab.url.includes("youtube.com/"))
-          ) {
-            api.tabs.update(activeTab.id, { url: url });
-          } else {
+        api.tabs.query({ active: true, currentWindow: true })
+          .then((tabs) => {
+            const activeTab = tabs && tabs[0];
+            if (activeTab && activeTab.id) {
+              api.tabs.update(activeTab.id, { url: url })
+                .catch((err) => {
+                  console.warn("Failed to update active tab, creating new instead:", err);
+                  api.tabs.create({ url: url });
+                });
+            } else {
+              api.tabs.create({ url: url });
+            }
+            window.close();
+          })
+          .catch((err) => {
+            console.error("Error querying active tab for playback:", err);
             api.tabs.create({ url: url });
-          }
-          window.close();
-        });
+            window.close();
+          });
       });
 
       // Rename action (Update)
       renameBtn.addEventListener("click", () => {
         showPopupModal({
-          title: "Rename Snapshot",
-          placeholder: "Enter new name",
+          titleKey: "renamePrompt",
+          placeholderKey: "saveInputPlaceholder",
           defaultValue: pl.name,
-          confirmLabel: "Rename",
+          confirmLabelKey: "rename",
           onConfirm: (trimmed) => {
             api.storage.local.get("savedPlaylists", (res) => {
               const saved = res.savedPlaylists || [];
@@ -331,7 +563,7 @@
 
       // Delete action (Delete)
       deleteBtn.addEventListener("click", () => {
-        showConfirmModal(`Delete "${pl.name}"?`, () => {
+        showConfirmModal("deleteConfirm", () => {
           api.storage.local.get("savedPlaylists", (res) => {
             let saved = res.savedPlaylists || [];
             saved = saved.filter((p) => p.id !== pl.id);
@@ -348,12 +580,15 @@
 
   // Delete all action (Delete All)
   deleteAllBtn.addEventListener("click", () => {
-    showConfirmModal("Are you sure you want to delete all saved playlist snapshots? This cannot be undone.", () => {
+    showConfirmModal("deleteAllConfirm", () => {
       api.storage.local.set({ savedPlaylists: [] }, () => {
         renderPlaylists();
       });
     });
   });
 
-  renderPlaylists();
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
+  await loadSettings();
+  applySettingsUI();
+  await renderPlaylists();
 })();

@@ -544,3 +544,216 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px var(--ryp-accent-glow);
 }
+
+/* ── Settings Panel & Switches ─────────────────────────────────────────── */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.header-action-btn {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-md);
+  color: var(--ryp-sub);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.header-action-btn:hover {
+  background: var(--ryp-card-bg);
+  color: var(--ryp-text);
+  transform: scale(1.05);
+}
+
+.header-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.settings-panel {
+  padding: 12px 16px;
+  background: var(--ryp-card-bg);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  animation: ryp-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes ryp-slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.setting-label {
+  font-weight: 600;
+  color: var(--ryp-text);
+  font-size: 12.5px;
+}
+
+.setting-select {
+  padding: 6px 10px;
+  font-family: var(--ryp-font);
+  font-size: 12px;
+  background: var(--ryp-bg);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-md);
+  color: var(--ryp-text);
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.setting-select:focus {
+  border-color: var(--ryp-accent-start);
+}
+
+.setting-switch-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+}
+
+.setting-switch-text {
+  font-weight: 500;
+  color: var(--ryp-text);
+  font-size: 12.5px;
+}
+
+/* Custom switch checkbox */
+.setting-switch-label input[type="checkbox"] {
+  appearance: none;
+  width: 32px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 99px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  outline: none;
+  flex-shrink: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .setting-switch-label input[type="checkbox"] {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.setting-switch-label input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.setting-switch-label input[type="checkbox"]:checked {
+  background: var(--ryp-accent-grad);
+}
+
+.setting-switch-label input[type="checkbox"]:checked::before {
+  transform: translateX(14px);
+}
+
+/* ── Compact Layout Styles ─────────────────────────────────────────────── */
+
+body.ryp-compact .popup-header {
+  padding: 10px 16px;
+}
+
+body.ryp-compact .popup-main {
+  padding: 10px 16px 16px;
+  gap: 8px;
+}
+
+body.ryp-compact .save-current-section {
+  padding: 10px 12px;
+}
+
+body.ryp-compact .playlist-card {
+  padding: 8px 12px;
+}
+
+body.ryp-compact .action-play {
+  padding: 6px 10px;
+}
+
+body.ryp-compact .action-rename,
+body.ryp-compact .action-delete {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── RTL Localization Layouts ───────────────────────────────────────────── */
+
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .popup-title {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .header-actions {
+  margin-left: 0;
+  margin-right: auto;
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .save-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .playlist-card {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .playlist-info {
+  padding-right: 0;
+  padding-left: 8px;
+}
+
+[dir="rtl"] .playlist-actions {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .settings-group {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .setting-switch-label {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .ryp-modal-buttons {
+  justify-content: flex-start;
+}
+

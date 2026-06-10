@@ -21,6 +21,107 @@
 
   const PANEL_ID = "ryp-saved-panel";
   let panelVisible = false;
+  let activeLang = "en";
+
+  const TRANSLATIONS = {
+    en: {
+      extensionName: "Playlist Tools",
+      saveLabel: "Save current play order as a snapshot:",
+      saveInputPlaceholder: "e.g. My Custom Sort",
+      clearWatched: "Clear watched badges",
+      savedSnapshots: "Saved Snapshots",
+      noSnapshots: "No snapshots yet.",
+      emptyHint: "Enter a name above and hit Save.",
+      play: "Play",
+      delete: "Delete",
+      save: "Save",
+      saveConfirm: "Playlist snapshot saved!",
+      clearWatchedConfirm: "Watched badges cleared."
+    },
+    fr: {
+      extensionName: "Outils Playlist",
+      saveLabel: "Enregistrer l'ordre de lecture actuel :",
+      saveInputPlaceholder: "ex: Cours inversé",
+      clearWatched: "Effacer vidéos vues",
+      savedSnapshots: "Instantannés",
+      noSnapshots: "Aucun instantané.",
+      emptyHint: "Saisissez un nom ci-dessus et cliquez sur Enreg.",
+      play: "Lire",
+      delete: "Supprimer",
+      save: "Enreg.",
+      saveConfirm: "Instantané enregistré !",
+      clearWatchedConfirm: "Badges de vidéos vues effacés."
+    },
+    ar: {
+      extensionName: "أدوات قائمة التشغيل",
+      saveLabel: "حفظ الترتيب الحالي كلقطة:",
+      saveInputPlaceholder: "مثال: ترتيب عكسي",
+      clearWatched: "مسح شارات المشاهدة",
+      savedSnapshots: "اللقطات المحفوظة",
+      noSnapshots: "لا توجد لقطات بعد.",
+      emptyHint: "أدخل اسمًا أعلاه واضغط حفظ.",
+      play: "تشغيل",
+      delete: "حذف",
+      save: "حفظ",
+      saveConfirm: "تم حفظ لقطة قائمة التشغيل!",
+      clearWatchedConfirm: "تمت إزالة شارات المشاهدة."
+    }
+  };
+
+  const api = typeof browser !== "undefined" ? browser : chrome;
+
+  function applyPanelSettings(settings) {
+    const lang = settings?.lang || "en";
+    activeLang = lang;
+    const dict = TRANSLATIONS[lang] || TRANSLATIONS.en;
+    
+    // Toggle compact mode
+    document.body.classList.toggle("ryp-compact", !!settings?.compact);
+    
+    // Toggle hide badges mode
+    document.body.classList.toggle("ryp-hide-badges", !settings?.showBadges);
+    
+    const panel = document.getElementById(PANEL_ID);
+    if (!panel) return;
+    
+    // Apply layout direction
+    panel.dir = lang === "ar" ? "rtl" : "ltr";
+    
+    // Translate static strings
+    const titleSpan = panel.querySelector(".ryp-panel-title");
+    if (titleSpan && titleSpan.childNodes[1]) {
+      titleSpan.childNodes[1].textContent = " " + dict.extensionName;
+    }
+    
+    const saveLabel = panel.querySelector(".ryp-save-label");
+    if (saveLabel) saveLabel.textContent = dict.saveLabel;
+    
+    const saveInput = panel.querySelector(".ryp-save-input");
+    if (saveInput) saveInput.placeholder = dict.saveInputPlaceholder;
+    
+    const saveConfirm = panel.querySelector(".ryp-save-confirm");
+    if (saveConfirm && saveConfirm.childNodes[1]) {
+      saveConfirm.childNodes[1].textContent = " " + dict.save;
+    }
+    
+    const clearWatched = panel.querySelector(".ryp-clear-watched");
+    if (clearWatched && clearWatched.childNodes[1]) {
+      clearWatched.childNodes[1].textContent = " " + dict.clearWatched;
+    }
+    
+    const sectionTitle = panel.querySelector(".ryp-panel-section-title");
+    if (sectionTitle) sectionTitle.textContent = dict.savedSnapshots;
+    
+    // Re-render list
+    renderList();
+  }
+
+  // Listen for settings changes from the popup
+  api.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.ryp_settings) {
+      applyPanelSettings(changes.ryp_settings.newValue);
+    }
+  });
 
   // ── DOM helpers ───────────────────────────────────────────────────────────
 
@@ -102,7 +203,10 @@
     // Header
     const iconSpan = el("span", { className: "ryp-panel-icon" });
     iconSpan.appendChild(ICONS.panel());
-    const titleSpan = el("span", { className: "ryp-panel-title" }, [iconSpan, " Playlist Tools"]);
+    
+    const titleTextNode = document.createTextNode(" Playlist Tools");
+    const titleSpan = el("span", { className: "ryp-panel-title" }, [iconSpan, titleTextNode]);
+    
     const closeBtn = el("button", {
       className: "ryp-panel-close",
       id: "ryp-panel-close",
@@ -155,6 +259,12 @@
 
     document.body.appendChild(panel);
     bindPanelEvents(panel);
+
+    // Load and apply settings
+    api.storage.local.get("ryp_settings", (res) => {
+      const settings = res.ryp_settings || {};
+      applyPanelSettings(settings);
+    });
   }
 
   function bindPanelEvents(panel) {
@@ -241,20 +351,35 @@
     const playlists = (await State.get(State.keys.savedPlaylists)) || [];
     listEl.replaceChildren(); // clear safely without innerHTML
 
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+
     if (playlists.length === 0) {
       const emptyIcon = el("div", { className: "ryp-empty-icon" });
       emptyIcon.appendChild(ICONS.folder());
-      const emptyText = el("p", { textContent: "No snapshots yet." });
+      const emptyText = el("p", { textContent: dict.noSnapshots });
       const hint = el("p", { className: "ryp-empty-hint" });
-      hint.appendChild(document.createTextNode("Enter a name above and hit "));
-      hint.appendChild(el("strong", { textContent: "Save" }));
-      hint.appendChild(document.createTextNode("."));
+      
+      const strongSave = el("strong", { textContent: dict.save });
+      if (activeLang === "ar") {
+        hint.appendChild(document.createTextNode("أدخل اسمًا أعلاه واضغط "));
+        hint.appendChild(strongSave);
+        hint.appendChild(document.createTextNode("."));
+      } else if (activeLang === "fr") {
+        hint.appendChild(document.createTextNode("Saisissez un nom ci-dessus et cliquez sur "));
+        hint.appendChild(strongSave);
+        hint.appendChild(document.createTextNode("."));
+      } else {
+        hint.appendChild(document.createTextNode("Enter a name above and hit "));
+        hint.appendChild(strongSave);
+        hint.appendChild(document.createTextNode("."));
+      }
+      
       listEl.appendChild(el("div", { className: "ryp-empty-state" }, [emptyIcon, emptyText, hint]));
       return;
     }
 
     for (const pl of playlists) {
-      const date = new Date(pl.savedAt).toLocaleDateString(undefined, {
+      const date = new Date(pl.savedAt).toLocaleDateString(activeLang, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -273,17 +398,17 @@
       // Action buttons — dataset set separately, never via innerHTML
       const playBtn = el("button", {
         className: "ryp-action-play",
-        title: "Open and play this snapshot",
+        title: dict.play,
       });
       playBtn.appendChild(ICONS.play());
-      playBtn.appendChild(document.createTextNode(" Play"));
+      playBtn.appendChild(document.createTextNode(" " + dict.play));
       playBtn.dataset.id = pl.id;
 
       const deleteBtn = el("button", {
         className: "ryp-action-delete",
-        title: "Delete this snapshot",
+        title: dict.delete,
       });
-      deleteBtn.setAttribute("aria-label", `Delete ${pl.name}`);
+      deleteBtn.setAttribute("aria-label", `${dict.delete} ${pl.name}`);
       deleteBtn.appendChild(ICONS.trash());
       deleteBtn.dataset.id = pl.id;
 

@@ -7,17 +7,51 @@
   <body>
     <header class="popup-header">
       <span class="popup-title">
-        <span id="popup-title-icon" class="popup-icon"></span> Playlist Tools
+        <span id="popup-title-icon" class="popup-icon"></span>
+        <span data-i18n="extensionName">Playlist Tools</span>
       </span>
-      <button id="delete-all-btn" class="delete-all-btn" title="Delete all saved snapshots" style="display: none;">Delete All</button>
+      <div class="header-actions">
+        <button id="settings-btn" class="header-action-btn" title="Settings"></button>
+        <button id="delete-all-btn" class="delete-all-btn" data-i18n="deleteAll" style="display: none;">Delete All</button>
+      </div>
     </header>
 
     <main class="popup-main">
+      <!-- Settings Panel -->
+      <div id="settings-panel" class="settings-panel" style="display: none;">
+        <div class="settings-group">
+          <label class="setting-label" data-i18n="language">Language</label>
+          <select id="lang-select" class="setting-select">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="ar">العربية</option>
+          </select>
+        </div>
+        <div class="settings-group">
+          <label class="setting-switch-label">
+            <input type="checkbox" id="skip-watched-toggle">
+            <span class="setting-switch-text" data-i18n="autoSkip">Auto-skip watched</span>
+          </label>
+        </div>
+        <div class="settings-group">
+          <label class="setting-switch-label">
+            <input type="checkbox" id="show-badges-toggle">
+            <span class="setting-switch-text" data-i18n="showBadges">Show watched badges</span>
+          </label>
+        </div>
+        <div class="settings-group">
+          <label class="setting-switch-label">
+            <input type="checkbox" id="compact-toggle">
+            <span class="setting-switch-text" data-i18n="compact">Compact layout</span>
+          </label>
+        </div>
+      </div>
+
       <!-- Save current playlist section, only visible on YouTube playlist watch pages -->
       <div id="save-current-section" class="save-current-section" style="display: none;">
-        <label for="save-input-popup" class="save-label">Save current playlist state:</label>
+        <label for="save-input-popup" class="save-label" data-i18n="saveCurrentSectionLabel">Save current playlist state:</label>
         <div class="save-row">
-          <input type="text" id="save-input-popup" class="save-input" placeholder="e.g. My Custom Sort" maxlength="80">
+          <input type="text" id="save-input-popup" class="save-input" data-i18n="saveInputPlaceholder" placeholder="e.g. My Custom Sort" maxlength="80">
           <button id="save-confirm-popup" class="save-confirm"></button>
         </div>
       </div>
