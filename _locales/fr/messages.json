@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "YouTube Playlist Tools — Reverse & Reorder",
+    "description": "Le nom de l'extension"
+  },
+  "extensionDescription": {
+    "message": "Inversez, mélangez, réorganisez par glisser-déposer et sauvegardez vos playlists YouTube localement. Sans connexion ni suivi.",
+    "description": "La description de l'extension"
+  }
+}

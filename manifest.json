@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Playlist Tools — Reverse & Reorder",
-  "version": "2.0.0",
-  "description": "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking. Privacy-first playlist power.",
+  "name": "__MSG_extensionName__",
+  "version": "2.0.1",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "browser_specific_settings": {
     "gecko": {
       "id": "reverse-playlist@benmoussa",

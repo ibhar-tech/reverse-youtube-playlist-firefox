@@ -115,7 +115,7 @@ ok "Lint passed"
 # ── Step 2: Build zip ────────────────────────────────────────────────────────
 log "Building $ZIP_NAME..."
 rm -f "$ZIP_PATH"
-(cd "$SOURCE_DIR" && zip -r "$ZIP_PATH" manifest.json icons/ src/ \
+(cd "$SOURCE_DIR" && zip -r "$ZIP_PATH" manifest.json icons/ src/ _locales/ \
   --exclude "*.DS_Store" --exclude "*/.git/*")
 ok "Built $ZIP_PATH ($(du -h "$ZIP_PATH" | cut -f1))"
 
@@ -164,7 +164,9 @@ JWT=$(make_jwt)
 
 RELEASE_NOTES_EN="v${VERSION}: Shuffle mode, drag-to-reorder sidebar, save snapshots locally, watched badges, in-page panel. Full modular rewrite. 0 lint errors."
 RELEASE_NOTES_FR="v${VERSION}: Mode aléatoire, réorganisation par glisser-déposer, sauvegarde locale des listes, badges des vidéos visionnées, panneau latéral intégré. Réécriture modulaire complète. 0 erreur."
+RELEASE_NOTES_AR="v${VERSION}: وضع الخلط العشوائي، إعادة ترتيب الشريط الجانبي بالسحب والإفلات، حفظ لقطات قوائم التشغيل محليًا، شارات المشاهدة، لوحة مدمجة. إعادة كتابة برمجية كاملة. 0 أخطاء."
 
+# Create version with currently registered locales first (en-US, fr)
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
   --arg notes_en "$RELEASE_NOTES_EN" \
@@ -182,8 +184,23 @@ VERSION_ID=$(echo "$VERSION_RESPONSE" | jq -r '.id // empty')
 [[ -n "$VERSION_ID" ]] || fail "Version creation failed. Response: $VERSION_RESPONSE"
 ok "Version $VERSION created (version id: $VERSION_ID)"
 
+# Now that the version has been created with the zip, the new locales are registered!
+# We can PATCH the version to include the Arabic release notes.
+log "Adding Arabic release notes to version $VERSION..."
+JWT=$(make_jwt)
+VERSION_PATCH_BODY=$(jq -n \
+  --arg notes_ar "$RELEASE_NOTES_AR" \
+  '{"release_notes": {"ar": $notes_ar}}')
+
+curl -sS \
+  -X PATCH "$AMO_API/addons/addon/$AMO_ADDON_ID/versions/$VERSION_ID/" \
+  -H "Authorization: JWT $JWT" \
+  -H "Content-Type: application/json" \
+  -d "$VERSION_PATCH_BODY" > /dev/null
+ok "Arabic release notes added to version $VERSION"
+
 # ── Step 6: PATCH listing metadata ───────────────────────────────────────────
-log "Updating listing name, summary, and description (en-US and fr)..."
+log "Updating listing name, summary, and description (en-US, fr, and ar)..."
 JWT=$(make_jwt)
 
 LONG_DESC_EN="🎬 REVERSE YouTube playlists — play oldest-first, newest-first, or any custom order.
@@ -222,6 +239,23 @@ Tout s'exécute dans votre navigateur sous forme de script de contenu côté cli
 • Créer une séquence de visionnage personnalisée pour une playlist sélectionnée
 • Reprendre exactement là où vous vous étiez arrêté dans une longue série éducative"
 
+LONG_DESC_AR="🎬 اعكس قوائم تشغيل يوتيوب — شغّل من الأقدم إلى الأحدث، أو من الأحدث إلى الأقدم، أو بأي ترتيب مخصص.
+🔀 اخلط قوائم التشغيل بترتيب عشوائي مستمر يحافظ على ترتيبه أثناء التنقل في التطبيق.
+↕️ اسحب وأعد ترتيب مقاطع الفيديو في الشريط الجانبي دون لمس خوادم يوتيوب.
+💾 احفظ قوائم التشغيل المخصصة محليًا — بدون تسجيل دخول Google، ولا يتم إرسال أي بيانات إلى أي مكان.
+✅ وضع علامة \"تمت المشاهدة\" على مقاطع الفيديو لترى شارة ✓ تلقائيًا.
+
+✨ مجاني تمامًا. بدون إعلانات. بدون تتبع. مفتوح المصدر.
+
+--- كيف يعمل ---
+كل شيء يعمل في متصفحك كبرمجة نصية جانبية للعميل. لا نتصل أبدًا بـ API الخاص بيوتيوب، ولا نقرأ حساب Google الخاص بك، ولا نخزن أي شيء خارج storage.local لمتصفحك.
+
+--- مثالي لـ ---
+• مشاهدة قائمة تشغيل لدورة تعليمية بترتيب الرفع الزمني
+• متابعة مسلسل أو برنامج من أحدث حلقة إلى الأقدم
+• إنشاء تسلسل مشاهدة مخصص لقائمة تشغيل منسقة
+• استئناف المشاهدة من حيث توقفت تمامًا في سلسلة تعليمية طويلة"
+
 PATCH_PAYLOAD=$(jq -n \
   --arg name_en    "YouTube Playlist Tools — Reverse & Reorder" \
   --arg summary_en "Reverse, shuffle, drag-reorder, and save YouTube playlists locally. No login. No tracking." \
@@ -229,7 +263,10 @@ PATCH_PAYLOAD=$(jq -n \
   --arg name_fr    "YouTube Playlist Tools — Reverse & Reorder" \
   --arg summary_fr "Inversez, mélangez, réorganisez par glisser-déposer et sauvegardez vos playlists YouTube localement. Sans connexion ni suivi." \
   --arg desc_fr    "$LONG_DESC_FR" \
-  '{"name": {"en-US": $name_en, "fr": $name_fr}, "summary": {"en-US": $summary_en, "fr": $summary_fr}, "description": {"en-US": $desc_en, "fr": $desc_fr}}')
+  --arg name_ar    "YouTube Playlist Tools — Reverse & Reorder" \
+  --arg summary_ar "اعكس، اخلط، أعد ترتيب قوائم تشغيل يوتيوب بالسحب، واحفظها محليًا. بدون تسجيل دخول، وبدون تتبع." \
+  --arg desc_ar    "$LONG_DESC_AR" \
+  '{"name": {"en-US": $name_en, "fr": $name_fr, "ar": $name_ar}, "summary": {"en-US": $summary_en, "fr": $summary_fr, "ar": $summary_ar}, "description": {"en-US": $desc_en, "fr": $desc_fr, "ar": $desc_ar}}')
 
 PATCH_RESPONSE=$(curl -sS \
   -X PATCH "$AMO_API/addons/addon/$AMO_ADDON_ID/" \
