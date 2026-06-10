@@ -9,20 +9,39 @@
 /* ── Design tokens ──────────────────────────────────────────────────────── */
 
 :root {
-  --ryp-accent:        #3ea6ff;
-  --ryp-accent-hover:  #5cb4ff;
-  --ryp-btn-bg:        rgba(255, 255, 255, 0.08);
-  --ryp-btn-hover:     rgba(255, 255, 255, 0.15);
-  --ryp-btn-text:      #e8e8e8;
-  --ryp-btn-active-bg: #3ea6ff;
-  --ryp-btn-active-text: #0f0f0f;
-  --ryp-panel-bg:      #212121;
-  --ryp-panel-border:  rgba(255, 255, 255, 0.12);
-  --ryp-panel-text:    #e8e8e8;
-  --ryp-panel-sub:     #aaa;
+  /* Default: Light mode values with YouTube spec variables */
+  --ryp-accent:        var(--yt-spec-call-to-action, #065fd4);
+  --ryp-accent-hover:  var(--yt-spec-call-to-action-hover, #0056b3);
+  --ryp-btn-bg:        var(--yt-spec-badge-chip-background, rgba(0, 0, 0, 0.05));
+  --ryp-btn-hover:     var(--yt-spec-button-chip-background-hover, rgba(0, 0, 0, 0.1));
+  --ryp-btn-hover-border: rgba(0, 0, 0, 0.15);
+  --ryp-btn-text:      var(--yt-spec-text-primary, #0f0f0f);
+  --ryp-btn-active-bg: var(--yt-spec-call-to-action, #065fd4);
+  --ryp-btn-active-text: var(--yt-spec-static-brand-white, #ffffff);
+  --ryp-panel-bg:      var(--yt-spec-menu-background, #ffffff);
+  --ryp-panel-border:  var(--yt-spec-10-percent-layer, rgba(0, 0, 0, 0.1));
+  --ryp-panel-text:    var(--yt-spec-text-primary, #0f0f0f);
+  --ryp-panel-sub:     var(--yt-spec-text-secondary, #606060);
   --ryp-radius:        20px;
-  --ryp-shadow:        0 8px 32px rgba(0, 0, 0, 0.55);
+  --ryp-shadow:        var(--yt-spec-shadow-active, 0 4px 16px rgba(0, 0, 0, 0.15));
   --ryp-font:          "Roboto", "Arial", sans-serif;
+}
+
+html[dark] {
+  /* Dark mode overrides */
+  --ryp-accent:        var(--yt-spec-call-to-action, #3ea6ff);
+  --ryp-accent-hover:  var(--yt-spec-call-to-action-hover, #5cb4ff);
+  --ryp-btn-bg:        var(--yt-spec-badge-chip-background, rgba(255, 255, 255, 0.1));
+  --ryp-btn-hover:     var(--yt-spec-button-chip-background-hover, rgba(255, 255, 255, 0.18));
+  --ryp-btn-hover-border: rgba(255, 255, 255, 0.25);
+  --ryp-btn-text:      var(--yt-spec-text-primary, #f1f1f1);
+  --ryp-btn-active-bg: var(--yt-spec-call-to-action, #3ea6ff);
+  --ryp-btn-active-text: var(--yt-spec-static-brand-black, #0f0f0f);
+  --ryp-panel-bg:      var(--yt-spec-menu-background, #212121);
+  --ryp-panel-border:  var(--yt-spec-10-percent-layer, rgba(255, 255, 255, 0.1));
+  --ryp-panel-text:    var(--yt-spec-text-primary, #f1f1f1);
+  --ryp-panel-sub:     var(--yt-spec-text-secondary, #aaa);
+  --ryp-shadow:        var(--yt-spec-shadow-active, 0 8px 32px rgba(0, 0, 0, 0.5));
 }
 
 /* ── Toolbar container ──────────────────────────────────────────────────── */
@@ -59,7 +78,7 @@
 
 .ryp-btn:hover {
   background: var(--ryp-btn-hover);
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: var(--ryp-btn-hover-border);
   transform: translateY(-1px);
 }
 
