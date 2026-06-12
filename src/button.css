@@ -409,6 +409,43 @@ html[dark] .ryp-save-input {
   color: #ef4444;
 }
 
+/* Import / Export backup row */
+.ryp-panel-tools-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ryp-panel-tool {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-md);
+  color: var(--ryp-sub);
+  font-family: var(--ryp-font);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 9px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.ryp-panel-tool:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: var(--ryp-accent-start);
+}
+
+.ryp-panel-tool svg {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0;
+}
+
 /* Snapshots Section Header */
 .ryp-panel-section-title {
   padding: 20px 24px 8px;
@@ -553,6 +590,33 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
   height: 12px;
 }
 
+/* Duplicate snapshot button — same shape as delete, indigo hover */
+.ryp-action-duplicate {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-md);
+  color: var(--ryp-sub);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.ryp-action-duplicate:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: var(--ryp-accent-start);
+  transform: scale(1.05);
+}
+
+.ryp-action-duplicate svg {
+  width: 12px;
+  height: 12px;
+}
+
 /* Empty State */
 .ryp-empty-state {
   text-align: center;
@@ -622,6 +686,85 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
 #ryp-toast.ryp-toast-show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* ── Resume Toast (with action button) ──────────────────────────────────── */
+
+#ryp-resume-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(560px, calc(100vw - 48px));
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f8fafc;
+  font-family: var(--ryp-font);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px 10px 20px;
+  border-radius: var(--ryp-radius-pill);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#ryp-resume-toast.ryp-toast-show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.ryp-resume-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ryp-resume-btn {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  font-family: var(--ryp-font);
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--ryp-accent-grad, linear-gradient(135deg, #6366f1, #a855f7));
+  border: none;
+  border-radius: var(--ryp-radius-pill);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ryp-resume-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+}
+
+.ryp-resume-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  border-radius: var(--ryp-radius-pill);
+  color: rgba(248, 250, 252, 0.6);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.ryp-resume-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
 }
 
 /* ── Icon Constraint Fixes ──────────────────────────────────────────────── */

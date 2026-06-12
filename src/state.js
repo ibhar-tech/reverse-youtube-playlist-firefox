@@ -44,6 +44,7 @@
       shuffle: (id) => `shuffle:${id}`,
       customOrder: (id) => `customOrder:${id}`,
       watched: (id) => `watched:${id}`,
+      progress: (id) => `progress:${id}`,
       savedPlaylists: "savedPlaylists",
     },
   };

@@ -36,7 +36,18 @@
       delete: "Delete",
       save: "Save",
       saveConfirm: "Playlist snapshot saved!",
-      clearWatchedConfirm: "Watched badges cleared."
+      clearWatchedConfirm: "Watched badges cleared.",
+      export: "Export",
+      import: "Import",
+      exportTitle: "Export saved playlists to a file",
+      importTitle: "Import saved playlists from a file",
+      exportEmpty: "Nothing to export yet.",
+      importDone: "✓ Imported {added} playlist(s), skipped {skipped} duplicate(s).",
+      importInvalid: "Invalid backup file — nothing imported.",
+      duplicate: "Duplicate",
+      copySuffix: "(copy)",
+      resume: "Resume",
+      resumeMessage: "Continue where you left off — {title} · {time}"
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -50,7 +61,18 @@
       delete: "Supprimer",
       save: "Enreg.",
       saveConfirm: "Instantané enregistré !",
-      clearWatchedConfirm: "Badges de vidéos vues effacés."
+      clearWatchedConfirm: "Badges de vidéos vues effacés.",
+      export: "Exporter",
+      import: "Importer",
+      exportTitle: "Exporter les playlists sauvegardées",
+      importTitle: "Importer des playlists depuis un fichier",
+      exportEmpty: "Rien à exporter pour l'instant.",
+      importDone: "✓ {added} playlist(s) importée(s), {skipped} doublon(s) ignoré(s).",
+      importInvalid: "Fichier de sauvegarde invalide — rien n'a été importé.",
+      duplicate: "Dupliquer",
+      copySuffix: "(copie)",
+      resume: "Reprendre",
+      resumeMessage: "Reprendre où vous étiez — {title} · {time}"
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -64,7 +86,18 @@
       delete: "حذف",
       save: "حفظ",
       saveConfirm: "تم حفظ لقطة قائمة التشغيل!",
-      clearWatchedConfirm: "تمت إزالة شارات المشاهدة."
+      clearWatchedConfirm: "تمت إزالة شارات المشاهدة.",
+      export: "تصدير",
+      import: "استيراد",
+      exportTitle: "تصدير قوائم التشغيل المحفوظة إلى ملف",
+      importTitle: "استيراد قوائم تشغيل من ملف",
+      exportEmpty: "لا يوجد شيء للتصدير بعد.",
+      importDone: "✓ تم استيراد {added} قائمة، وتخطي {skipped} مكررة.",
+      importInvalid: "ملف نسخ احتياطي غير صالح — لم يتم استيراد أي شيء.",
+      duplicate: "تكرار",
+      copySuffix: "(نسخة)",
+      resume: "متابعة",
+      resumeMessage: "المتابعة من حيث توقفت — {title} · {time}"
     }
   };
 
@@ -107,6 +140,18 @@
     const clearWatched = panel.querySelector(".ryp-clear-watched");
     if (clearWatched && clearWatched.childNodes[1]) {
       clearWatched.childNodes[1].textContent = " " + dict.clearWatched;
+    }
+
+    const exportBtn = panel.querySelector("#ryp-export-btn");
+    if (exportBtn && exportBtn.childNodes[1]) {
+      exportBtn.childNodes[1].textContent = " " + dict.export;
+      exportBtn.title = dict.exportTitle;
+    }
+
+    const importBtn = panel.querySelector("#ryp-import-btn");
+    if (importBtn && importBtn.childNodes[1]) {
+      importBtn.childNodes[1].textContent = " " + dict.import;
+      importBtn.title = dict.importTitle;
     }
     
     const sectionTitle = panel.querySelector(".ryp-panel-section-title");
@@ -192,6 +237,20 @@
     ]),
     folder: () => svg("ryp-folder-icon-svg", "0 0 24 24", 2, [
       { tag: "path", attrs: { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" } }
+    ]),
+    download: () => svg("ryp-download-icon-svg", "0 0 24 24", 2, [
+      { tag: "path", attrs: { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" } },
+      { tag: "polyline", attrs: { points: "7 10 12 15 17 10" } },
+      { tag: "line", attrs: { x1: "12", y1: "15", x2: "12", y2: "3" } }
+    ]),
+    upload: () => svg("ryp-upload-icon-svg", "0 0 24 24", 2, [
+      { tag: "path", attrs: { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" } },
+      { tag: "polyline", attrs: { points: "17 8 12 3 7 8" } },
+      { tag: "line", attrs: { x1: "12", y1: "3", x2: "12", y2: "15" } }
+    ]),
+    copy: () => svg("ryp-copy-icon-svg", "0 0 24 24", 2, [
+      { tag: "rect", attrs: { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" } },
+      { tag: "path", attrs: { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" } }
     ])
   };
 
@@ -242,8 +301,36 @@
     clearWatchedBtn.appendChild(ICONS.clear());
     clearWatchedBtn.appendChild(document.createTextNode(" Clear watched badges"));
 
+    // Import / export backup row
+    const exportBtn = el("button", {
+      className: "ryp-panel-tool",
+      id: "ryp-export-btn",
+      title: "Export saved playlists to a file",
+    });
+    exportBtn.appendChild(ICONS.download());
+    exportBtn.appendChild(document.createTextNode(" Export"));
+
+    const importBtn = el("button", {
+      className: "ryp-panel-tool",
+      id: "ryp-import-btn",
+      title: "Import saved playlists from a file",
+    });
+    importBtn.appendChild(ICONS.upload());
+    importBtn.appendChild(document.createTextNode(" Import"));
+
+    const importInput = el("input", {
+      type: "file",
+      id: "ryp-import-input",
+      accept: ".json,application/json",
+    });
+    importInput.style.display = "none";
+
+    const toolsRow = el("div", { className: "ryp-panel-tools-row" }, [
+      exportBtn, importBtn, importInput,
+    ]);
+
     const saveSection = el("div", { className: "ryp-panel-save-section" }, [
-      saveLabel, saveRow, clearWatchedBtn,
+      saveLabel, saveRow, clearWatchedBtn, toolsRow,
     ]);
 
     // List
@@ -293,6 +380,45 @@
       await Playback.clearWatched(listId);
       await window.RYP.Sidebar.applyWatchedBadges();
       showToast("Watched badges cleared for this playlist.");
+    });
+
+    const Backup = window.RYP.Backup;
+    const importInput = panel.querySelector("#ryp-import-input");
+
+    panel.querySelector("#ryp-export-btn").addEventListener("click", async () => {
+      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+      const playlists = (await State.get(State.keys.savedPlaylists)) || [];
+      if (playlists.length === 0) {
+        showToast(dict.exportEmpty);
+        return;
+      }
+      Backup.triggerDownload(playlists);
+    });
+
+    panel.querySelector("#ryp-import-btn").addEventListener("click", () => {
+      importInput.click();
+    });
+
+    importInput.addEventListener("change", async () => {
+      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+      const file = importInput.files && importInput.files[0];
+      importInput.value = ""; // allow re-selecting the same file
+      if (!file) return;
+      try {
+        const incoming = Backup.parseImport(await file.text());
+        const existing = (await State.get(State.keys.savedPlaylists)) || [];
+        const { merged, added, skipped } = Backup.mergeSnapshots(existing, incoming);
+        await State.set(State.keys.savedPlaylists, merged);
+        await renderList();
+        showToast(
+          dict.importDone
+            .replace("{added}", String(added))
+            .replace("{skipped}", String(skipped))
+        );
+      } catch (err) {
+        console.warn("Import failed:", err);
+        showToast(dict.importInvalid);
+      }
     });
 
     // Close when clicking outside the panel.
@@ -404,6 +530,14 @@
       playBtn.appendChild(document.createTextNode(" " + dict.play));
       playBtn.dataset.id = pl.id;
 
+      const duplicateBtn = el("button", {
+        className: "ryp-action-duplicate",
+        title: dict.duplicate,
+      });
+      duplicateBtn.setAttribute("aria-label", `${dict.duplicate} ${pl.name}`);
+      duplicateBtn.appendChild(ICONS.copy());
+      duplicateBtn.dataset.id = pl.id;
+
       const deleteBtn = el("button", {
         className: "ryp-action-delete",
         title: dict.delete,
@@ -412,7 +546,7 @@
       deleteBtn.appendChild(ICONS.trash());
       deleteBtn.dataset.id = pl.id;
 
-      const actionsCol = el("div", { className: "ryp-saved-actions" }, [playBtn, deleteBtn]);
+      const actionsCol = el("div", { className: "ryp-saved-actions" }, [playBtn, duplicateBtn, deleteBtn]);
       const card = el("div", { className: "ryp-saved-card" }, [infoCol, actionsCol]);
 
       playBtn.addEventListener("click", async () => {
@@ -425,6 +559,24 @@
         await Playback.applyCustomOrder(pl.sourceListId, pl.order);
         const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}&list=${pl.sourceListId}&index=${firstIndex}`;
         window.open(url, "_self");
+      });
+
+      duplicateBtn.addEventListener("click", async () => {
+        const saved = (await State.get(State.keys.savedPlaylists)) || [];
+        const pos = saved.findIndex((p) => p.id === pl.id);
+        if (pos === -1) return;
+        const src = saved[pos];
+        const copy = {
+          ...src,
+          id: window.RYP.Backup.freshId(),
+          name: `${src.name} ${dict.copySuffix}`.slice(0, 80),
+          order: [...src.order],
+          videos: src.videos.map((v) => ({ ...v })),
+          savedAt: new Date().toISOString(),
+        };
+        saved.splice(pos + 1, 0, copy);
+        await State.set(State.keys.savedPlaylists, saved);
+        await renderList();
       });
 
       deleteBtn.addEventListener("click", async () => {
@@ -463,6 +615,68 @@
     void toast.offsetWidth;
     toast.classList.add("ryp-toast-show");
     setTimeout(() => toast.remove(), 3200);
+  }
+
+  // ── Resume toast ──────────────────────────────────────────────────────────
+
+  function formatTime(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = String(s % 60).padStart(2, "0");
+    return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+  }
+
+  /** Action toast offering to jump back to the last recorded position. */
+  function showResumeToast(prog, listId) {
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    const existing = document.getElementById("ryp-resume-toast");
+    if (existing) existing.remove();
+
+    const toast = el("div", { id: "ryp-resume-toast", role: "status" });
+    toast.dir = activeLang === "ar" ? "rtl" : "ltr";
+
+    const text = el("span", { className: "ryp-resume-text" });
+    text.textContent = dict.resumeMessage
+      .replace("{title}", prog.title || "…")
+      .replace("{time}", formatTime(prog.t || 0));
+
+    const resumeBtn = el("button", {
+      className: "ryp-resume-btn",
+      textContent: dict.resume,
+    });
+    const closeBtn = el("button", {
+      className: "ryp-resume-close",
+      "aria-label": "Dismiss",
+      textContent: "✕",
+    });
+
+    const hide = () => {
+      toast.classList.remove("ryp-toast-show");
+      setTimeout(() => toast.remove(), 300);
+    };
+    const autoHide = setTimeout(hide, 12000);
+
+    resumeBtn.addEventListener("click", () => {
+      clearTimeout(autoHide);
+      const t = Math.max(0, Math.floor(prog.t || 0));
+      const idxParam = Number.isFinite(prog.index) && prog.index
+        ? `&index=${prog.index}`
+        : "";
+      window.open(
+        `https://www.youtube.com/watch?v=${prog.videoId}&list=${listId}${idxParam}&t=${t}s`,
+        "_self"
+      );
+    });
+    closeBtn.addEventListener("click", () => {
+      clearTimeout(autoHide);
+      hide();
+    });
+
+    toast.append(text, resumeBtn, closeBtn);
+    document.body.appendChild(toast);
+    void toast.offsetWidth;
+    toast.classList.add("ryp-toast-show");
   }
 
   // ── Custom Modal ──────────────────────────────────────────────────────────
@@ -536,6 +750,7 @@
     togglePanel,
     isPanelVisible: () => panelVisible,
     showToast,
+    showResumeToast,
     saveCurrentOrder,
     renderList,
     showSaveModal,

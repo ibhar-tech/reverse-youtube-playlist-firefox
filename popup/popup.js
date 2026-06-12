@@ -22,9 +22,10 @@
   const badgesToggle = document.getElementById("show-badges-toggle");
   const compactToggle = document.getElementById("compact-toggle");
   const loopToggle = document.getElementById("loop-toggle");
+  const resumeToggle = document.getElementById("resume-toggle");
 
   let activeTabId = null;
-  let currentSettings = { lang: "en", autoSkip: false, showBadges: true, compact: false, loop: false };
+  let currentSettings = { lang: "en", autoSkip: false, showBadges: true, compact: false, loop: false, resumePrompt: true };
 
   // ── Translations Dictionary ────────────────────────────────────────────────
 
@@ -64,6 +65,9 @@
       clearWatchedConfirm: "Watched badges cleared.",
       saveCurrentSectionLabel: "Save current playlist state:",
       loop: "Loop playlist order",
+      resumePrompt: "Offer to resume playlists",
+      duplicate: "Duplicate",
+      copySuffix: "(copy)",
       rateUs: "Enjoying it? Leave a review ★",
       exportTitle: "Export saved playlists to a file",
       importTitle: "Import saved playlists from a file",
@@ -106,6 +110,9 @@
       clearWatchedConfirm: "Badges de vidéos vues effacés.",
       saveCurrentSectionLabel: "Enregistrer l'état actuel :",
       loop: "Lecture en boucle",
+      resumePrompt: "Proposer la reprise de lecture",
+      duplicate: "Dupliquer",
+      copySuffix: "(copie)",
       rateUs: "Vous aimez ? Laissez un avis ★",
       exportTitle: "Exporter les playlists sauvegardées",
       importTitle: "Importer des playlists depuis un fichier",
@@ -148,6 +155,9 @@
       clearWatchedConfirm: "تمت إزالة شارات المشاهدة.",
       saveCurrentSectionLabel: "حفظ حالة قائمة التشغيل الحالية:",
       loop: "تكرار قائمة التشغيل",
+      resumePrompt: "اقتراح استئناف المشاهدة",
+      duplicate: "تكرار اللقطة",
+      copySuffix: "(نسخة)",
       rateUs: "أعجبك الامتداد؟ اترك تقييمًا ★",
       exportTitle: "تصدير قوائم التشغيل المحفوظة إلى ملف",
       importTitle: "استيراد قوائم تشغيل من ملف",
@@ -196,6 +206,10 @@
     ]),
     play: () => svg("play-icon-svg", "0 0 24 24", 2, [
       { tag: "polygon", attrs: { points: "5 3 19 12 5 21 5 3" } }
+    ]),
+    copy: () => svg("copy-icon-svg", "0 0 24 24", 2, [
+      { tag: "rect", attrs: { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" } },
+      { tag: "path", attrs: { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" } }
     ]),
     edit: () => svg("edit-icon-svg", "0 0 24 24", 2, [
       { tag: "path", attrs: { d: "M12 20h9" } },
@@ -406,6 +420,7 @@
           showBadges: loaded.showBadges ?? true,
           compact: loaded.compact ?? false,
           loop: loaded.loop ?? false,
+          resumePrompt: loaded.resumePrompt ?? true,
         };
         resolve(currentSettings);
       });
@@ -426,6 +441,7 @@
     badgesToggle.checked = currentSettings.showBadges;
     compactToggle.checked = currentSettings.compact;
     loopToggle.checked = currentSettings.loop;
+    resumeToggle.checked = currentSettings.resumePrompt;
 
     // Apply translation & direction
     translateUI();
@@ -466,45 +482,16 @@
     saveSettings();
   });
 
+  resumeToggle.addEventListener("change", (e) => {
+    currentSettings.resumePrompt = e.target.checked;
+    saveSettings();
+  });
+
   // ── Import / Export ───────────────────────────────────────────────────────
+  // Validation/merge/download logic is shared with the in-page panel via
+  // window.RYP.Backup (src/backup.js, loaded by popup.html).
 
-  const ID_RE = /^[A-Za-z0-9_-]{5,64}$/; // YouTube video/playlist id charset
-
-  function freshId() {
-    return crypto.randomUUID
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  }
-
-  function isValidSnapshot(p) {
-    return (
-      p && typeof p === "object" &&
-      typeof p.name === "string" && p.name.trim() &&
-      typeof p.sourceListId === "string" && ID_RE.test(p.sourceListId) &&
-      Array.isArray(p.order) && p.order.length > 0 &&
-      p.order.every((n) => Number.isFinite(Number(n))) &&
-      Array.isArray(p.videos)
-    );
-  }
-
-  /** Rebuild a snapshot from untrusted input, keeping only known fields. */
-  function normalizeSnapshot(p) {
-    return {
-      id: typeof p.id === "string" && p.id ? p.id.slice(0, 64) : freshId(),
-      name: p.name.trim().slice(0, 80),
-      sourceListId: p.sourceListId,
-      order: p.order.map(Number),
-      videos: p.videos
-        .filter((v) => v && typeof v === "object" && ID_RE.test(v.videoId || ""))
-        .map((v) => ({
-          index: Number(v.index),
-          videoId: v.videoId,
-          title: typeof v.title === "string" ? v.title.slice(0, 300) : "",
-          thumbnail: typeof v.thumbnail === "string" ? v.thumbnail.slice(0, 500) : "",
-        })),
-      savedAt: typeof p.savedAt === "string" ? p.savedAt : new Date().toISOString(),
-    };
-  }
+  const Backup = window.RYP.Backup;
 
   async function exportPlaylists() {
     const dict = getDict();
@@ -514,56 +501,19 @@
       showPopupToast(dict.exportEmpty, true);
       return;
     }
-    const payload = {
-      schema: "ryp-saved-playlists",
-      schemaVersion: 1,
-      exportedAt: new Date().toISOString(),
-      playlists,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = el("a", {
-      href: url,
-      download: `playlist-tools-backup-${new Date().toISOString().slice(0, 10)}.json`,
-    });
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    Backup.triggerDownload(playlists);
   }
 
   async function importPlaylists(file) {
     const dict = getDict();
     try {
-      const data = JSON.parse(await file.text());
-      // Accept both the v3 backup envelope and a raw snapshot array.
-      const incoming = Array.isArray(data) ? data : data && data.playlists;
-      if (!Array.isArray(incoming)) throw new Error("not a backup file");
-
-      const valid = incoming.filter(isValidSnapshot).map(normalizeSnapshot);
-      if (valid.length === 0) throw new Error("no valid playlists");
-
+      const incoming = Backup.parseImport(await file.text());
       const res = await api.storage.local.get("savedPlaylists");
-      const existing = res.savedPlaylists || [];
-      const byId = new Map(existing.map((p) => [p.id, p]));
-      let added = 0;
-      let skipped = 0;
-
-      for (const pl of valid) {
-        const dup = byId.get(pl.id);
-        if (dup && dup.savedAt === pl.savedAt && dup.name === pl.name) {
-          skipped++;
-          continue;
-        }
-        if (dup) pl.id = freshId(); // same id, different content — keep both
-        byId.set(pl.id, pl);
-        existing.push(pl);
-        added++;
-      }
-
-      await api.storage.local.set({ savedPlaylists: existing });
+      const { merged, added, skipped } = Backup.mergeSnapshots(
+        res.savedPlaylists || [],
+        incoming
+      );
+      await api.storage.local.set({ savedPlaylists: merged });
       await renderPlaylists();
       showPopupToast(
         dict.importDone
@@ -676,6 +626,12 @@
       playBtn.appendChild(ICONS.play());
       playBtn.appendChild(document.createTextNode(" " + dict.play));
 
+      const duplicateBtn = el("button", {
+        className: "action-duplicate",
+        title: dict.duplicate,
+      });
+      duplicateBtn.appendChild(ICONS.copy());
+
       const renameBtn = el("button", {
         className: "action-rename",
         title: dict.rename,
@@ -688,7 +644,7 @@
       });
       deleteBtn.appendChild(ICONS.trash());
 
-      const actionsCol = el("div", { className: "playlist-actions" }, [playBtn, renameBtn, deleteBtn]);
+      const actionsCol = el("div", { className: "playlist-actions" }, [playBtn, duplicateBtn, renameBtn, deleteBtn]);
       const card = el("div", { className: "playlist-card" }, [infoCol, actionsCol]);
 
       // Play action
@@ -727,6 +683,28 @@
             api.tabs.create({ url: url });
             window.close();
           });
+      });
+
+      // Duplicate action — inserts the copy right after the original
+      duplicateBtn.addEventListener("click", () => {
+        api.storage.local.get("savedPlaylists", (res) => {
+          const saved = res.savedPlaylists || [];
+          const pos = saved.findIndex((p) => p.id === pl.id);
+          if (pos === -1) return;
+          const src = saved[pos];
+          const copy = {
+            ...src,
+            id: Backup.freshId(),
+            name: `${src.name} ${dict.copySuffix}`.slice(0, 80),
+            order: [...src.order],
+            videos: src.videos.map((v) => ({ ...v })),
+            savedAt: new Date().toISOString(),
+          };
+          saved.splice(pos + 1, 0, copy);
+          api.storage.local.set({ savedPlaylists: saved }, () => {
+            renderPlaylists();
+          });
+        });
       });
 
       // Rename action (Update)

@@ -313,7 +313,8 @@ body {
   height: 10px;
 }
 
-/* Secondary Action Buttons (Rename / Delete) */
+/* Secondary Action Buttons (Duplicate / Rename / Delete) */
+.action-duplicate,
 .action-rename,
 .action-delete {
   width: 28px;
@@ -330,6 +331,7 @@ body {
   outline: none;
 }
 
+.action-duplicate:hover,
 .action-rename:hover {
   background: rgba(99, 102, 241, 0.08);
   border-color: rgba(99, 102, 241, 0.3);
@@ -344,6 +346,7 @@ body {
   transform: scale(1.05);
 }
 
+.action-duplicate svg,
 .action-rename svg,
 .action-delete svg {
   width: 12px;
@@ -706,6 +709,7 @@ body.ryp-compact .action-play {
   padding: 6px 10px;
 }
 
+body.ryp-compact .action-duplicate,
 body.ryp-compact .action-rename,
 body.ryp-compact .action-delete {
   width: 24px;

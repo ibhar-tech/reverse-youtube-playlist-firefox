@@ -162,8 +162,8 @@ done
 log "Creating version $VERSION on the listing..."
 JWT=$(make_jwt)
 
-RELEASE_NOTES_EN="v${VERSION}: Import/export saved playlists as JSON backup files, playing a saved snapshot now restores its exact order, new loop-playlist-order setting, watched tracking now works in reverse/shuffle modes and survives playlist edits, reverse playback now stops cleanly at the end instead of falling back to YouTube autoplay, and big performance improvements on long sessions."
-RELEASE_NOTES_FR="v${VERSION}: Import/export des playlists sauvegardées en fichiers JSON, la lecture d'un instantané restaure désormais son ordre exact, nouvelle option de lecture en boucle, le suivi des vidéos vues fonctionne maintenant en mode inverse/aléatoire et survit aux modifications de playlist, la lecture inversée s'arrête proprement à la fin, et grosses améliorations de performance."
+RELEASE_NOTES_EN="v${VERSION}: Resume where you left off — a one-click prompt jumps back to your last position in any playlist (per-playlist, stored locally, can be disabled in settings). Import/export buttons are now also available in the in-page panel, and a new Duplicate action clones any saved snapshot so you can build variants of a list."
+RELEASE_NOTES_FR="v${VERSION}: Reprenez où vous étiez — une invite en un clic vous ramène à votre dernière position dans chaque playlist (stockée localement, désactivable dans les paramètres). Les boutons d'import/export sont désormais aussi dans le panneau intégré, et une nouvelle action Dupliquer clone n'importe quel instantané pour créer des variantes d'une liste."
 
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
@@ -201,6 +201,7 @@ LONG_DESC_EN="🎬 REVERSE YouTube playlists — play oldest-first, newest-first
 ↕️ DRAG & REORDER videos in the sidebar without touching YouTube's servers.
 💾 SAVE custom playlists locally — no Google login, no data sent anywhere.
 📤 EXPORT & IMPORT your saved playlists as JSON backup files — your lists are permanent and portable across devices.
+⏯️ RESUME WHERE YOU LEFT OFF — a one-click prompt jumps back to your last position in any playlist.
 🔁 LOOP your custom play order endlessly with one setting.
 ✅ MARK videos as watched and see a ✓ badge automatically — tracking survives playlist edits.
 ⏭️ AUTO-SKIP already watched videos automatically to save time.
@@ -226,6 +227,7 @@ LONG_DESC_FR="🎬 INVERSEZ les playlists YouTube — lisez du plus ancien au pl
 ↕️ GLISSEZ & RÉORGANISEZ les vidéos dans la barre latérale sans toucher aux serveurs de YouTube.
 💾 SAUVEGARDEZ des playlists personnalisées localement — pas de connexion Google, aucune donnée envoyée.
 📤 EXPORTEZ & IMPORTEZ vos playlists sauvegardées en fichiers JSON — vos listes sont permanentes et portables entre appareils.
+⏯️ REPRENEZ OÙ VOUS ÉTIEZ — une invite en un clic vous ramène à votre dernière position dans chaque playlist.
 🔁 LISEZ EN BOUCLE votre ordre de lecture personnalisé avec une seule option.
 ✅ MARQUEZ les vidéos comme lues et voyez un badge ✓ s'afficher automatiquement — le suivi survit aux modifications de playlist.
 ⏭️ PASSEZ AUTOMATIQUEMENT les vidéos déjà vues pour gagner du temps.

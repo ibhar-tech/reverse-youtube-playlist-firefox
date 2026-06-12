@@ -2,7 +2,7 @@
 
 > **Reverse, shuffle, drag-reorder, and save YouTube playlists — locally, privately, with zero logins.**
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
 [![Firefox](https://img.shields.io/badge/Firefox-≥140-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 [![Privacy: No data collected](https://img.shields.io/badge/Privacy-No%20data%20collected-brightgreen?style=flat-square)]()
@@ -17,7 +17,9 @@
 | **⤮ Shuffle** | Fisher-Yates randomises the play order and remembers it so the same random sequence survives in-app navigation. |
 | **⠿ Reorder** | Enables drag-and-drop on the sidebar. Drag any video to a new position; the custom order is saved automatically. |
 | **🎵 My Lists** | Opens a slide-in panel to name and save a snapshot of the current order. Playing a snapshot restores its exact saved order — your lists are permanent. |
-| **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and Firefox profiles. |
+| **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and Firefox profiles. Available from the popup and the in-page panel. |
+| **⏯️ Resume** | A one-click prompt jumps back to the video and timestamp where you left off in any playlist. Per-playlist, stored locally, can be turned off in settings. |
+| **⧉ Duplicate** | Clone any saved snapshot with one click to build variants of a list. |
 | **🔁 Loop** | Optional setting: when the active play order ends, start it over instead of stopping. |
 | **✓ Watched badges** | A blue ✓ badge appears on any video you've fully watched. Tracked by video ID, so badges survive playlist edits. Optional auto-skip of watched videos. |
 
@@ -65,6 +67,7 @@ web-ext lint         # validate manifest before submission
 ```
 manifest.json          MV3 manifest — file load order, permissions, metadata
 src/
+  backup.js            Shared import/export helpers — validate, merge, download (RYP.Backup)
   state.js             Storage key definitions + read/write helpers (RYP.State)
   playlist.js          DOM reading, navigation, YouTube selector constants (RYP.Playlist)
   playback.js          Reverse / shuffle / custom-order engine + watch tracking (RYP.Playback)
@@ -106,6 +109,11 @@ bootstrap            ← content.js    (needs all of the above)
 ---
 
 ## 📋 Changelog
+
+### v3.1.0 — 2026-06
+- ✨ **Resume where you left off** — playback position is recorded per playlist (locally); a toast offers a one-click jump back to your last video + timestamp. Toggle in settings.
+- ✨ **Import/Export in the in-page panel** — backup buttons no longer require opening the popup; logic shared via `src/backup.js`
+- ✨ **Duplicate snapshot** — clone a saved list (popup + panel) to build variants
 
 ### v3.0.0 — 2026-06
 - ✨ **Import / Export** — back up saved playlists to a JSON file and restore them anywhere

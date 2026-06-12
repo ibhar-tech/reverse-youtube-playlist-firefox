@@ -36,6 +36,7 @@
   
   let autoSkipEnabled = false;
   let loopEnabled = false;
+  let resumePromptEnabled = true;
   // Watched entries are videoId strings since v3; legacy entries may still be
   // playlist indices (numbers) until migrated by loadState().
   let cachedWatched = [];
@@ -44,6 +45,7 @@
   function updateSettings(settings) {
     autoSkipEnabled = !!settings?.autoSkip;
     loopEnabled = !!settings?.loop;
+    resumePromptEnabled = settings?.resumePrompt ?? true;
   }
 
   api.storage.local.get("ryp_settings").then((res) => {
@@ -199,7 +201,54 @@
     return changed ? out : null;
   }
 
+  // ── Watch-progress recording (resume where you left off) ────────────────
+
+  const PROGRESS_SAVE_MS = 5000;
+  // listIds whose stored progress has been read for a resume offer this
+  // session. Recording is held off until then so a fresh save can't clobber
+  // the resume point before it is offered.
+  const resumeChecked = new Set();
+  let lastProgressSave = 0;
+
+  function onProgressTick(e) {
+    const v = e.target;
+    if (!v || !Playlist.isPlaylistWatchPage()) return;
+    if (!v.duration || !isFinite(v.duration) || v.duration < 1) return;
+    const now = Date.now();
+    if (now - lastProgressSave < PROGRESS_SAVE_MS) return;
+
+    const listId = Playlist.getPlaylistId();
+    const videoId = new URLSearchParams(location.search).get("v");
+    if (!listId || !videoId || !resumeChecked.has(listId)) return;
+    // Don't let ad playback positions overwrite real progress.
+    if (document.querySelector(".html5-video-player.ad-showing")) return;
+
+    lastProgressSave = now;
+    State.set(State.keys.progress(listId), {
+      videoId,
+      index: Playlist.currentIndex(),
+      t: Math.floor(v.currentTime),
+      title: (document.title || "").replace(/ - YouTube$/, "").slice(0, 200),
+      updatedAt: Date.now(),
+    });
+  }
+
+  /** Offer to jump back to the last recorded position, once per playlist. */
+  async function maybeOfferResume(listId) {
+    if (resumeChecked.has(listId)) return;
+    resumeChecked.add(listId);
+    if (!resumePromptEnabled) return;
+
+    const prog = await State.get(State.keys.progress(listId));
+    if (!prog || !prog.videoId) return;
+    const currentVideoId = new URLSearchParams(location.search).get("v");
+    if (prog.videoId === currentVideoId) return; // already on that video
+
+    window.RYP.Panel?.showResumeToast(prog, listId);
+  }
+
   document.addEventListener("timeupdate", onTimeUpdate, true);
+  document.addEventListener("timeupdate", onProgressTick, true);
   document.addEventListener("ended", onEnded, true);
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -230,6 +279,8 @@
       }
       const idx = Playlist.currentIndex();
       endHandled = false; // new video settled — re-arm the near-end trigger
+
+      maybeOfferResume(Playlist.getPlaylistId());
 
       // Fallback: catch a forward advance that the near-end trigger missed.
       if (
