@@ -47,7 +47,10 @@
       duplicate: "Duplicate",
       copySuffix: "(copy)",
       resume: "Resume",
-      resumeMessage: "Continue where you left off — {title} · {time}"
+      resumeMessage: "Continue where you left off — {title} · {time}",
+      cancel: "Cancel",
+      close: "Close",
+      videosWord: "videos"
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -72,7 +75,10 @@
       duplicate: "Dupliquer",
       copySuffix: "(copie)",
       resume: "Reprendre",
-      resumeMessage: "Reprendre où vous étiez — {title} · {time}"
+      resumeMessage: "Reprendre où vous étiez — {title} · {time}",
+      cancel: "Annuler",
+      close: "Fermer",
+      videosWord: "vidéos"
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -97,7 +103,10 @@
       duplicate: "تكرار",
       copySuffix: "(نسخة)",
       resume: "متابعة",
-      resumeMessage: "المتابعة من حيث توقفت — {title} · {time}"
+      resumeMessage: "المتابعة من حيث توقفت — {title} · {time}",
+      cancel: "إلغاء",
+      close: "إغلاق",
+      videosWord: "فيديو"
     }
   };
 
@@ -156,6 +165,12 @@
     
     const sectionTitle = panel.querySelector(".ryp-panel-section-title");
     if (sectionTitle) sectionTitle.textContent = dict.savedSnapshots;
+
+    const closeBtn = panel.querySelector(".ryp-panel-close");
+    if (closeBtn) {
+      closeBtn.title = dict.close;
+      closeBtn.setAttribute("aria-label", dict.close);
+    }
     
     // Re-render list
     renderList();
@@ -371,7 +386,8 @@
       await saveCurrentOrder(name);
       input.value = "";
       await renderList();
-      showToast("✓ Playlist snapshot saved!");
+      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+      showToast("✓ " + dict.saveConfirm);
     });
 
     panel.querySelector("#ryp-clear-watched").addEventListener("click", async () => {
@@ -379,7 +395,8 @@
       if (!listId) return;
       await Playback.clearWatched(listId);
       await window.RYP.Sidebar.applyWatchedBadges();
-      showToast("Watched badges cleared for this playlist.");
+      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+      showToast(dict.clearWatchedConfirm);
     });
 
     const Backup = window.RYP.Backup;
@@ -517,7 +534,7 @@
       nameEl.title = pl.name;
       const metaEl = el("div", {
         className: "ryp-saved-meta",
-        textContent: `${pl.order.length} videos · ${date}`,
+        textContent: `${pl.order.length} ${dict.videosWord} · ${date}`,
       });
       const infoCol = el("div", { className: "ryp-saved-info" }, [nameEl, metaEl]);
 
@@ -609,6 +626,7 @@
     const toast = document.createElement("div");
     toast.id = "ryp-toast";
     toast.setAttribute("role", "status");
+    toast.dir = activeLang === "ar" ? "rtl" : "ltr";
     toast.textContent = message; // textContent — safe
     document.body.appendChild(toast);
     // Force reflow so the entrance animation triggers.
@@ -685,9 +703,13 @@
     const existing = document.getElementById("ryp-custom-modal");
     if (existing) existing.remove();
 
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
     const overlay = el("div", { id: "ryp-custom-modal", className: "ryp-modal-overlay" });
+    // The modal lives in YouTube's LTR document, so direction must be set
+    // explicitly for the title, input, and placeholder to mirror.
+    overlay.dir = activeLang === "ar" ? "rtl" : "ltr";
     const titleEl = el("h3", { className: "ryp-modal-title", textContent: title });
-    
+
     const input = el("input", {
       type: "text",
       className: "ryp-modal-input",
@@ -696,7 +718,7 @@
     });
     input.value = defaultValue || "";
 
-    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: "Cancel" });
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
     const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: confirmLabel || "Confirm" });
     
     const buttonsRow = el("div", { className: "ryp-modal-buttons" }, [cancelBtn, confirmBtn]);

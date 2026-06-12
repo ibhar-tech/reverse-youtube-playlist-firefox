@@ -68,6 +68,7 @@
       resumePrompt: "Offer to resume playlists",
       duplicate: "Duplicate",
       copySuffix: "(copy)",
+      videosWord: "videos",
       rateUs: "Enjoying it? Leave a review ★",
       exportTitle: "Export saved playlists to a file",
       importTitle: "Import saved playlists from a file",
@@ -113,6 +114,7 @@
       resumePrompt: "Proposer la reprise de lecture",
       duplicate: "Dupliquer",
       copySuffix: "(copie)",
+      videosWord: "vidéos",
       rateUs: "Vous aimez ? Laissez un avis ★",
       exportTitle: "Exporter les playlists sauvegardées",
       importTitle: "Importer des playlists depuis un fichier",
@@ -158,6 +160,7 @@
       resumePrompt: "اقتراح استئناف المشاهدة",
       duplicate: "تكرار اللقطة",
       copySuffix: "(نسخة)",
+      videosWord: "فيديو",
       rateUs: "أعجبك الامتداد؟ اترك تقييمًا ★",
       exportTitle: "تصدير قوائم التشغيل المحفوظة إلى ملف",
       importTitle: "استيراد قوائم تشغيل من ملف",
@@ -615,7 +618,7 @@
       nameEl.title = pl.name;
       const metaEl = el("div", {
         className: "playlist-meta",
-        textContent: `${pl.order.length} videos · ${date}`,
+        textContent: `${pl.order.length} ${dict.videosWord} · ${date}`,
       });
       const infoCol = el("div", { className: "playlist-info" }, [nameEl, metaEl]);
 
