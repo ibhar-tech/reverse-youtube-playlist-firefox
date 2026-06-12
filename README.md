@@ -117,6 +117,8 @@ bootstrap            ← content.js    (needs all of the above)
 - 🐛 **Player Next/Prev follow the active order** — pressing YouTube's next button (or Shift+N/Shift+P) in reverse/shuffle/custom mode no longer exits the playlist; it now navigates by the extension's order
 - 🐛 **Sidebar auto-scrolls to the playing video** when a reordering mode is active (previously the scroller rested at the visual bottom after reversing)
 - 🐛 **RTL fixes** — save dialog, toasts, and meta text now mirror and translate correctly in Arabic
+- 🐛 **Popup import actually works** — Firefox closes browser-action popups when the OS file picker opens, so import now runs in a dedicated tab with drag-and-drop support
+- 🎨 **Popup redesign** — language selector always visible in the header, labeled Export/Import buttons in a footer bar, snapshot count badge, section header, and more generous spacing
 
 ### v3.0.0 — 2026-06
 - ✨ **Import / Export** — back up saved playlists to a JSON file and restore them anywhere

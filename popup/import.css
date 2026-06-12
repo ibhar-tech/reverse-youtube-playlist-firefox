@@ -1,0 +1,154 @@
+/*
+ * YouTube Playlist Tools — import.css
+ * Standalone styles for the dedicated import tab (does not load popup.css,
+ * which pins the body width for the browser-action popup).
+ */
+
+:root {
+  --ryp-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ryp-accent-start: #6366f1;
+  --ryp-accent-end: #a855f7;
+  --ryp-accent-grad: linear-gradient(135deg, var(--ryp-accent-start), var(--ryp-accent-end));
+  --ryp-accent-glow: rgba(99, 102, 241, 0.25);
+  --ryp-bg: #f5f5f7;
+  --ryp-card: #ffffff;
+  --ryp-border: rgba(0, 0, 0, 0.08);
+  --ryp-text: #0f0f0f;
+  --ryp-sub: #5f6368;
+  --ryp-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ryp-bg: #0f0f0f;
+    --ryp-card: #1c1c1e;
+    --ryp-border: rgba(255, 255, 255, 0.08);
+    --ryp-text: #f3f4f6;
+    --ryp-sub: #9ca3af;
+    --ryp-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ryp-bg);
+  color: var(--ryp-text);
+  font-family: var(--ryp-font);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.import-card {
+  width: min(480px, calc(100vw - 48px));
+  background: var(--ryp-card);
+  border: 1px solid var(--ryp-border);
+  border-radius: 24px;
+  box-shadow: var(--ryp-shadow);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.import-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--ryp-accent-start);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.import-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+#import-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ryp-sub);
+}
+
+.drop-zone {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 36px 24px;
+  border: 2px dashed var(--ryp-border);
+  border-radius: 16px;
+  color: var(--ryp-sub);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone-over {
+  border-color: var(--ryp-accent-start);
+  background: rgba(99, 102, 241, 0.05);
+  color: var(--ryp-accent-start);
+}
+
+.result {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.result-success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #059669;
+}
+
+.result-error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  .result-success { color: #34d399; }
+  .result-error { color: #f87171; }
+}
+
+.done-btn {
+  padding: 10px 28px;
+  font-family: var(--ryp-font);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--ryp-accent-grad);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--ryp-accent-glow);
+  transition: all 0.2s ease;
+}
+
+.done-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px var(--ryp-accent-glow);
+}

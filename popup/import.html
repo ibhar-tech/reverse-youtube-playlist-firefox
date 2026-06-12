@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Import — Playlist Tools</title>
+    <link rel="stylesheet" href="import.css">
+  </head>
+  <body>
+    <main class="import-card">
+      <div class="import-icon" id="import-icon"></div>
+      <h1 id="import-title">Import saved playlists</h1>
+      <p id="import-hint">
+        Choose a backup file (.json) exported from Playlist Tools.
+        Imported lists are merged with your existing ones — exact duplicates are skipped.
+      </p>
+
+      <div id="drop-zone" class="drop-zone" tabindex="0" role="button">
+        <span id="drop-zone-label">Drop your backup file here, or click to browse</span>
+      </div>
+      <input type="file" id="file-input" accept=".json,application/json" style="display: none;">
+
+      <div id="result-success" class="result result-success" style="display: none;"></div>
+      <div id="result-error" class="result result-error" style="display: none;"></div>
+
+      <button id="done-btn" class="done-btn" style="display: none;">Done</button>
+    </main>
+
+    <script src="../src/backup.js"></script>
+    <script src="import.js"></script>
+  </body>
+</html>

@@ -14,7 +14,7 @@
   const logoContainer = document.getElementById("popup-title-icon");
   const importBtn = document.getElementById("import-btn");
   const exportBtn = document.getElementById("export-btn");
-  const importFileInput = document.getElementById("import-file-input");
+  const listCountEl = document.getElementById("list-count");
 
   // Settings controls
   const langSelect = document.getElementById("lang-select");
@@ -70,6 +70,8 @@
       copySuffix: "(copy)",
       videosWord: "videos",
       rateUs: "Enjoying it? Leave a review ★",
+      export: "Export",
+      import: "Import",
       exportTitle: "Export saved playlists to a file",
       importTitle: "Import saved playlists from a file",
       exportEmpty: "Nothing to export yet.",
@@ -116,6 +118,8 @@
       copySuffix: "(copie)",
       videosWord: "vidéos",
       rateUs: "Vous aimez ? Laissez un avis ★",
+      export: "Exporter",
+      import: "Importer",
       exportTitle: "Exporter les playlists sauvegardées",
       importTitle: "Importer des playlists depuis un fichier",
       exportEmpty: "Rien à exporter pour l'instant.",
@@ -162,6 +166,8 @@
       copySuffix: "(نسخة)",
       videosWord: "فيديو",
       rateUs: "أعجبك الامتداد؟ اترك تقييمًا ★",
+      export: "تصدير",
+      import: "استيراد",
       exportTitle: "تصدير قوائم التشغيل المحفوظة إلى ملف",
       importTitle: "استيراد قوائم تشغيل من ملف",
       exportEmpty: "لا يوجد شيء للتصدير بعد.",
@@ -243,8 +249,6 @@
   // Initialize static layout elements
   if (logoContainer) logoContainer.appendChild(ICONS.logo());
   if (settingsBtn) settingsBtn.appendChild(ICONS.settings());
-  if (exportBtn) exportBtn.appendChild(ICONS.download());
-  if (importBtn) importBtn.appendChild(ICONS.upload());
 
   // DOM creation helper (safe from XSS)
   function el(tag, attrs = {}, children = []) {
@@ -289,9 +293,19 @@
       saveConfirmBtn.appendChild(document.createTextNode(" " + dict.save));
     }
 
-    // Icon-only header buttons carry their labels in tooltips
-    if (exportBtn) exportBtn.title = dict.exportTitle;
-    if (importBtn) importBtn.title = dict.importTitle;
+    // Footer action buttons: icon + visible label
+    if (exportBtn) {
+      exportBtn.replaceChildren();
+      exportBtn.appendChild(ICONS.download());
+      exportBtn.appendChild(document.createTextNode(" " + dict.export));
+      exportBtn.title = dict.exportTitle;
+    }
+    if (importBtn) {
+      importBtn.replaceChildren();
+      importBtn.appendChild(ICONS.upload());
+      importBtn.appendChild(document.createTextNode(" " + dict.import));
+      importBtn.title = dict.importTitle;
+    }
     if (settingsBtn) settingsBtn.title = dict.settings;
   }
 
@@ -507,34 +521,14 @@
     Backup.triggerDownload(playlists);
   }
 
-  async function importPlaylists(file) {
-    const dict = getDict();
-    try {
-      const incoming = Backup.parseImport(await file.text());
-      const res = await api.storage.local.get("savedPlaylists");
-      const { merged, added, skipped } = Backup.mergeSnapshots(
-        res.savedPlaylists || [],
-        incoming
-      );
-      await api.storage.local.set({ savedPlaylists: merged });
-      await renderPlaylists();
-      showPopupToast(
-        dict.importDone
-          .replace("{added}", String(added))
-          .replace("{skipped}", String(skipped))
-      );
-    } catch (err) {
-      console.warn("Import failed:", err);
-      showPopupToast(dict.importInvalid, true);
-    }
-  }
-
   exportBtn.addEventListener("click", exportPlaylists);
-  importBtn.addEventListener("click", () => importFileInput.click());
-  importFileInput.addEventListener("change", () => {
-    const file = importFileInput.files && importFileInput.files[0];
-    importFileInput.value = ""; // allow re-selecting the same file
-    if (file) importPlaylists(file);
+
+  // Importing needs a file picker, but Firefox closes the browser-action
+  // popup as soon as the picker takes focus — the chosen file would never
+  // reach us. Run the import from a dedicated extension tab instead.
+  importBtn.addEventListener("click", () => {
+    api.tabs.create({ url: api.runtime.getURL("popup/import.html") });
+    window.close();
   });
 
   // ── Tab Management & URL Queries ──────────────────────────────────────────
@@ -594,6 +588,11 @@
         resolve(res.savedPlaylists || []);
       });
     });
+
+    if (listCountEl) {
+      listCountEl.textContent = String(data.length);
+      listCountEl.style.display = data.length > 0 ? "inline-flex" : "none";
+    }
 
     if (data.length === 0) {
       deleteAllBtn.style.display = "none";
