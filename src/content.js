@@ -35,6 +35,15 @@
     Sidebar.applyVisualOrder();
     await Sidebar.applyWatchedBadges();
 
+    // With CSS reordering active, YouTube's own auto-scroll lands on the
+    // wrong visual spot — re-scroll to the playing item. Second pass
+    // overrides YouTube's late async scroll after render settles.
+    const { reverseOn, customOrder } = Playback.getState();
+    if (reverseOn || customOrder) {
+      Sidebar.scrollToCurrentItem();
+      setTimeout(() => Sidebar.scrollToCurrentItem(), 300);
+    }
+
     // Sync toolbar button appearance to the loaded state.
     Toolbar.syncButtonStates();
 

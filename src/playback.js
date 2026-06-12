@@ -76,6 +76,21 @@
     return null;
   }
 
+  /** Inverse of getRawNextIndex — the item played before idx in the order. */
+  function getRawPrevIndex(idx) {
+    if (customOrder && customOrder.length > 0) {
+      const pos = customOrder.indexOf(idx);
+      if (pos <= 0) return null;
+      return customOrder[pos - 1];
+    }
+    if (reverseOn) {
+      const items = Playlist.readItems();
+      const max = items.length ? items[items.length - 1].index : null;
+      return max !== null && idx + 1 <= max ? idx + 1 : null;
+    }
+    return null;
+  }
+
   /** First index of the active order — used when loop mode wraps around. */
   function firstIndexInMode() {
     if (customOrder && customOrder.length > 0) return customOrder[0];
@@ -120,7 +135,11 @@
   function stepTo(targetIndex) {
     if (navigating || targetIndex === null) return false;
     navigating = true;
-    return Playlist.goToIndex(targetIndex);
+    const ok = Playlist.goToIndex(targetIndex);
+    // If the target item is not loaded the click never happened — release
+    // the latch or every later navigation would be silently swallowed.
+    if (!ok) navigating = false;
+    return ok;
   }
 
   // ── Event listeners ───────────────────────────────────────────────────────
@@ -201,6 +220,57 @@
     return changed ? out : null;
   }
 
+  // ── Player next/prev control interception ────────────────────────────────
+  // While a mode is active, YouTube's own next/previous controls still follow
+  // YouTube's order (index+1 / index-1) — pressing Next on the last video
+  // even autoplays out of the playlist. Capture the controls and Shift+N /
+  // Shift+P and route them through the active order instead.
+
+  function handleManualStep(e, isNext) {
+    const idx = Playlist.currentIndex();
+    if (idx === null) return; // can't resolve position — let YouTube handle it
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isNext) {
+      const next = nextIndexInMode(idx);
+      if (next !== null) {
+        stepTo(next);
+      } else {
+        const Panel = window.RYP.Panel;
+        if (Panel) Panel.showToast(Panel.t("endOfOrder"));
+      }
+      return;
+    }
+
+    // Previous: mimic YouTube — restart the video when already a few
+    // seconds in, otherwise go to the item played before this one.
+    const v = document.querySelector("#movie_player video, video");
+    if (v && v.currentTime > 3) {
+      v.currentTime = 0;
+      return;
+    }
+    const prev = getRawPrevIndex(idx);
+    if (prev !== null) stepTo(prev);
+    else if (v) v.currentTime = 0; // start of the order — just restart
+  }
+
+  function onControlClick(e) {
+    if (!isActive() || !Playlist.isPlaylistWatchPage()) return;
+    if (!e.target || typeof e.target.closest !== "function") return;
+    const btn = e.target.closest(".ytp-next-button, .ytp-prev-button");
+    if (!btn) return;
+    handleManualStep(e, btn.classList.contains("ytp-next-button"));
+  }
+
+  function onControlKey(e) {
+    if (!isActive() || !Playlist.isPlaylistWatchPage()) return;
+    if (!e.shiftKey || (e.key !== "N" && e.key !== "P")) return;
+    const t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/i.test(t.tagName))) return;
+    handleManualStep(e, e.key === "N");
+  }
+
   // ── Watch-progress recording (resume where you left off) ────────────────
 
   const PROGRESS_SAVE_MS = 5000;
@@ -250,6 +320,8 @@
   document.addEventListener("timeupdate", onTimeUpdate, true);
   document.addEventListener("timeupdate", onProgressTick, true);
   document.addEventListener("ended", onEnded, true);
+  document.addEventListener("click", onControlClick, true);
+  document.addEventListener("keydown", onControlKey, true);
 
   // ── Public API ────────────────────────────────────────────────────────────
 

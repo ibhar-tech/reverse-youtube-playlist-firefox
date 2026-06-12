@@ -114,6 +114,9 @@ bootstrap            ← content.js    (needs all of the above)
 - ✨ **Resume where you left off** — playback position is recorded per playlist (locally); a toast offers a one-click jump back to your last video + timestamp. Toggle in settings.
 - ✨ **Import/Export in the in-page panel** — backup buttons no longer require opening the popup; logic shared via `src/backup.js`
 - ✨ **Duplicate snapshot** — clone a saved list (popup + panel) to build variants
+- 🐛 **Player Next/Prev follow the active order** — pressing YouTube's next button (or Shift+N/Shift+P) in reverse/shuffle/custom mode no longer exits the playlist; it now navigates by the extension's order
+- 🐛 **Sidebar auto-scrolls to the playing video** when a reordering mode is active (previously the scroller rested at the visual bottom after reversing)
+- 🐛 **RTL fixes** — save dialog, toasts, and meta text now mirror and translate correctly in Arabic
 
 ### v3.0.0 — 2026-06
 - ✨ **Import / Export** — back up saved playlists to a JSON file and restore them anywhere

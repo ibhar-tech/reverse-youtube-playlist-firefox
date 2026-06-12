@@ -50,7 +50,8 @@
       resumeMessage: "Continue where you left off — {title} · {time}",
       cancel: "Cancel",
       close: "Close",
-      videosWord: "videos"
+      videosWord: "videos",
+      endOfOrder: "End of the playlist order."
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -78,7 +79,8 @@
       resumeMessage: "Reprendre où vous étiez — {title} · {time}",
       cancel: "Annuler",
       close: "Fermer",
-      videosWord: "vidéos"
+      videosWord: "vidéos",
+      endOfOrder: "Fin de l'ordre de lecture."
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -106,7 +108,8 @@
       resumeMessage: "المتابعة من حيث توقفت — {title} · {time}",
       cancel: "إلغاء",
       close: "إغلاق",
-      videosWord: "فيديو"
+      videosWord: "فيديو",
+      endOfOrder: "نهاية ترتيب قائمة التشغيل."
     }
   };
 
@@ -773,6 +776,8 @@
     isPanelVisible: () => panelVisible,
     showToast,
     showResumeToast,
+    /** Translated string for the active language (used by other modules). */
+    t: (key) => (TRANSLATIONS[activeLang] || TRANSLATIONS.en)[key] || key,
     saveCurrentOrder,
     renderList,
     showSaveModal,

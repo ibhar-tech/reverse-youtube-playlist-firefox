@@ -70,6 +70,42 @@
     }
   }
 
+  /**
+   * Scroll the playlist sidebar so the currently-playing item is visible.
+   * Needed whenever our CSS reordering is active: YouTube auto-scrolls by
+   * DOM position, which no longer matches the visual position (e.g. with
+   * column-reverse the scroller rests at the visual bottom).
+   */
+  function scrollToCurrentItem() {
+    const container = Playlist.getItemsContainer();
+    if (!container) return;
+    const selected = container.querySelector(`${Playlist.SEL.item}[selected]`);
+    if (!selected) return;
+
+    // Find the scrollable ancestor that actually owns the panel scrollbar.
+    let scroller = null;
+    for (let node = selected.parentElement; node; node = node.parentElement) {
+      if (node.scrollHeight > node.clientHeight + 1) {
+        const overflowY = getComputedStyle(node).overflowY;
+        if (overflowY === "auto" || overflowY === "scroll") {
+          scroller = node;
+          break;
+        }
+      }
+      if (node === document.body) break;
+    }
+
+    if (scroller) {
+      const sRect = scroller.getBoundingClientRect();
+      const iRect = selected.getBoundingClientRect();
+      // Relative adjustment works in both scroll coordinate systems
+      // (column-reverse flips the scrollTop origin to the visual bottom).
+      scroller.scrollTop += iRect.top - sRect.top - 8;
+    } else {
+      selected.scrollIntoView({ block: "nearest" });
+    }
+  }
+
   // ── Drag and drop ─────────────────────────────────────────────────────────
 
   function makeItemsDraggable() {
@@ -196,6 +232,7 @@
   window.RYP.Sidebar = {
     applyVisualOrder,
     applyWatchedBadges,
+    scrollToCurrentItem,
 
     toggleReorderMode() {
       reorderModeOn = !reorderModeOn;

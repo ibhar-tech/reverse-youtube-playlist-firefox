@@ -287,6 +287,7 @@
         await Playback.enableReverse(listId);
       }
       Sidebar.applyVisualOrder();
+      Sidebar.scrollToCurrentItem();
       syncButtonStates();
     });
 
@@ -297,11 +298,11 @@
       const { shuffleOn } = Playback.getState();
       if (shuffleOn) {
         await Playback.disableShuffle(listId);
-        Sidebar.applyVisualOrder();
       } else {
         await Playback.enableShuffle(listId);
-        Sidebar.applyVisualOrder();
       }
+      Sidebar.applyVisualOrder();
+      Sidebar.scrollToCurrentItem();
       syncButtonStates();
     });
 
