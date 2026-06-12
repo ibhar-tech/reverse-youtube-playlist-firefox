@@ -757,3 +757,52 @@ body.ryp-compact .action-delete {
   justify-content: flex-start;
 }
 
+/* ── Footer & Rate Link ─────────────────────────────────────────────────── */
+
+.popup-footer {
+  padding: 8px 20px 12px;
+  text-align: center;
+  border-top: 1px solid var(--ryp-border);
+}
+
+.rate-link {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ryp-sub);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.rate-link:hover {
+  color: var(--ryp-accent-start);
+}
+
+/* ── Status Toast ───────────────────────────────────────────────────────── */
+
+.popup-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  max-width: 320px;
+  padding: 9px 16px;
+  background: var(--ryp-text);
+  color: var(--ryp-bg);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--ryp-radius-pill);
+  box-shadow: var(--ryp-shadow-hover);
+  z-index: 9999;
+  animation: popup-toast-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.popup-toast-error {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+@keyframes popup-toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+

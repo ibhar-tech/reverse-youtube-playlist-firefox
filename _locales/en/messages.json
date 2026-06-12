@@ -4,7 +4,7 @@
     "description": "The name of the extension"
   },
   "extensionDescription": {
-    "message": "Reverse, shuffle, drag-reorder, and save YouTube playlists. Supports watched badges, auto-skip, compact layout, and multi-language UI (EN/FR/AR).",
+    "message": "Reverse, shuffle, drag-reorder, save, and export/import YouTube playlists. Watched badges, auto-skip, loop mode, compact layout, multi-language UI.",
     "description": "The description of the extension"
   }
 }

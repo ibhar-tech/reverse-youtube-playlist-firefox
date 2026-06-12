@@ -35,20 +35,24 @@
   let endHandled = false;
   
   let autoSkipEnabled = false;
+  let loopEnabled = false;
+  // Watched entries are videoId strings since v3; legacy entries may still be
+  // playlist indices (numbers) until migrated by loadState().
   let cachedWatched = [];
 
-  // Load autoSkip initially and on storage onChanged
-  function updateAutoSkip(settings) {
+  // Load settings initially and on storage onChanged
+  function updateSettings(settings) {
     autoSkipEnabled = !!settings?.autoSkip;
+    loopEnabled = !!settings?.loop;
   }
 
-  api.storage.local.get("ryp_settings", (res) => {
-    updateAutoSkip(res.ryp_settings);
+  api.storage.local.get("ryp_settings").then((res) => {
+    updateSettings(res.ryp_settings);
   });
 
   api.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes.ryp_settings) {
-      updateAutoSkip(changes.ryp_settings.newValue);
+      updateSettings(changes.ryp_settings.newValue);
     }
   });
 
@@ -70,15 +74,45 @@
     return null;
   }
 
+  /** First index of the active order — used when loop mode wraps around. */
+  function firstIndexInMode() {
+    if (customOrder && customOrder.length > 0) return customOrder[0];
+    if (reverseOn) {
+      const items = Playlist.readItems();
+      return items.length ? items[items.length - 1].index : null;
+    }
+    return null;
+  }
+
   /** Returns the index to navigate to after currentIdx, or null to stop. */
   function nextIndexInMode(currentIdx) {
-    let target = getRawNextIndex(currentIdx);
+    const items = Playlist.readItems();
+    const videoIdByIndex = new Map(items.map((it) => [it.index, it.videoId]));
+    const isWatched = (idx) => {
+      const vid = videoIdByIndex.get(idx);
+      return (
+        cachedWatched.includes(idx) || (!!vid && cachedWatched.includes(vid))
+      );
+    };
+    const advance = (idx) => {
+      let t = getRawNextIndex(idx);
+      if (t === null && loopEnabled) t = firstIndexInMode();
+      return t === idx ? null : t;
+    };
+
+    let target = advance(currentIdx);
     if (!autoSkipEnabled) return target;
 
-    while (target !== null && cachedWatched.includes(target)) {
-      target = getRawNextIndex(target);
+    // Skip watched items; bounded so loop mode can't spin forever when
+    // everything in the order has already been watched.
+    const maxHops = (customOrder ? customOrder.length : items.length) + 1;
+    let hops = 0;
+    while (target !== null && isWatched(target) && hops < maxHops) {
+      target = advance(target);
+      hops++;
     }
-    return target;
+    if (target !== null && isWatched(target)) return null;
+    return target === currentIdx ? null : target;
   }
 
   function stepTo(targetIndex) {
@@ -98,8 +132,20 @@
     if (!v || !v.duration || !isFinite(v.duration) || v.duration < 1) return;
     if (v.duration - v.currentTime <= END_LEAD) {
       endHandled = true;
-      const next = nextIndexInMode(Playlist.currentIndex());
-      if (next !== null) stepTo(next);
+      // We navigate away before `ended` can fire, so the video must be
+      // marked watched here or modes would never record watch progress.
+      const listId = Playlist.getPlaylistId();
+      const finishedIndex = Playlist.currentIndex();
+      if (listId && finishedIndex !== null) markAsWatched(listId, finishedIndex);
+
+      const next = nextIndexInMode(finishedIndex);
+      if (next !== null) {
+        stepTo(next);
+      } else {
+        // End of the active order: pause so YouTube's own autoplay-forward
+        // cannot hijack playback into the wrong next video.
+        v.pause();
+      }
     }
   }
 
@@ -118,14 +164,39 @@
   }
 
   async function markAsWatched(listId, index) {
+    // Prefer the stable videoId; fall back to the index if the sidebar item
+    // for this index is not loaded (badges still work via the index check).
+    const item = Playlist.readItems().find((it) => it.index === index);
+    const entry = item?.videoId || index;
     const watched = (await State.get(State.keys.watched(listId))) || [];
-    if (!watched.includes(index)) {
-      watched.push(index);
+    if (!watched.includes(entry)) {
+      watched.push(entry);
       await State.set(State.keys.watched(listId), watched);
     }
     cachedWatched = watched;
     // Refresh sidebar badges if Sidebar is already loaded.
     window.RYP.Sidebar?.applyWatchedBadges();
+  }
+
+  /**
+   * v2 stored watched entries as playlist indices; v3 stores videoIds so
+   * badges survive playlist edits. Maps any legacy numeric entries to
+   * videoIds via the loaded sidebar items (unmappable ones are kept as-is
+   * so they keep matching by index until their item loads).
+   */
+  function migrateWatched(watched) {
+    if (!watched.some((w) => typeof w === "number")) return null;
+    const byIndex = new Map(
+      Playlist.readItems().map((it) => [it.index, it.videoId])
+    );
+    let changed = false;
+    const out = [];
+    for (const w of watched) {
+      const mapped = typeof w === "number" && byIndex.get(w) ? byIndex.get(w) : w;
+      if (mapped !== w) changed = true;
+      if (!out.includes(mapped)) out.push(mapped);
+    }
+    return changed ? out : null;
   }
 
   document.addEventListener("timeupdate", onTimeUpdate, true);
@@ -139,6 +210,12 @@
       const savedShuffle = !!(await State.get(State.keys.shuffle(listId)));
       const savedOrder = (await State.get(State.keys.customOrder(listId))) || null;
       cachedWatched = (await State.get(State.keys.watched(listId))) || [];
+
+      const migrated = migrateWatched(cachedWatched);
+      if (migrated) {
+        cachedWatched = migrated;
+        await State.set(State.keys.watched(listId), migrated);
+      }
 
       // Shuffle requires a custom order to have been stored; if it's gone, reset.
       shuffleOn = savedShuffle && savedOrder !== null;
@@ -246,6 +323,7 @@
     },
 
     async clearWatched(listId) {
+      cachedWatched = [];
       await State.remove(State.keys.watched(listId));
     },
   };

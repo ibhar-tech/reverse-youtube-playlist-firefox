@@ -4,7 +4,7 @@
     "description": "Le nom de l'extension"
   },
   "extensionDescription": {
-    "message": "Inversez, mélangez, réorganisez et sauvegardez vos playlists YouTube. Badges de vidéos vues, passage automatique, mode compact et interface multilingue (EN/FR/AR).",
+    "message": "Inversez, mélangez, réorganisez, sauvegardez et exportez/importez vos playlists YouTube. Badges, passage auto, lecture en boucle, mode compact, UI multilingue.",
     "description": "La description de l'extension"
   }
 }

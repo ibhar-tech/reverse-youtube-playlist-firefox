@@ -23,6 +23,10 @@
   const REVERSED_CLASS = "ryp-reversed";
   let reorderModeOn = false;
   let dragSrcElement = null;
+  // True while order styles/classes are applied to the sidebar, so the
+  // no-mode case can skip the per-item DOM walk (this runs on every
+  // throttled mutation pass).
+  let visualStateApplied = false;
 
   // ── Visual order ──────────────────────────────────────────────────────────
 
@@ -32,6 +36,10 @@
     if (!container) return;
 
     const { reverseOn, customOrder } = Playback.getState();
+
+    if (!reverseOn && !(customOrder && customOrder.length > 0) && !visualStateApplied) {
+      return;
+    }
 
     if (customOrder && customOrder.length > 0) {
       // Custom/shuffle order: keep DOM untouched, use CSS `order` property.
@@ -44,6 +52,7 @@
         const orderPos = customOrder.indexOf(item.index);
         item.element.style.order = orderPos >= 0 ? orderPos : 9999;
       });
+      visualStateApplied = true;
     } else {
       // Reset any CSS order overrides from a previous custom/shuffle mode.
       const panel = document.querySelector(Playlist.SEL.panel);
@@ -57,6 +66,7 @@
 
       // Cosmetic column-reverse for pure reverse mode.
       container.classList.toggle(REVERSED_CLASS, reverseOn);
+      visualStateApplied = reverseOn;
     }
   }
 
@@ -173,9 +183,10 @@
     if (!listId) return;
     const watched = await Playback.getWatched(listId);
     Playlist.readItems().forEach((item) => {
+      // Entries are videoIds since v3; legacy entries may be indices.
       item.element.classList.toggle(
         "ryp-watched",
-        watched.includes(item.index)
+        watched.includes(item.videoId) || watched.includes(item.index)
       );
     });
   }

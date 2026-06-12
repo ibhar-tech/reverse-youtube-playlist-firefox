@@ -45,8 +45,16 @@
   // ── Mutation observer ─────────────────────────────────────────────────────
   // Re-injects toolbar whenever YouTube removes it (SPA navigation, panel
   // re-render triggered by window resize or DevTools).
+  //
+  // YouTube mutates the DOM constantly (progress bar, chat, ads), so the
+  // observer callback only schedules work: the real pass runs at most once
+  // per OBSERVER_THROTTLE_MS instead of on every mutation record.
 
-  const ensureObserver = new MutationObserver(() => {
+  const OBSERVER_THROTTLE_MS = 150;
+  let observerTimer = null;
+
+  function onDomSettled() {
+    observerTimer = null;
     if (!Playlist.isPlaylistWatchPage()) return;
 
     if (!document.getElementById(TOOLBAR_ID)) {
@@ -54,10 +62,16 @@
       Toolbar.syncButtonStates();
     }
 
-    // Re-apply visual order and watched badges after every DOM mutation so
-    // YouTube re-renders cannot silently reset our styling.
+    // Re-apply visual order and watched badges so YouTube re-renders cannot
+    // silently reset our styling.
     Sidebar.applyVisualOrder();
+    Sidebar.applyWatchedBadges();
     if (Sidebar.isReorderModeOn()) Sidebar.refreshDraggable();
+  }
+
+  const ensureObserver = new MutationObserver(() => {
+    if (observerTimer !== null) return;
+    observerTimer = setTimeout(onDomSettled, OBSERVER_THROTTLE_MS);
   });
 
   ensureObserver.observe(document.documentElement, {

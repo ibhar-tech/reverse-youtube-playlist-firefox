@@ -415,11 +415,14 @@
       const actionsCol = el("div", { className: "ryp-saved-actions" }, [playBtn, deleteBtn]);
       const card = el("div", { className: "ryp-saved-card" }, [infoCol, actionsCol]);
 
-      playBtn.addEventListener("click", () => {
+      playBtn.addEventListener("click", async () => {
         if (!pl || pl.order.length === 0) return;
         const firstIndex = pl.order[0];
         const firstVideo = pl.videos.find((v) => v.index === firstIndex);
         if (!firstVideo) return;
+        // Restore the snapshot's order as the active custom order so playback
+        // follows the saved sequence, not whatever mode was last active.
+        await Playback.applyCustomOrder(pl.sourceListId, pl.order);
         const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}&list=${pl.sourceListId}&index=${firstIndex}`;
         window.open(url, "_self");
       });

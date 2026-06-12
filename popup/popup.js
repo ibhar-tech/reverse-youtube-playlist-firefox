@@ -12,15 +12,19 @@
   const saveInput = document.getElementById("save-input-popup");
   const saveConfirmBtn = document.getElementById("save-confirm-popup");
   const logoContainer = document.getElementById("popup-title-icon");
-  
+  const importBtn = document.getElementById("import-btn");
+  const exportBtn = document.getElementById("export-btn");
+  const importFileInput = document.getElementById("import-file-input");
+
   // Settings controls
   const langSelect = document.getElementById("lang-select");
   const skipToggle = document.getElementById("skip-watched-toggle");
   const badgesToggle = document.getElementById("show-badges-toggle");
   const compactToggle = document.getElementById("compact-toggle");
+  const loopToggle = document.getElementById("loop-toggle");
 
   let activeTabId = null;
-  let currentSettings = { lang: "en", autoSkip: false, showBadges: true, compact: false };
+  let currentSettings = { lang: "en", autoSkip: false, showBadges: true, compact: false, loop: false };
 
   // ── Translations Dictionary ────────────────────────────────────────────────
 
@@ -58,7 +62,14 @@
       deleteAllConfirm: "Are you sure you want to delete all saved playlist snapshots? This cannot be undone.",
       saveConfirm: "✓ Playlist snapshot saved!",
       clearWatchedConfirm: "Watched badges cleared.",
-      saveCurrentSectionLabel: "Save current playlist state:"
+      saveCurrentSectionLabel: "Save current playlist state:",
+      loop: "Loop playlist order",
+      rateUs: "Enjoying it? Leave a review ★",
+      exportTitle: "Export saved playlists to a file",
+      importTitle: "Import saved playlists from a file",
+      exportEmpty: "Nothing to export yet.",
+      importDone: "✓ Imported {added} playlist(s), skipped {skipped} duplicate(s).",
+      importInvalid: "Invalid backup file — nothing imported."
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -93,7 +104,14 @@
       deleteAllConfirm: "Voulez-vous supprimer tous les instantanés ? Cette action est irréversible.",
       saveConfirm: "✓ Instantané enregistré !",
       clearWatchedConfirm: "Badges de vidéos vues effacés.",
-      saveCurrentSectionLabel: "Enregistrer l'état actuel :"
+      saveCurrentSectionLabel: "Enregistrer l'état actuel :",
+      loop: "Lecture en boucle",
+      rateUs: "Vous aimez ? Laissez un avis ★",
+      exportTitle: "Exporter les playlists sauvegardées",
+      importTitle: "Importer des playlists depuis un fichier",
+      exportEmpty: "Rien à exporter pour l'instant.",
+      importDone: "✓ {added} playlist(s) importée(s), {skipped} doublon(s) ignoré(s).",
+      importInvalid: "Fichier de sauvegarde invalide — rien n'a été importé."
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -128,7 +146,14 @@
       deleteAllConfirm: "هل أنت متأكد من حذف جميع لقطات قوائم التشغيل؟ لا يمكن التراجع عن هذا.",
       saveConfirm: "✓ تم حفظ لقطة قائمة التشغيل!",
       clearWatchedConfirm: "تمت إزالة شارات المشاهدة.",
-      saveCurrentSectionLabel: "حفظ حالة قائمة التشغيل الحالية:"
+      saveCurrentSectionLabel: "حفظ حالة قائمة التشغيل الحالية:",
+      loop: "تكرار قائمة التشغيل",
+      rateUs: "أعجبك الامتداد؟ اترك تقييمًا ★",
+      exportTitle: "تصدير قوائم التشغيل المحفوظة إلى ملف",
+      importTitle: "استيراد قوائم تشغيل من ملف",
+      exportEmpty: "لا يوجد شيء للتصدير بعد.",
+      importDone: "✓ تم استيراد {added} قائمة، وتخطي {skipped} مكررة.",
+      importInvalid: "ملف نسخ احتياطي غير صالح — لم يتم استيراد أي شيء."
     }
   };
 
@@ -182,6 +207,16 @@
       { tag: "line", attrs: { x1: "10", y1: "11", x2: "10", y2: "17" } },
       { tag: "line", attrs: { x1: "14", y1: "11", x2: "14", y2: "17" } }
     ]),
+    download: () => svg("download-icon-svg", "0 0 24 24", 2, [
+      { tag: "path", attrs: { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" } },
+      { tag: "polyline", attrs: { points: "7 10 12 15 17 10" } },
+      { tag: "line", attrs: { x1: "12", y1: "15", x2: "12", y2: "3" } }
+    ]),
+    upload: () => svg("upload-icon-svg", "0 0 24 24", 2, [
+      { tag: "path", attrs: { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" } },
+      { tag: "polyline", attrs: { points: "17 8 12 3 7 8" } },
+      { tag: "line", attrs: { x1: "12", y1: "3", x2: "12", y2: "15" } }
+    ]),
     settings: () => svg("settings-icon-svg", "0 0 24 24", 2, [
       { tag: "circle", attrs: { cx: "12", cy: "12", r: "3" } },
       { tag: "path", attrs: { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" } }
@@ -191,6 +226,8 @@
   // Initialize static layout elements
   if (logoContainer) logoContainer.appendChild(ICONS.logo());
   if (settingsBtn) settingsBtn.appendChild(ICONS.settings());
+  if (exportBtn) exportBtn.appendChild(ICONS.download());
+  if (importBtn) importBtn.appendChild(ICONS.upload());
 
   // DOM creation helper (safe from XSS)
   function el(tag, attrs = {}, children = []) {
@@ -234,6 +271,23 @@
       saveConfirmBtn.appendChild(ICONS.save());
       saveConfirmBtn.appendChild(document.createTextNode(" " + dict.save));
     }
+
+    // Icon-only header buttons carry their labels in tooltips
+    if (exportBtn) exportBtn.title = dict.exportTitle;
+    if (importBtn) importBtn.title = dict.importTitle;
+    if (settingsBtn) settingsBtn.title = dict.settings;
+  }
+
+  // ── Status toast ──────────────────────────────────────────────────────────
+
+  function showPopupToast(message, isError = false) {
+    const existing = document.getElementById("popup-toast");
+    if (existing) existing.remove();
+    const toast = el("div", { id: "popup-toast", className: "popup-toast", role: "status" });
+    toast.classList.toggle("popup-toast-error", isError);
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
   }
 
   // ── Custom Popup Modals ───────────────────────────────────────────────────
@@ -351,6 +405,7 @@
           autoSkip: loaded.autoSkip ?? false,
           showBadges: loaded.showBadges ?? true,
           compact: loaded.compact ?? false,
+          loop: loaded.loop ?? false,
         };
         resolve(currentSettings);
       });
@@ -370,6 +425,7 @@
     skipToggle.checked = currentSettings.autoSkip;
     badgesToggle.checked = currentSettings.showBadges;
     compactToggle.checked = currentSettings.compact;
+    loopToggle.checked = currentSettings.loop;
 
     // Apply translation & direction
     translateUI();
@@ -405,15 +461,140 @@
     saveSettings();
   });
 
+  loopToggle.addEventListener("change", (e) => {
+    currentSettings.loop = e.target.checked;
+    saveSettings();
+  });
+
+  // ── Import / Export ───────────────────────────────────────────────────────
+
+  const ID_RE = /^[A-Za-z0-9_-]{5,64}$/; // YouTube video/playlist id charset
+
+  function freshId() {
+    return crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function isValidSnapshot(p) {
+    return (
+      p && typeof p === "object" &&
+      typeof p.name === "string" && p.name.trim() &&
+      typeof p.sourceListId === "string" && ID_RE.test(p.sourceListId) &&
+      Array.isArray(p.order) && p.order.length > 0 &&
+      p.order.every((n) => Number.isFinite(Number(n))) &&
+      Array.isArray(p.videos)
+    );
+  }
+
+  /** Rebuild a snapshot from untrusted input, keeping only known fields. */
+  function normalizeSnapshot(p) {
+    return {
+      id: typeof p.id === "string" && p.id ? p.id.slice(0, 64) : freshId(),
+      name: p.name.trim().slice(0, 80),
+      sourceListId: p.sourceListId,
+      order: p.order.map(Number),
+      videos: p.videos
+        .filter((v) => v && typeof v === "object" && ID_RE.test(v.videoId || ""))
+        .map((v) => ({
+          index: Number(v.index),
+          videoId: v.videoId,
+          title: typeof v.title === "string" ? v.title.slice(0, 300) : "",
+          thumbnail: typeof v.thumbnail === "string" ? v.thumbnail.slice(0, 500) : "",
+        })),
+      savedAt: typeof p.savedAt === "string" ? p.savedAt : new Date().toISOString(),
+    };
+  }
+
+  async function exportPlaylists() {
+    const dict = getDict();
+    const res = await api.storage.local.get("savedPlaylists");
+    const playlists = res.savedPlaylists || [];
+    if (playlists.length === 0) {
+      showPopupToast(dict.exportEmpty, true);
+      return;
+    }
+    const payload = {
+      schema: "ryp-saved-playlists",
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      playlists,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = el("a", {
+      href: url,
+      download: `playlist-tools-backup-${new Date().toISOString().slice(0, 10)}.json`,
+    });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  async function importPlaylists(file) {
+    const dict = getDict();
+    try {
+      const data = JSON.parse(await file.text());
+      // Accept both the v3 backup envelope and a raw snapshot array.
+      const incoming = Array.isArray(data) ? data : data && data.playlists;
+      if (!Array.isArray(incoming)) throw new Error("not a backup file");
+
+      const valid = incoming.filter(isValidSnapshot).map(normalizeSnapshot);
+      if (valid.length === 0) throw new Error("no valid playlists");
+
+      const res = await api.storage.local.get("savedPlaylists");
+      const existing = res.savedPlaylists || [];
+      const byId = new Map(existing.map((p) => [p.id, p]));
+      let added = 0;
+      let skipped = 0;
+
+      for (const pl of valid) {
+        const dup = byId.get(pl.id);
+        if (dup && dup.savedAt === pl.savedAt && dup.name === pl.name) {
+          skipped++;
+          continue;
+        }
+        if (dup) pl.id = freshId(); // same id, different content — keep both
+        byId.set(pl.id, pl);
+        existing.push(pl);
+        added++;
+      }
+
+      await api.storage.local.set({ savedPlaylists: existing });
+      await renderPlaylists();
+      showPopupToast(
+        dict.importDone
+          .replace("{added}", String(added))
+          .replace("{skipped}", String(skipped))
+      );
+    } catch (err) {
+      console.warn("Import failed:", err);
+      showPopupToast(dict.importInvalid, true);
+    }
+  }
+
+  exportBtn.addEventListener("click", exportPlaylists);
+  importBtn.addEventListener("click", () => importFileInput.click());
+  importFileInput.addEventListener("change", () => {
+    const file = importFileInput.files && importFileInput.files[0];
+    importFileInput.value = ""; // allow re-selecting the same file
+    if (file) importPlaylists(file);
+  });
+
   // ── Tab Management & URL Queries ──────────────────────────────────────────
 
-  // Check if active tab is a YouTube playlist page and show the save section
+  // Check if active tab is a YouTube playlist *watch* page and show the save
+  // section. /playlist browse pages are excluded — the content script can
+  // only read the sidebar on watch pages, so saving there would fail.
   api.tabs.query({ active: true, currentWindow: true })
     .then((tabs) => {
       const activeTab = tabs && tabs[0];
       if (activeTab && activeTab.url) {
         const url = activeTab.url;
-        if (url.includes("youtube.com/") && (url.includes("list=") || url.includes("playlist?"))) {
+        if (url.includes("youtube.com/") && url.includes("/watch") && url.includes("list=")) {
           activeTabId = activeTab.id;
           saveSection.style.display = "block";
         }
@@ -439,13 +620,14 @@
         if (response && response.success) {
           saveInput.value = "";
           renderPlaylists();
+          showPopupToast(getDict().saveConfirm);
         } else {
-          alert(response?.error || "Failed to save playlist state.");
+          showPopupToast(response?.error || "Failed to save playlist state.", true);
         }
       })
       .catch((err) => {
         console.error("Error sending message to content script:", err);
-        alert("Cannot communicate with the YouTube tab. Please refresh the page and try again.");
+        showPopupToast("Cannot communicate with the YouTube tab. Please refresh the page and try again.", true);
       });
   });
 
@@ -510,11 +692,19 @@
       const card = el("div", { className: "playlist-card" }, [infoCol, actionsCol]);
 
       // Play action
-      playBtn.addEventListener("click", () => {
+      playBtn.addEventListener("click", async () => {
         if (!pl.order || pl.order.length === 0) return;
         const firstIndex = pl.order[0];
         const firstVideo = pl.videos.find((v) => v.index === firstIndex);
         if (!firstVideo) return;
+
+        // Restore the snapshot's order as the active custom order so the
+        // content script plays the saved sequence (keys match src/state.js).
+        await api.storage.local.set({
+          [`customOrder:${pl.sourceListId}`]: pl.order,
+          [`reverse:${pl.sourceListId}`]: false,
+          [`shuffle:${pl.sourceListId}`]: false,
+        });
 
         const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}&list=${pl.sourceListId}&index=${firstIndex}`;
 

@@ -162,8 +162,8 @@ done
 log "Creating version $VERSION on the listing..."
 JWT=$(make_jwt)
 
-RELEASE_NOTES_EN="v${VERSION}: Added dynamic localization (EN/FR/AR), reactive settings panel in popup (language, auto-skip watched, compact layout, watched badges), safe playback redirection from any tab, and premium UI visual polish."
-RELEASE_NOTES_FR="v${VERSION}: Ajout de la localisation dynamique (EN/FR/AR), panneau de paramètres réactif dans le popup (langue, saut des vidéos vues, mode compact, badges), redirection de lecture sécurisée depuis n'importe quel onglet et polissage visuel premium."
+RELEASE_NOTES_EN="v${VERSION}: Import/export saved playlists as JSON backup files, playing a saved snapshot now restores its exact order, new loop-playlist-order setting, watched tracking now works in reverse/shuffle modes and survives playlist edits, reverse playback now stops cleanly at the end instead of falling back to YouTube autoplay, and big performance improvements on long sessions."
+RELEASE_NOTES_FR="v${VERSION}: Import/export des playlists sauvegardées en fichiers JSON, la lecture d'un instantané restaure désormais son ordre exact, nouvelle option de lecture en boucle, le suivi des vidéos vues fonctionne maintenant en mode inverse/aléatoire et survit aux modifications de playlist, la lecture inversée s'arrête proprement à la fin, et grosses améliorations de performance."
 
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
@@ -200,7 +200,9 @@ LONG_DESC_EN="🎬 REVERSE YouTube playlists — play oldest-first, newest-first
 🔀 SHUFFLE playlists with a persistent random order that survives in-app navigation.
 ↕️ DRAG & REORDER videos in the sidebar without touching YouTube's servers.
 💾 SAVE custom playlists locally — no Google login, no data sent anywhere.
-✅ MARK videos as watched and see a ✓ badge automatically.
+📤 EXPORT & IMPORT your saved playlists as JSON backup files — your lists are permanent and portable across devices.
+🔁 LOOP your custom play order endlessly with one setting.
+✅ MARK videos as watched and see a ✓ badge automatically — tracking survives playlist edits.
 ⏭️ AUTO-SKIP already watched videos automatically to save time.
 🌐 MULTI-LANGUAGE UI — switch dynamically between English, French, and Arabic (العربية) with full RTL support.
 📐 COMPACT LAYOUT mode for a cleaner, distraction-free view.
@@ -223,7 +225,9 @@ LONG_DESC_FR="🎬 INVERSEZ les playlists YouTube — lisez du plus ancien au pl
 🔀 MÉLANGEZ les playlists avec un ordre aléatoire persistant qui survit à la navigation.
 ↕️ GLISSEZ & RÉORGANISEZ les vidéos dans la barre latérale sans toucher aux serveurs de YouTube.
 💾 SAUVEGARDEZ des playlists personnalisées localement — pas de connexion Google, aucune donnée envoyée.
-✅ MARQUEZ les vidéos comme lues et voyez un badge ✓ s'afficher automatiquement.
+📤 EXPORTEZ & IMPORTEZ vos playlists sauvegardées en fichiers JSON — vos listes sont permanentes et portables entre appareils.
+🔁 LISEZ EN BOUCLE votre ordre de lecture personnalisé avec une seule option.
+✅ MARQUEZ les vidéos comme lues et voyez un badge ✓ s'afficher automatiquement — le suivi survit aux modifications de playlist.
 ⏭️ PASSEZ AUTOMATIQUEMENT les vidéos déjà vues pour gagner du temps.
 🌐 INTERFACE MULTILINGUE — basculez dynamiquement entre l'anglais, le français et l'arabe (العربية) avec support RTL complet.
 📐 MODE COMPACT pour une vue épurée et sans distraction.
@@ -251,12 +255,12 @@ payload = {"name": {}, "summary": {}, "description": {}}
 translations = {
   "en-US": {
     "name": "YT Playlist Tools — Reverse, Shuffle & Reorder",
-    "summary": "Reverse, shuffle, drag-reorder, and save YouTube playlists. Supports watched badges, auto-skip, compact layout, and multi-language UI (EN/FR/AR).",
+    "summary": "Reverse, shuffle, drag-reorder, save, and export/import YouTube playlists. Watched badges, auto-skip, loop mode, compact layout, and multi-language UI (EN/FR/AR).",
     "desc": os.environ.get("EXPORT_DESC_EN", "")
   },
   "fr": {
     "name": "YT Playlist Tools — Reverse, Shuffle & Reorder",
-    "summary": "Inversez, mélangez, réorganisez et sauvegardez vos playlists YouTube. Badges de vidéos vues, passage automatique, mode compact et interface multilingue (EN/FR/AR).",
+    "summary": "Inversez, mélangez, réorganisez, sauvegardez et exportez/importez vos playlists YouTube. Badges de vidéos vues, passage automatique, lecture en boucle, mode compact et interface multilingue (EN/FR/AR).",
     "desc": os.environ.get("EXPORT_DESC_FR", "")
   }
 }

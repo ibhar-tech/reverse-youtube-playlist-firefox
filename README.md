@@ -2,8 +2,8 @@
 
 > **Reverse, shuffle, drag-reorder, and save YouTube playlists — locally, privately, with zero logins.**
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
-[![Firefox](https://img.shields.io/badge/Firefox-≥115-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist/)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
+[![Firefox](https://img.shields.io/badge/Firefox-≥140-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 [![Privacy: No data collected](https://img.shields.io/badge/Privacy-No%20data%20collected-brightgreen?style=flat-square)]()
 
@@ -16,8 +16,10 @@
 | **⮃ Reverse** | Plays the playlist last-to-first. Great for watching a series from newest to oldest or a course in chronological upload order. Toggle persists per playlist. |
 | **⤮ Shuffle** | Fisher-Yates randomises the play order and remembers it so the same random sequence survives in-app navigation. |
 | **⠿ Reorder** | Enables drag-and-drop on the sidebar. Drag any video to a new position; the custom order is saved automatically. |
-| **🎵 My Lists** | Opens a slide-in panel to name and save a snapshot of the current order. Play or delete saved snapshots anytime — no account needed. |
-| **✓ Watched badges** | A blue ✓ badge appears on any video you've fully watched in this session. Persists across navigations. |
+| **🎵 My Lists** | Opens a slide-in panel to name and save a snapshot of the current order. Playing a snapshot restores its exact saved order — your lists are permanent. |
+| **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and Firefox profiles. |
+| **🔁 Loop** | Optional setting: when the active play order ends, start it over instead of stopping. |
+| **✓ Watched badges** | A blue ✓ badge appears on any video you've fully watched. Tracked by video ID, so badges survive playlist edits. Optional auto-skip of watched videos. |
 
 ---
 
@@ -25,7 +27,7 @@
 
 - **No API calls.** We never contact YouTube's servers, Google, or any third party.
 - **No Google login.** Zero OAuth, zero account access.
-- **Only `storage` permission.** Everything lives in your browser's own `storage.local` — on your device, nowhere else.
+- **Only `storage` + `activeTab` permissions.** Everything lives in your browser's own `storage.local` — on your device, nowhere else.
 - **No telemetry.** Not even a ping.
 
 ---
@@ -104,6 +106,16 @@ bootstrap            ← content.js    (needs all of the above)
 ---
 
 ## 📋 Changelog
+
+### v3.0.0 — 2026-06
+- ✨ **Import / Export** — back up saved playlists to a JSON file and restore them anywhere
+- ✨ **Permanent playlists** — playing a saved snapshot now restores its exact saved order
+- ✨ **Loop mode** — optional setting to restart the active play order when it ends
+- 🐛 **Watched tracking fixed in reverse/shuffle modes** — videos are now marked before the pre-end navigation
+- 🐛 **Watched badges keyed by video ID** — badges no longer drift when the playlist owner edits the list (legacy data migrates automatically)
+- 🐛 **Clean stop at end of order** — reverse playback no longer falls through to YouTube's autoplay-forward
+- 🐛 **Popup Save section** only appears on watch pages where saving actually works
+- ⚡ **Performance** — MutationObserver work is throttled and skipped when no mode is active
 
 ### v2.0.0 — 2026-06
 - ✨ **Shuffle mode** — persistent Fisher-Yates random order

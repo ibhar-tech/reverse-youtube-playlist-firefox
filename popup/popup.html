@@ -11,9 +11,12 @@
         <span data-i18n="extensionName">Playlist Tools</span>
       </span>
       <div class="header-actions">
+        <button id="import-btn" class="header-action-btn" title="Import saved playlists"></button>
+        <button id="export-btn" class="header-action-btn" title="Export saved playlists"></button>
         <button id="settings-btn" class="header-action-btn" title="Settings"></button>
         <button id="delete-all-btn" class="delete-all-btn" data-i18n="deleteAll" style="display: none;">Delete All</button>
       </div>
+      <input type="file" id="import-file-input" accept=".json,application/json" style="display: none;">
     </header>
 
     <main class="popup-main">
@@ -41,6 +44,12 @@
         </div>
         <div class="settings-group">
           <label class="setting-switch-label">
+            <input type="checkbox" id="loop-toggle">
+            <span class="setting-switch-text" data-i18n="loop">Loop playlist order</span>
+          </label>
+        </div>
+        <div class="settings-group">
+          <label class="setting-switch-label">
             <input type="checkbox" id="compact-toggle">
             <span class="setting-switch-text" data-i18n="compact">Compact layout</span>
           </label>
@@ -60,6 +69,12 @@
         <!-- Playlists will be loaded dynamically here -->
       </div>
     </main>
+
+    <footer class="popup-footer">
+      <a id="rate-link" class="rate-link" data-i18n="rateUs"
+         href="https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/reviews/"
+         target="_blank" rel="noopener">Enjoying it? Leave a review ★</a>
+    </footer>
 
     <script src="popup.js"></script>
   </body>
