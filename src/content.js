@@ -13,19 +13,35 @@
 
   const { Playlist, Playback, Sidebar, Panel, Toolbar } = window.RYP;
   const TOOLBAR_ID = "ryp-toolbar";
+  let navigationEpoch = 0;
+  let activeListId = null;
+  let stateReadyListId = null;
 
   // ── Navigation handler ────────────────────────────────────────────────────
 
   async function onNavigate() {
+    const epoch = ++navigationEpoch;
     if (!Playlist.isPlaylistWatchPage()) {
+      stateReadyListId = null;
+      Sidebar.disableReorderMode();
+      Panel.togglePanel(false);
+      activeListId = null;
       Playback.handleNavigation();
       return;
     }
 
     const listId = Playlist.getPlaylistId();
+    if (listId !== activeListId) {
+      stateReadyListId = null;
+      document.getElementById(TOOLBAR_ID)?.remove();
+      Sidebar.disableReorderMode();
+      activeListId = listId;
+    }
 
     // Restore persisted modes for this playlist.
-    await Playback.loadState(listId);
+    const loaded = await Playback.loadState(listId);
+    if (!loaded || epoch !== navigationEpoch || Playlist.getPlaylistId() !== listId) return;
+    stateReadyListId = listId;
 
     // Inject UI (idempotent — each returns early if already present).
     Toolbar.injectToolbar();
@@ -34,12 +50,13 @@
     // Apply visual state to the sidebar.
     Sidebar.applyVisualOrder();
     await Sidebar.applyWatchedBadges();
+    if (epoch !== navigationEpoch || Playlist.getPlaylistId() !== listId) return;
 
     // With CSS reordering active, YouTube's own auto-scroll lands on the
     // wrong visual spot — re-scroll to the playing item. Second pass
     // overrides YouTube's late async scroll after render settles.
     const { reverseOn, customOrder } = Playback.getState();
-    if (reverseOn || customOrder) {
+    if (location.pathname === "/watch" && (reverseOn || customOrder)) {
       Sidebar.scrollToCurrentItem();
       setTimeout(() => Sidebar.scrollToCurrentItem(), 300);
     }
@@ -65,17 +82,32 @@
   function onDomSettled() {
     observerTimer = null;
     if (!Playlist.isPlaylistWatchPage()) return;
+    if (stateReadyListId !== Playlist.getPlaylistId()) return;
 
-    if (!document.getElementById(TOOLBAR_ID)) {
-      Toolbar.injectToolbar();
-      Toolbar.syncButtonStates();
+    // Disconnect temporarily so our own DOM modifications don't trigger the observer in a loop
+    ensureObserver.disconnect();
+
+    try {
+      if (!document.getElementById(TOOLBAR_ID)) {
+        const injected = Toolbar.injectToolbar();
+        if (injected) {
+          console.log("[RYP] Toolbar injected on", location.pathname);
+        }
+        Toolbar.syncButtonStates();
+      }
+
+      // Re-apply visual order and watched badges so YouTube re-renders cannot
+      // silently reset our styling.
+      Sidebar.applyVisualOrder();
+      Sidebar.applyWatchedBadges();
+      if (Sidebar.isReorderModeOn()) Sidebar.refreshDraggable();
+    } finally {
+      // Reconnect observer
+      ensureObserver.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+      });
     }
-
-    // Re-apply visual order and watched badges so YouTube re-renders cannot
-    // silently reset our styling.
-    Sidebar.applyVisualOrder();
-    Sidebar.applyWatchedBadges();
-    if (Sidebar.isReorderModeOn()) Sidebar.refreshDraggable();
   }
 
   const ensureObserver = new MutationObserver(() => {
@@ -95,7 +127,12 @@
   api.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "SAVE_PLAYLIST") {
       if (Playlist.isPlaylistWatchPage()) {
-        Panel.saveCurrentOrder(request.name).then(() => {
+        Panel.saveCurrentOrder(
+          request.name,
+          request.updateSnapshotId,
+          request.tags,
+          request.sourceListId
+        ).then(() => {
           if (Panel.isPanelVisible()) {
             Panel.renderList();
           }
@@ -110,7 +147,6 @@
     }
   });
 
-  window.addEventListener("yt-navigate-finish", onNavigate);
   document.addEventListener("yt-navigate-finish", onNavigate);
   onNavigate();
 })();

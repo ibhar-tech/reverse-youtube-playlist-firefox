@@ -53,9 +53,11 @@
   });
 
   api.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && changes.ryp_settings) {
-      updateSettings(changes.ryp_settings.newValue);
-    }
+    if (areaName !== "local") return;
+    if (changes.ryp_settings) updateSettings(changes.ryp_settings.newValue);
+    const listId = Playlist.getPlaylistId();
+    const watchedChange = listId && changes[State.keys.watched(listId)];
+    if (watchedChange) cachedWatched = watchedChange.newValue || [];
   });
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -189,14 +191,16 @@
     // for this index is not loaded (badges still work via the index check).
     const item = Playlist.readItems().find((it) => it.index === index);
     const entry = item?.videoId || index;
+    if (!cachedWatched.includes(entry)) cachedWatched = [...cachedWatched, entry];
     const watched = (await State.get(State.keys.watched(listId))) || [];
     if (!watched.includes(entry)) {
       watched.push(entry);
       await State.set(State.keys.watched(listId), watched);
     }
-    cachedWatched = watched;
-    // Refresh sidebar badges if Sidebar is already loaded.
-    window.RYP.Sidebar?.applyWatchedBadges();
+    if (Playlist.getPlaylistId() === listId) {
+      cachedWatched = watched;
+      window.RYP.Sidebar?.applyWatchedBadges();
+    }
   }
 
   /**
@@ -310,6 +314,7 @@
     if (!resumePromptEnabled) return;
 
     const prog = await State.get(State.keys.progress(listId));
+    if (Playlist.getPlaylistId() !== listId) return;
     if (!prog || !prog.videoId) return;
     const currentVideoId = new URLSearchParams(location.search).get("v");
     if (prog.videoId === currentVideoId) return; // already on that video
@@ -327,20 +332,32 @@
 
   window.RYP.Playback = {
     async loadState(listId) {
-      reverseOn = !!(await State.get(State.keys.reverse(listId)));
-      const savedShuffle = !!(await State.get(State.keys.shuffle(listId)));
-      const savedOrder = (await State.get(State.keys.customOrder(listId))) || null;
-      cachedWatched = (await State.get(State.keys.watched(listId))) || [];
+      const [savedReverse, savedShuffle, savedOrder, watched] = await Promise.all([
+        State.get(State.keys.reverse(listId)),
+        State.get(State.keys.shuffle(listId)),
+        State.get(State.keys.customOrder(listId)),
+        State.get(State.keys.watched(listId)),
+      ]);
+      if (!Playlist.isPlaylistWatchPage() || Playlist.getPlaylistId() !== listId) {
+        return false;
+      }
 
-      const migrated = migrateWatched(cachedWatched);
+      let loadedWatched = watched || [];
+      const migrated = migrateWatched(loadedWatched);
       if (migrated) {
-        cachedWatched = migrated;
+        loadedWatched = migrated;
         await State.set(State.keys.watched(listId), migrated);
+      }
+      if (!Playlist.isPlaylistWatchPage() || Playlist.getPlaylistId() !== listId) {
+        return false;
       }
 
       // Shuffle requires a custom order to have been stored; if it's gone, reset.
-      shuffleOn = savedShuffle && savedOrder !== null;
-      customOrder = savedOrder;
+      reverseOn = !!savedReverse;
+      shuffleOn = !!savedShuffle && savedOrder != null;
+      customOrder = savedOrder || null;
+      cachedWatched = loadedWatched;
+      return true;
     },
 
     handleNavigation() {
@@ -435,6 +452,10 @@
       await State.set(State.keys.reverse(listId), false);
       await State.set(State.keys.shuffle(listId), false);
       await State.remove(State.keys.customOrder(listId));
+    },
+
+    isActive() {
+      return isActive();
     },
 
     getState() {

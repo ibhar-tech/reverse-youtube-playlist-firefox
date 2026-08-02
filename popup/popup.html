@@ -53,6 +53,9 @@
             <span class="setting-switch-text" data-i18n="compact">Compact layout</span>
           </label>
         </div>
+        <div class="settings-group clear-badges-group">
+          <button id="clear-watched-btn" class="popup-btn danger-btn" data-i18n="clearWatched">Clear watched badges</button>
+        </div>
       </div>
 
       <!-- Save current playlist section, only visible on YouTube playlist watch pages -->
@@ -62,6 +65,7 @@
           <input type="text" id="save-input-popup" class="save-input" data-i18n="saveInputPlaceholder" placeholder="e.g. My Custom Sort" maxlength="80">
           <button id="save-confirm-popup" class="save-confirm"></button>
         </div>
+        <input type="text" id="save-tags-popup" class="save-input tags-input" data-i18n="tagsPlaceholder" placeholder="Tags (comma separated)" maxlength="200">
       </div>
 
       <!-- Saved snapshots section -->
@@ -73,6 +77,10 @@
         <button id="delete-all-btn" class="delete-all-btn" data-i18n="deleteAll" style="display: none;">Delete All</button>
       </div>
 
+      <div id="search-container" class="search-container" style="display: none;">
+        <input type="text" id="popup-search-input" class="popup-search-input" data-i18n="searchSnapshots" placeholder="Search names or tags...">
+      </div>
+
       <div id="playlist-list" class="playlist-list">
         <!-- Playlists will be loaded dynamically here -->
       </div>
@@ -82,6 +90,7 @@
       <div class="footer-actions">
         <button id="export-btn" class="footer-action-btn" title="Export saved playlists"></button>
         <button id="import-btn" class="footer-action-btn" title="Import saved playlists"></button>
+        <button id="support-btn" class="footer-action-btn" title="Support this project">❤️</button>
       </div>
       <a id="rate-link" class="rate-link" data-i18n="rateUs"
          href="https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/reviews/"

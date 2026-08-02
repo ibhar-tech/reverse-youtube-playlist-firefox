@@ -1,8 +1,8 @@
 /*
  * YouTube Playlist Tools — toolbar.js
  *
- * Injects and manages the four-button toolbar into the playlist panel header:
- *   [⮃ Reverse]  [⤮ Shuffle]  [⠿ Reorder]  [🎵 Playlists]
+ * Injects and manages the playlist toolbar:
+ *   [Reverse] [Shuffle] [Reorder] [Reset] [Save] [My Lists]
  *
  * Each button reflects live state (active / inactive) from Playback and
  * Sidebar. The toolbar is re-injected whenever YouTube removes it (SPA
@@ -12,7 +12,7 @@
   "use strict";
 
   window.RYP = window.RYP || {};
-  const { Playlist, Playback, Sidebar, Panel } = window.RYP;
+  const { Playlist, Playback, Sidebar, Panel, State } = window.RYP;
 
   const TOOLBAR_ID = "ryp-toolbar";
   const api = typeof browser !== "undefined" ? browser : chrome;
@@ -42,7 +42,11 @@
       myListsOnTitle: "Close saved snapshots panel",
       saveModalTitle: "Save Playlist Snapshot",
       saveModalPlaceholder: "e.g. My Custom Sort",
-      saveConfirmToast: "✓ Playlist snapshot saved!"
+      tagsPlaceholder: "Tags (comma separated)",
+      reset: "Reset",
+      resetTitle: "Restore original playlist play order",
+      reorderActive: "Custom Order",
+      reorderActiveTitle: "Custom play order is active — drag-reordered (click to modify)"
     },
     fr: {
       reverse: "Inverser",
@@ -64,7 +68,11 @@
       myListsOnTitle: "Fermer le panneau des instantanés",
       saveModalTitle: "Enregistrer un instantané",
       saveModalPlaceholder: "ex: Cours inversé",
-      saveConfirmToast: "✓ Instantané enregistré !"
+      tagsPlaceholder: "Tags (séparés par des virgules)",
+      reset: "Réinitialiser",
+      resetTitle: "Restaurer l'ordre de lecture original",
+      reorderActive: "Ordre Perso",
+      reorderActiveTitle: "L'ordre personnalisé est actif (cliquez pour modifier)"
     },
     ar: {
       reverse: "عكس",
@@ -86,7 +94,11 @@
       myListsOnTitle: "إغلاق لوحة القوائم المحفوظة",
       saveModalTitle: "حفظ لقطة قائمة التشغيل",
       saveModalPlaceholder: "مثال: ترتيب عكسي",
-      saveConfirmToast: "✓ تم حفظ لقطة قائمة التشغيل!"
+      tagsPlaceholder: "وسوم (مفصولة بفواصل)",
+      reset: "إعادة تعيين",
+      resetTitle: "استعادة ترتيب التشغيل الأصلي لقائمة التشغيل",
+      reorderActive: "ترتيب مخصص",
+      reorderActiveTitle: "ترتيب التشغيل المخصص مفعل (انقر للتعديل)"
     }
   };
 
@@ -103,7 +115,7 @@
   });
 
   // Load and apply settings on startup
-  api.storage.local.get("ryp_settings", (res) => {
+  api.storage.local.get("ryp_settings").then((res) => {
     applyToolbarSettings(res.ryp_settings);
   });
 
@@ -150,6 +162,10 @@
       { tag: "line", attrs: { x1: "9", y1: "13", x2: "15", y2: "13" } },
       { tag: "line", attrs: { x1: "9", y1: "17", x2: "15", y2: "17" } }
     ]),
+    reset: () => svg("0 0 24 24", 2.2, [
+      { tag: "path", attrs: { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" } },
+      { tag: "polyline", attrs: { points: "3 3 3 8 8 8" } }
+    ]),
     save: () => svg("0 0 24 24", 2.2, [
       { tag: "path", attrs: { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" } },
       { tag: "polyline", attrs: { points: "17 21 17 13 7 13 7 21" } },
@@ -195,9 +211,16 @@
   // ── Toolbar injection ─────────────────────────────────────────────────────
 
   function injectToolbar() {
-    if (document.getElementById(TOOLBAR_ID)) return true;
     const container = Playlist.findHeaderContainer();
     if (!container) return false;
+
+    const existing = document.getElementById(TOOLBAR_ID);
+    if (existing) {
+      if (existing.parentElement === container) {
+        return true;
+      }
+      existing.remove();
+    }
 
     const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
 
@@ -215,6 +238,9 @@
     const reorderBtn = makeButton(
       "ryp-btn-reorder", "reorder", dict.reorder, dict.reorderTitle
     );
+    const resetBtn = makeButton(
+      "ryp-btn-reset", "reset", dict.reset, dict.resetTitle
+    );
     const saveBtn = makeButton(
       "ryp-btn-save", "save", dict.save, dict.saveTitle
     );
@@ -222,18 +248,18 @@
       "ryp-btn-playlists", "playlists", dict.myLists, dict.myListsTitle
     );
 
-    toolbar.append(reverseBtn, shuffleBtn, reorderBtn, saveBtn, playlistsBtn);
+    toolbar.append(reverseBtn, shuffleBtn, reorderBtn, resetBtn, saveBtn, playlistsBtn);
     container.appendChild(toolbar);
 
     syncButtonStates();
-    bindEvents(reverseBtn, shuffleBtn, reorderBtn, saveBtn, playlistsBtn);
+    bindEvents(reverseBtn, shuffleBtn, reorderBtn, resetBtn, saveBtn, playlistsBtn);
     return true;
   }
 
   // ── State sync ────────────────────────────────────────────────────────────
 
   function syncButtonStates() {
-    const { reverseOn, shuffleOn } = Playback.getState();
+    const { reverseOn, shuffleOn, customOrder } = Playback.getState();
     const reorderOn = Sidebar.isReorderModeOn();
     const panelOn = Panel.isPanelVisible();
     const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
@@ -250,12 +276,35 @@
       dict.shuffleOn, dict.shuffle,
       dict.shuffleOnTitle, dict.shuffleTitle
     );
-    setActive(
-      document.getElementById("ryp-btn-reorder"),
-      reorderOn,
-      dict.reorderOn, dict.reorder,
-      dict.reorderOnTitle, dict.reorderTitle
-    );
+
+    // Custom active state logic for Reorder button
+    const reorderBtn = document.getElementById("ryp-btn-reorder");
+    if (reorderBtn) {
+      const isCustomActive = customOrder !== null && customOrder.length > 0 && !shuffleOn && !reverseOn;
+      reorderBtn.classList.toggle("ryp-custom-active", isCustomActive);
+
+      if (reorderOn) {
+        setActive(reorderBtn, true, dict.reorderOn, dict.reorder, dict.reorderOnTitle, dict.reorderTitle);
+      } else if (isCustomActive) {
+        reorderBtn.classList.remove("ryp-active");
+        reorderBtn.setAttribute("aria-pressed", "false");
+        reorderBtn.title = dict.reorderActiveTitle;
+        const labelEl = reorderBtn.querySelector(".ryp-label");
+        if (labelEl) labelEl.textContent = dict.reorderActive;
+      } else {
+        setActive(reorderBtn, false, dict.reorderOn, dict.reorder, dict.reorderOnTitle, dict.reorderTitle);
+      }
+    }
+
+    // Reset button visibility & title
+    const resetBtn = document.getElementById("ryp-btn-reset");
+    if (resetBtn) {
+      const isModified = Playback.isActive();
+      resetBtn.classList.toggle("ryp-visible", isModified);
+      resetBtn.title = dict.resetTitle;
+      const labelEl = resetBtn.querySelector(".ryp-label");
+      if (labelEl) labelEl.textContent = dict.reset;
+    }
 
     // Save button needs translated label & title updated
     const saveBtn = document.getElementById("ryp-btn-save");
@@ -275,7 +324,7 @@
 
   // ── Events ────────────────────────────────────────────────────────────────
 
-  function bindEvents(reverseBtn, shuffleBtn, reorderBtn, saveBtn, playlistsBtn) {
+  function bindEvents(reverseBtn, shuffleBtn, reorderBtn, resetBtn, saveBtn, playlistsBtn) {
     reverseBtn.addEventListener("click", async (e) => {
       e.preventDefault(); e.stopPropagation();
       const listId = Playlist.getPlaylistId();
@@ -312,6 +361,19 @@
       syncButtonStates();
     });
 
+    resetBtn.addEventListener("click", async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const listId = Playlist.getPlaylistId();
+      if (!listId) return;
+      await Playback.disableAll(listId);
+      if (Sidebar.isReorderModeOn()) {
+        Sidebar.toggleReorderMode();
+      }
+      Sidebar.applyVisualOrder();
+      Sidebar.scrollToCurrentItem();
+      syncButtonStates();
+    });
+
     saveBtn.addEventListener("click", async (e) => {
       e.preventDefault(); e.stopPropagation();
       const listId = Playlist.getPlaylistId();
@@ -322,14 +384,37 @@
       Panel.showSaveModal({
         title: dict.saveModalTitle,
         placeholder: dict.saveModalPlaceholder,
+        tagsPlaceholder: dict.tagsPlaceholder,
         defaultValue: "",
         confirmLabel: dict.save,
-        onConfirm: async (name) => {
-          await Panel.saveCurrentOrder(name);
-          if (Panel.isPanelVisible()) {
-            await Panel.renderList();
+        onConfirm: async (name, tags) => {
+          try {
+            const saved = (await State.get(State.keys.savedPlaylists)) || [];
+            const existing = saved.filter((p) => p.sourceListId === listId);
+
+            if (existing.length > 0) {
+              Panel.showSaveOptionsModal({
+                existingSnapshots: existing,
+                newName: name,
+                tags,
+                expectedListId: listId,
+                onComplete: async (isUpdate) => {
+                  if (Panel.isPanelVisible()) {
+                    await Panel.renderList();
+                  }
+                  Panel.showToast("✓ " + (isUpdate ? Panel.t("updateConfirm") : Panel.t("saveConfirm")));
+                },
+              });
+            } else {
+              await Panel.saveCurrentOrder(name, null, tags, listId);
+              if (Panel.isPanelVisible()) {
+                await Panel.renderList();
+              }
+              Panel.showToast("✓ " + Panel.t("saveConfirm"));
+            }
+          } catch (err) {
+            Panel.showToast(err.message || "Could not save the snapshot");
           }
-          Panel.showToast(dict.saveConfirmToast);
         }
       });
     });

@@ -14,28 +14,16 @@
   window.RYP = window.RYP || {};
   window.RYP.State = {
     async get(key) {
-      try {
-        const res = await STORAGE.get(key);
-        return res[key];
-      } catch {
-        return undefined;
-      }
+      const res = await STORAGE.get(key);
+      return res[key];
     },
 
     async set(key, value) {
-      try {
-        await STORAGE.set({ [key]: value });
-      } catch {
-        /* degrade gracefully */
-      }
+      await STORAGE.set({ [key]: value });
     },
 
     async remove(key) {
-      try {
-        await STORAGE.remove(key);
-      } catch {
-        /* degrade gracefully */
-      }
+      await STORAGE.remove(key);
     },
 
     // Canonical storage key names — single source of truth.

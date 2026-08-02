@@ -2,7 +2,7 @@
 
 > **Reverse, shuffle, drag-reorder, and save YouTube playlists — locally, privately, with zero logins.**
 
-[![Version](https://img.shields.io/badge/version-3.1.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
+[![Version](https://img.shields.io/badge/version-3.2.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
 [![Firefox](https://img.shields.io/badge/Firefox-≥140-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 [![Privacy: No data collected](https://img.shields.io/badge/Privacy-No%20data%20collected-brightgreen?style=flat-square)]()
@@ -19,7 +19,7 @@
 | **🎵 My Lists** | Opens a slide-in panel to name and save a snapshot of the current order. Playing a snapshot restores its exact saved order — your lists are permanent. |
 | **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and Firefox profiles. Available from the popup and the in-page panel. |
 | **⏯️ Resume** | A one-click prompt jumps back to the video and timestamp where you left off in any playlist. Per-playlist, stored locally, can be turned off in settings. |
-| **⧉ Duplicate** | Clone any saved snapshot with one click to build variants of a list. |
+| **# Tags** | Add tags to snapshots and filter saved lists by name or tag. |
 | **🔁 Loop** | Optional setting: when the active play order ends, start it over instead of stopping. |
 | **✓ Watched badges** | A blue ✓ badge appears on any video you've fully watched. Tracked by video ID, so badges survive playlist edits. Optional auto-skip of watched videos. |
 
@@ -40,7 +40,7 @@ A content script runs on `youtube.com` watch pages that have a `?list=` paramete
 
 1. Reads sidebar items (`ytd-playlist-panel-video-renderer`) to build the play order.
 2. Intercepts the `timeupdate` event ~0.35 s before the video ends to pre-empt YouTube's autoplay-forward and navigate to the correct next item instead.
-3. Stores all state (mode flags, custom order, watched indices, saved snapshots) in `browser.storage.local` keyed by playlist ID.
+3. Stores all state (mode flags, custom order, watched video IDs, saved snapshots) in `browser.storage.local` keyed by playlist ID.
 4. Re-injects the toolbar after every YouTube SPA navigation via a `MutationObserver` + `yt-navigate-finish` listener.
 
 Nothing is changed on YouTube's servers. Purely client-side.
@@ -90,11 +90,11 @@ All modules share the `window.RYP` global namespace. Script load order in `manif
 
 ```
 window.RYP.State     ← state.js
-window.RYP.Playlist  ← playlist.js   (needs State)
+window.RYP.Playlist  ← playlist.js
 window.RYP.Playback  ← playback.js   (needs State, Playlist)
-window.RYP.Sidebar   ← sidebar.js    (needs Playlist, Playback, State)
+window.RYP.Sidebar   ← sidebar.js    (needs Playlist, Playback)
 window.RYP.Panel     ← panel.js      (needs State, Playlist, Playback)
-window.RYP.Toolbar   ← toolbar.js    (needs Playlist, Playback, Sidebar, Panel)
+window.RYP.Toolbar   ← toolbar.js    (needs State, Playlist, Playback, Sidebar, Panel)
 bootstrap            ← content.js    (needs all of the above)
 ```
 
@@ -110,10 +110,18 @@ bootstrap            ← content.js    (needs all of the above)
 
 ## 📋 Changelog
 
+### v3.2.0 — 2026-07
+- ✨ **Snapshot tags and filtering** — add comma-separated tags and search saved snapshots by name or tag
+- ✨ **Safer snapshot saves** — when snapshots already exist for a playlist, choose one to update or create a new snapshot
+- 🐛 **My Lists state sync** — the toolbar button now resets when the panel closes from its close button, an outside click, or navigation
+- 🐛 **Firefox popup storage fixed** — popup and toolbar storage access now consistently uses Firefox's Promise API
+- 🐛 **Ordering and navigation fixes** — reversed snapshots save correctly, drag/drop follows the visible order, and stale SPA state can no longer overwrite another playlist
+- 🗂 **Backup schema v2** — tags are included in exports, imports are validated more strictly, and exact duplicates are skipped safely
+
 ### v3.1.0 — 2026-06
 - ✨ **Resume where you left off** — playback position is recorded per playlist (locally); a toast offers a one-click jump back to your last video + timestamp. Toggle in settings.
 - ✨ **Import/Export in the in-page panel** — backup buttons no longer require opening the popup; logic shared via `src/backup.js`
-- ✨ **Duplicate snapshot** — clone a saved list (popup + panel) to build variants
+- ✨ **Snapshot tags and safer updates** — filter by tags and choose whether to update an existing snapshot from the same playlist or create a new one
 - 🐛 **Player Next/Prev follow the active order** — pressing YouTube's next button (or Shift+N/Shift+P) in reverse/shuffle/custom mode no longer exits the playlist; it now navigates by the extension's order
 - 🐛 **Sidebar auto-scrolls to the playing video** when a reordering mode is active (previously the scroller rested at the visual bottom after reversing)
 - 🐛 **RTL fixes** — save dialog, toasts, and meta text now mirror and translate correctly in Arabic
@@ -144,6 +152,12 @@ bootstrap            ← content.js    (needs all of the above)
 
 ### v1.0.0 — 2025
 - 🎉 Initial release: Reverse playback mode
+
+## ❤️ Support
+
+If this extension saves you time, consider supporting its development:
+
+→ **[Support this project](./SUPPORT.md)**
 
 ---
 

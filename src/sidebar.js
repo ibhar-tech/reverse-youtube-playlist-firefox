@@ -6,19 +6,15 @@
  *   - Applying CSS `order` property for custom/shuffle order
  *   - Drag-and-drop reorder mode (makes sidebar items draggable)
  *
- * Drag-and-drop works by:
- *   1. Adding `draggable="true"` + drag event listeners to each sidebar item.
- *   2. On drop: directly moving the dropped element in the DOM and computing
- *      the new index order from DOM position.
- *   3. Persisting the new order via Playback.applyCustomOrder().
- *   4. The MutationObserver in content.js re-applies visual order after
- *      YouTube re-renders the panel, so state survives SPA navigations.
+ * Drag-and-drop derives a new order from the currently visible sequence and
+ * persists it through Playback.applyCustomOrder(). CSS ordering keeps the
+ * result visible after YouTube re-renders the panel.
  */
 (() => {
   "use strict";
 
   window.RYP = window.RYP || {};
-  const { Playlist, Playback, State } = window.RYP;
+  const { Playlist, Playback } = window.RYP;
 
   const REVERSED_CLASS = "ryp-reversed";
   let reorderModeOn = false;
@@ -27,7 +23,6 @@
   // no-mode case can skip the per-item DOM walk (this runs on every
   // throttled mutation pass).
   let visualStateApplied = false;
-
   // ── Visual order ──────────────────────────────────────────────────────────
 
   /** Reflect the current playback mode visually in the sidebar. */
@@ -116,6 +111,15 @@
       element.addEventListener("dragover", onDragOver);
       element.addEventListener("drop", onDrop);
       element.addEventListener("dragend", onDragEnd);
+
+      // Prepend a drag handle to allow dragging visually
+      if (!element.querySelector(".ryp-drag-handle")) {
+        const handle = document.createElement("div");
+        handle.className = "ryp-drag-handle";
+        handle.textContent = "⋮⋮";
+        handle.title = "Drag to reorder";
+        element.prepend(handle);
+      }
     });
   }
 
@@ -154,7 +158,13 @@
     return false;
   }
 
-  function onDrop(e) {
+  function indexFromElement(element) {
+    const href = element.querySelector(Playlist.SEL.itemLink)?.getAttribute("href");
+    const index = parseInt(new URL(href || "", location.origin).searchParams.get("index") || "", 10);
+    return Number.isFinite(index) ? index : null;
+  }
+
+  async function onDrop(e) {
     e.stopPropagation();
     e.preventDefault();
     if (!dragSrcElement || dragSrcElement === this) return;
@@ -162,40 +172,26 @@
     const container = Playlist.getItemsContainer();
     if (!container) return;
 
-    const allEls = Array.from(
-      container.querySelectorAll(Playlist.SEL.item)
-    );
-    const srcPos = allEls.indexOf(dragSrcElement);
-    const dstPos = allEls.indexOf(this);
+    const { reverseOn, customOrder } = Playback.getState();
+    const originalOrder = Playlist.readItems().map((item) => item.index);
+    const visibleOrder = customOrder && customOrder.length > 0
+      ? [...customOrder]
+      : reverseOn ? originalOrder.reverse() : originalOrder;
+    const sourceIndex = indexFromElement(dragSrcElement);
+    const targetIndex = indexFromElement(this);
+    const srcPos = visibleOrder.indexOf(sourceIndex);
+    const dstPos = visibleOrder.indexOf(targetIndex);
     if (srcPos === -1 || dstPos === -1) return;
 
-    // Reorder in DOM.
-    if (srcPos < dstPos) {
-      container.insertBefore(dragSrcElement, this.nextSibling);
-    } else {
-      container.insertBefore(dragSrcElement, this);
-    }
-
-    // Derive the new play order from DOM position after the move.
-    const newOrder = Array.from(
-      container.querySelectorAll(Playlist.SEL.item)
-    )
-      .map((el) => {
-        const anchor = el.querySelector(Playlist.SEL.itemLink);
-        const href = anchor && anchor.getAttribute("href");
-        if (!href) return null;
-        const idx = parseInt(
-          new URL(href, location.origin).searchParams.get("index") || "",
-          10
-        );
-        return Number.isFinite(idx) ? idx : null;
-      })
-      .filter((idx) => idx !== null);
+    const newOrder = visibleOrder.filter((index) => index !== sourceIndex);
+    const targetPosition = newOrder.indexOf(targetIndex);
+    newOrder.splice(srcPos < dstPos ? targetPosition + 1 : targetPosition, 0, sourceIndex);
 
     const listId = Playlist.getPlaylistId();
     if (listId && newOrder.length > 0) {
-      // Fire-and-forget — visual change is already applied, storage follows.
-      Playback.applyCustomOrder(listId, newOrder);
+      await Playback.applyCustomOrder(listId, newOrder);
+      applyVisualOrder();
+      window.RYP.Toolbar?.syncButtonStates();
     }
   }
 
@@ -217,7 +213,9 @@
   async function applyWatchedBadges() {
     const listId = Playlist.getPlaylistId();
     if (!listId) return;
+    const container = Playlist.getItemsContainer();
     const watched = await Playback.getWatched(listId);
+    if (Playlist.getPlaylistId() !== listId || Playlist.getItemsContainer() !== container) return;
     Playlist.readItems().forEach((item) => {
       // Entries are videoIds since v3; legacy entries may be indices.
       item.element.classList.toggle(
@@ -233,6 +231,13 @@
     applyVisualOrder,
     applyWatchedBadges,
     scrollToCurrentItem,
+
+    disableReorderMode() {
+      if (!reorderModeOn) return;
+      reorderModeOn = false;
+      removeItemsDraggable();
+      Playlist.getItemsContainer()?.classList.remove("ryp-reorder-mode");
+    },
 
     toggleReorderMode() {
       reorderModeOn = !reorderModeOn;
@@ -254,6 +259,18 @@
       if (!reorderModeOn) return;
       removeItemsDraggable();
       makeItemsDraggable();
+      Playlist.getItemsContainer()?.classList.add("ryp-reorder-mode");
     },
   };
+
+  // Listen for watched changes from popup or other tabs
+  const api = typeof browser !== "undefined" ? browser : chrome;
+  api.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local") {
+      const hasWatchedChange = Object.keys(changes).some((k) => k.startsWith("watched:"));
+      if (hasWatchedChange) {
+        applyWatchedBadges();
+      }
+    }
+  });
 })();

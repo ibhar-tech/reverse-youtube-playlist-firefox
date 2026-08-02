@@ -44,14 +44,22 @@
       exportEmpty: "Nothing to export yet.",
       importDone: "✓ Imported {added} playlist(s), skipped {skipped} duplicate(s).",
       importInvalid: "Invalid backup file — nothing imported.",
-      duplicate: "Duplicate",
-      copySuffix: "(copy)",
       resume: "Resume",
       resumeMessage: "Continue where you left off — {title} · {time}",
       cancel: "Cancel",
       close: "Close",
       videosWord: "videos",
-      endOfOrder: "End of the playlist order."
+      endOfOrder: "End of the playlist order.",
+      searchSnapshots: "Search names or tags...",
+      tagsPlaceholder: "Tags (comma separated)",
+      noMatchingSnapshots: "No matching snapshots found.",
+      confirm: "Confirm",
+      deleteConfirm: "Delete this playlist snapshot?",
+      saveOptionsTitle: "Save Options",
+      saveOptionsPrompt: "Existing snapshots found for this playlist. Would you like to update one or save as a new snapshot?",
+      saveAsNew: "Save as New",
+      updateExisting: "Update",
+      updateConfirm: "Snapshot updated!"
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -73,14 +81,22 @@
       exportEmpty: "Rien à exporter pour l'instant.",
       importDone: "✓ {added} playlist(s) importée(s), {skipped} doublon(s) ignoré(s).",
       importInvalid: "Fichier de sauvegarde invalide — rien n'a été importé.",
-      duplicate: "Dupliquer",
-      copySuffix: "(copie)",
       resume: "Reprendre",
       resumeMessage: "Reprendre où vous étiez — {title} · {time}",
       cancel: "Annuler",
       close: "Fermer",
       videosWord: "vidéos",
-      endOfOrder: "Fin de l'ordre de lecture."
+      endOfOrder: "Fin de l'ordre de lecture.",
+      searchSnapshots: "Rechercher par nom ou tag...",
+      tagsPlaceholder: "Tags (séparés par des virgules)",
+      noMatchingSnapshots: "Aucun instantané ne correspond.",
+      confirm: "Confirmer",
+      deleteConfirm: "Supprimer cet instantané ?",
+      saveOptionsTitle: "Options d'enregistrement",
+      saveOptionsPrompt: "Des instantanés existent déjà pour cette playlist. Voulez-vous en mettre un à jour ou enregistrer un nouvel instantané ?",
+      saveAsNew: "Enregistrer comme nouveau",
+      updateExisting: "Mettre à jour",
+      updateConfirm: "Instantané mis à jour !"
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -102,14 +118,22 @@
       exportEmpty: "لا يوجد شيء للتصدير بعد.",
       importDone: "✓ تم استيراد {added} قائمة، وتخطي {skipped} مكررة.",
       importInvalid: "ملف نسخ احتياطي غير صالح — لم يتم استيراد أي شيء.",
-      duplicate: "تكرار",
-      copySuffix: "(نسخة)",
       resume: "متابعة",
       resumeMessage: "المتابعة من حيث توقفت — {title} · {time}",
       cancel: "إلغاء",
       close: "إغلاق",
       videosWord: "فيديو",
-      endOfOrder: "نهاية ترتيب قائمة التشغيل."
+      endOfOrder: "نهاية ترتيب قائمة التشغيل.",
+      searchSnapshots: "البحث بالاسم أو الوسم...",
+      tagsPlaceholder: "وسوم (مفصولة بفواصل)",
+      noMatchingSnapshots: "لم يتم العثور على لقطات مطابقة.",
+      confirm: "تأكيد",
+      deleteConfirm: "حذف هذه اللقطة؟",
+      saveOptionsTitle: "خيارات الحفظ",
+      saveOptionsPrompt: "تم العثور على لقطات محفوظة لهذه القائمة. هل تريد تحديث إحداها أم حفظها كلقطة جديدة؟",
+      saveAsNew: "حفظ كلقطة جديدة",
+      updateExisting: "تحديث",
+      updateConfirm: "تم تحديث اللقطة بنجاح!"
     }
   };
 
@@ -131,6 +155,12 @@
     
     // Apply layout direction
     panel.dir = lang === "ar" ? "rtl" : "ltr";
+
+    const searchInput = panel.querySelector("#ryp-search-input");
+    if (searchInput) searchInput.placeholder = dict.searchSnapshots;
+
+    const tagsInput = panel.querySelector("#ryp-save-tags");
+    if (tagsInput) tagsInput.placeholder = dict.tagsPlaceholder;
     
     // Translate static strings
     const titleSpan = panel.querySelector(".ryp-panel-title");
@@ -265,10 +295,6 @@
       { tag: "path", attrs: { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" } },
       { tag: "polyline", attrs: { points: "17 8 12 3 7 8" } },
       { tag: "line", attrs: { x1: "12", y1: "3", x2: "12", y2: "15" } }
-    ]),
-    copy: () => svg("ryp-copy-icon-svg", "0 0 24 24", 2, [
-      { tag: "rect", attrs: { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" } },
-      { tag: "path", attrs: { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" } }
     ])
   };
 
@@ -311,6 +337,13 @@
     saveConfirmBtn.appendChild(document.createTextNode(" Save"));
 
     const saveRow = el("div", { className: "ryp-save-row" }, [saveInput, saveConfirmBtn]);
+    const tagsInput = el("input", {
+      type: "text",
+      id: "ryp-save-tags",
+      className: "ryp-save-input ryp-tags-input",
+      placeholder: "Tags (comma separated)",
+      maxlength: "200",
+    });
     const clearWatchedBtn = el("button", {
       className: "ryp-clear-watched",
       id: "ryp-clear-watched",
@@ -348,37 +381,52 @@
     ]);
 
     const saveSection = el("div", { className: "ryp-panel-save-section" }, [
-      saveLabel, saveRow, clearWatchedBtn, toolsRow,
+      saveLabel, saveRow, tagsInput, clearWatchedBtn, toolsRow,
     ]);
 
     // List
     const sectionTitle = el("div", { className: "ryp-panel-section-title", textContent: "Saved Snapshots" });
     const listContainer = el("div", { className: "ryp-panel-list", id: "ryp-panel-list" });
 
+    // Search
+    const searchInput = el("input", {
+      type: "text",
+      id: "ryp-search-input",
+      className: "ryp-search-input",
+      placeholder: "Search snapshots...",
+    });
+
     // Panel root
     const panel = el("div", {
       id: PANEL_ID,
       role: "dialog",
       "aria-label": "Saved Playlists",
-    }, [header, saveSection, sectionTitle, listContainer]);
+    }, [header, saveSection, sectionTitle, searchInput, listContainer]);
 
     document.body.appendChild(panel);
     bindPanelEvents(panel);
 
     // Load and apply settings
-    api.storage.local.get("ryp_settings", (res) => {
+    api.storage.local.get("ryp_settings").then((res) => {
       const settings = res.ryp_settings || {};
       applyPanelSettings(settings);
     });
   }
 
   function bindPanelEvents(panel) {
+    panel.querySelector("#ryp-search-input").addEventListener("input", () => {
+      renderList();
+    });
+
     panel
       .querySelector("#ryp-panel-close")
       .addEventListener("click", () => togglePanel(false));
 
-    panel.querySelector("#ryp-save-confirm").addEventListener("click", async () => {
+    panel.querySelector("#ryp-save-confirm").addEventListener("click", async (event) => {
+      const saveButton = event.currentTarget;
+      if (saveButton.disabled) return;
       const input = document.getElementById("ryp-save-name");
+      const tagsInput = document.getElementById("ryp-save-tags");
       const name = input.value.trim();
       if (!name) {
         input.classList.add("ryp-input-error");
@@ -386,11 +434,39 @@
         setTimeout(() => input.classList.remove("ryp-input-error"), 1200);
         return;
       }
-      await saveCurrentOrder(name);
-      input.value = "";
-      await renderList();
-      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
-      showToast("✓ " + dict.saveConfirm);
+
+      saveButton.disabled = true;
+      try {
+        const listId = Playlist.getPlaylistId();
+        const saved = (await State.get(State.keys.savedPlaylists)) || [];
+        const existing = saved.filter((p) => p.sourceListId === listId);
+        const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+
+        if (existing.length > 0) {
+          showSaveOptionsModal({
+            existingSnapshots: existing,
+            newName: name,
+            tags: tagsInput.value,
+            expectedListId: listId,
+            onComplete: async (isUpdate) => {
+              input.value = "";
+              tagsInput.value = "";
+              await renderList();
+              showToast("✓ " + (isUpdate ? dict.updateConfirm : dict.saveConfirm));
+            },
+          });
+        } else {
+          await saveCurrentOrder(name, null, tagsInput.value, listId);
+          input.value = "";
+          tagsInput.value = "";
+          await renderList();
+          showToast("✓ " + dict.saveConfirm);
+        }
+      } catch (err) {
+        showToast(err.message || "Could not save the snapshot");
+      } finally {
+        saveButton.disabled = false;
+      }
     });
 
     panel.querySelector("#ryp-clear-watched").addEventListener("click", async () => {
@@ -455,37 +531,163 @@
 
   // ── Save logic ────────────────────────────────────────────────────────────
 
-  async function saveCurrentOrder(name) {
+  async function saveCurrentOrder(name, updateSnapshotId = null, tags = [], expectedListId = null) {
     const listId = Playlist.getPlaylistId();
-    if (!listId) return;
+    if (!listId) throw new Error("Not on a playlist page");
+    if (expectedListId && listId !== expectedListId) {
+      throw new Error("The active playlist changed before the snapshot was saved");
+    }
     const items = Playlist.readItems();
-    if (items.length === 0) return;
+    if (items.length === 0) throw new Error("No playlist videos are loaded");
 
-    const { customOrder } = Playback.getState();
+    const { reverseOn, customOrder } = Playback.getState();
+    const originalOrder = items.map((it) => it.index);
     const order =
       customOrder && customOrder.length > 0
-        ? customOrder
-        : items.map((it) => it.index);
+        ? [...customOrder]
+        : reverseOn
+          ? originalOrder.reverse()
+          : originalOrder;
+    const normalizedTags = window.RYP.Backup.normalizeTags(tags);
 
-    const entry = {
-      id: crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      name,
-      sourceListId: listId,
-      order,
-      videos: items.map((it) => ({
-        index: it.index,
-        videoId: it.videoId,
-        title: it.title,
-        thumbnail: it.thumbnail,
-      })),
-      savedAt: new Date().toISOString(),
+    let saved = (await State.get(State.keys.savedPlaylists)) || [];
+
+    if (updateSnapshotId) {
+      const snapshotExists = saved.some(
+        (p) => p.id === updateSnapshotId && p.sourceListId === listId
+      );
+      if (!snapshotExists) {
+        throw new Error("The selected snapshot no longer belongs to this playlist");
+      }
+      saved = saved.map((p) => {
+        if (p.id === updateSnapshotId && p.sourceListId === listId) {
+          return {
+            ...p,
+            tags: normalizedTags.length > 0 ? normalizedTags : (p.tags || []),
+            order,
+            videos: items.map((it) => ({
+              index: it.index,
+              videoId: it.videoId,
+              title: it.title,
+              thumbnail: it.thumbnail,
+            })),
+            savedAt: new Date().toISOString(),
+          };
+        }
+        return p;
+      });
+    } else {
+      const entry = {
+        id: crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name,
+        tags: normalizedTags,
+        sourceListId: listId,
+        order,
+        videos: items.map((it) => ({
+          index: it.index,
+          videoId: it.videoId,
+          title: it.title,
+          thumbnail: it.thumbnail,
+        })),
+        savedAt: new Date().toISOString(),
+      };
+      saved.unshift(entry);
+    }
+    await State.set(State.keys.savedPlaylists, saved);
+  }
+
+  function showSaveOptionsModal({ existingSnapshots, newName, tags, expectedListId, onComplete }) {
+    const existing = document.getElementById("ryp-custom-modal");
+    if (existing) existing.remove();
+
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    const overlay = el("div", { id: "ryp-custom-modal", className: "ryp-modal-overlay" });
+    overlay.dir = activeLang === "ar" ? "rtl" : "ltr";
+
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: dict.saveOptionsTitle });
+    const textEl = el("p", {
+      className: "ryp-modal-text",
+      textContent: dict.saveOptionsPrompt
+    });
+    textEl.style.margin = "12px 0 20px 0";
+    textEl.style.fontSize = "14px";
+    textEl.style.color = "var(--ryp-sub)";
+
+    const buttonsList = el("div", { className: "ryp-modal-buttons-vertical" });
+    buttonsList.style.display = "flex";
+    buttonsList.style.flexDirection = "column";
+    buttonsList.style.gap = "8px";
+    buttonsList.style.width = "100%";
+
+    // Button to Save as New
+    const saveNewBtn = el("button", {
+      className: "ryp-modal-btn ryp-modal-btn-confirm",
+      textContent: `${dict.saveAsNew}: "${newName}"`
+    });
+    saveNewBtn.style.justifyContent = "center";
+    buttonsList.appendChild(saveNewBtn);
+
+    // Buttons for each existing snapshot to update
+    existingSnapshots.forEach((snap) => {
+      const btn = el("button", {
+        className: "ryp-modal-btn ryp-modal-btn-action",
+        textContent: `${dict.updateExisting}: "${snap.name}"`
+      });
+      btn.style.justifyContent = "center";
+      btn.style.background = "rgba(16, 185, 129, 0.08)";
+      btn.style.borderColor = "var(--ryp-accent-success, #10b981)";
+      btn.style.color = "var(--ryp-accent-success, #10b981)";
+
+      btn.addEventListener("click", () => runSave(snap.id));
+      buttonsList.appendChild(btn);
+    });
+
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
+    cancelBtn.style.justifyContent = "center";
+    buttonsList.appendChild(cancelBtn);
+
+    const modal = el("div", { className: "ryp-modal-content" }, [
+      titleEl,
+      textEl,
+      buttonsList
+    ]);
+    modal.style.maxWidth = "400px";
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const escListener = (e) => {
+      if (e.key === "Escape") close();
+    };
+    const close = () => {
+      window.removeEventListener("keydown", escListener);
+      overlay.classList.add("ryp-modal-closing");
+      setTimeout(() => overlay.remove(), 220);
+    };
+    const runSave = async (snapshotId) => {
+      for (const button of buttonsList.querySelectorAll("button")) button.disabled = true;
+      try {
+        await saveCurrentOrder(newName, snapshotId, tags, expectedListId);
+        close();
+        onComplete(snapshotId !== null);
+      } catch (err) {
+        showToast(err.message || "Could not save the snapshot");
+        for (const button of buttonsList.querySelectorAll("button")) button.disabled = false;
+      }
     };
 
-    const saved = (await State.get(State.keys.savedPlaylists)) || [];
-    saved.unshift(entry);
-    await State.set(State.keys.savedPlaylists, saved);
+    saveNewBtn.addEventListener("click", () => runSave(null));
+
+    cancelBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+
+    saveNewBtn.focus();
+
+    window.addEventListener("keydown", escListener);
   }
 
   // ── List rendering ────────────────────────────────────────────────────────
@@ -495,6 +697,23 @@
     if (!listEl) return;
 
     const playlists = (await State.get(State.keys.savedPlaylists)) || [];
+
+    // Toggle search input visibility based on whether we have any snapshots saved
+    const searchInput = document.getElementById("ryp-search-input");
+    if (searchInput) {
+      searchInput.style.display = playlists.length > 0 ? "block" : "none";
+    }
+
+    const searchQuery = searchInput?.value?.trim()?.toLowerCase() || "";
+    const filteredPlaylists = searchQuery
+      ? playlists.filter((pl) => {
+          const name = typeof pl.name === "string" ? pl.name : "";
+          const tags = Array.isArray(pl.tags) ? pl.tags : [];
+          return name.toLowerCase().includes(searchQuery) ||
+            tags.some((tag) => String(tag).toLowerCase().includes(searchQuery));
+        })
+      : playlists;
+
     listEl.replaceChildren(); // clear safely without innerHTML
 
     const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
@@ -524,7 +743,15 @@
       return;
     }
 
-    for (const pl of playlists) {
+    if (filteredPlaylists.length === 0) {
+      const emptyIcon = el("div", { className: "ryp-empty-icon" });
+      emptyIcon.appendChild(ICONS.folder());
+      const emptyText = el("p", { textContent: dict.noMatchingSnapshots });
+      listEl.appendChild(el("div", { className: "ryp-empty-state" }, [emptyIcon, emptyText]));
+      return;
+    }
+
+    for (const pl of filteredPlaylists) {
       const date = new Date(pl.savedAt).toLocaleDateString(activeLang, {
         year: "numeric",
         month: "short",
@@ -539,7 +766,11 @@
         className: "ryp-saved-meta",
         textContent: `${pl.order.length} ${dict.videosWord} · ${date}`,
       });
-      const infoCol = el("div", { className: "ryp-saved-info" }, [nameEl, metaEl]);
+      const tagsEl = el("div", { className: "ryp-snapshot-tags" });
+      for (const tag of Array.isArray(pl.tags) ? pl.tags : []) {
+        tagsEl.appendChild(el("span", { className: "ryp-tag", textContent: `#${tag}` }));
+      }
+      const infoCol = el("div", { className: "ryp-saved-info" }, [nameEl, metaEl, tagsEl]);
 
       // Action buttons — dataset set separately, never via innerHTML
       const playBtn = el("button", {
@@ -550,14 +781,6 @@
       playBtn.appendChild(document.createTextNode(" " + dict.play));
       playBtn.dataset.id = pl.id;
 
-      const duplicateBtn = el("button", {
-        className: "ryp-action-duplicate",
-        title: dict.duplicate,
-      });
-      duplicateBtn.setAttribute("aria-label", `${dict.duplicate} ${pl.name}`);
-      duplicateBtn.appendChild(ICONS.copy());
-      duplicateBtn.dataset.id = pl.id;
-
       const deleteBtn = el("button", {
         className: "ryp-action-delete",
         title: dict.delete,
@@ -566,7 +789,7 @@
       deleteBtn.appendChild(ICONS.trash());
       deleteBtn.dataset.id = pl.id;
 
-      const actionsCol = el("div", { className: "ryp-saved-actions" }, [playBtn, duplicateBtn, deleteBtn]);
+      const actionsCol = el("div", { className: "ryp-saved-actions" }, [playBtn, deleteBtn]);
       const card = el("div", { className: "ryp-saved-card" }, [infoCol, actionsCol]);
 
       playBtn.addEventListener("click", async () => {
@@ -581,29 +804,13 @@
         window.open(url, "_self");
       });
 
-      duplicateBtn.addEventListener("click", async () => {
-        const saved = (await State.get(State.keys.savedPlaylists)) || [];
-        const pos = saved.findIndex((p) => p.id === pl.id);
-        if (pos === -1) return;
-        const src = saved[pos];
-        const copy = {
-          ...src,
-          id: window.RYP.Backup.freshId(),
-          name: `${src.name} ${dict.copySuffix}`.slice(0, 80),
-          order: [...src.order],
-          videos: src.videos.map((v) => ({ ...v })),
-          savedAt: new Date().toISOString(),
-        };
-        saved.splice(pos + 1, 0, copy);
-        await State.set(State.keys.savedPlaylists, saved);
-        await renderList();
-      });
-
-      deleteBtn.addEventListener("click", async () => {
-        let saved = (await State.get(State.keys.savedPlaylists)) || [];
-        saved = saved.filter((p) => p.id !== pl.id);
-        await State.set(State.keys.savedPlaylists, saved);
-        await renderList();
+      deleteBtn.addEventListener("click", () => {
+        showConfirmModal("deleteConfirm", async () => {
+          let saved = (await State.get(State.keys.savedPlaylists)) || [];
+          saved = saved.filter((p) => p.id !== pl.id);
+          await State.set(State.keys.savedPlaylists, saved);
+          await renderList();
+        });
       });
 
       listEl.appendChild(card);
@@ -617,7 +824,12 @@
     const panel = document.getElementById(PANEL_ID);
     if (!panel) return panelVisible;
     panel.classList.toggle("ryp-panel-visible", panelVisible);
-    if (panelVisible) renderList();
+    if (panelVisible) {
+      const searchInput = document.getElementById("ryp-search-input");
+      if (searchInput) searchInput.value = "";
+      renderList();
+    }
+    window.RYP.Toolbar?.syncButtonStates();
     return panelVisible;
   }
 
@@ -702,7 +914,7 @@
 
   // ── Custom Modal ──────────────────────────────────────────────────────────
 
-  function showSaveModal({ title, placeholder, defaultValue, confirmLabel, onConfirm }) {
+  function showSaveModal({ title, placeholder, tagsPlaceholder, defaultValue, defaultTags, confirmLabel, onConfirm }) {
     const existing = document.getElementById("ryp-custom-modal");
     if (existing) existing.remove();
 
@@ -720,6 +932,13 @@
       maxlength: "80"
     });
     input.value = defaultValue || "";
+    const tagsInput = el("input", {
+      type: "text",
+      className: "ryp-modal-input",
+      placeholder: tagsPlaceholder || dict.tagsPlaceholder,
+      maxlength: "200"
+    });
+    tagsInput.value = Array.isArray(defaultTags) ? defaultTags.join(", ") : (defaultTags || "");
 
     const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
     const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: confirmLabel || "Confirm" });
@@ -728,6 +947,7 @@
     const modal = el("div", { className: "ryp-modal-content" }, [
       titleEl,
       input,
+      tagsInput,
       buttonsRow
     ]);
     
@@ -750,6 +970,7 @@
     });
 
     const handleConfirm = () => {
+      if (confirmBtn.disabled) return;
       const val = input.value.trim();
       if (!val) {
         input.classList.add("ryp-input-error");
@@ -757,15 +978,78 @@
         setTimeout(() => input.classList.remove("ryp-input-error"), 1200);
         return;
       }
-      onConfirm(val);
+      confirmBtn.disabled = true;
+      onConfirm(val, tagsInput.value);
       close();
     };
 
     confirmBtn.addEventListener("click", handleConfirm);
-    input.addEventListener("keydown", (e) => {
+    const handleKeydown = (e) => {
       if (e.key === "Enter") handleConfirm();
       if (e.key === "Escape") close();
+    };
+    input.addEventListener("keydown", handleKeydown);
+    tagsInput.addEventListener("keydown", handleKeydown);
+  }
+
+  function showConfirmModal(textKey, onConfirm) {
+    const existing = document.getElementById("ryp-custom-modal");
+    if (existing) existing.remove();
+
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    const overlay = el("div", { id: "ryp-custom-modal", className: "ryp-modal-overlay" });
+    overlay.dir = activeLang === "ar" ? "rtl" : "ltr";
+
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: dict.confirm });
+    const textEl = el("p", { className: "ryp-modal-text", textContent: dict[textKey] || textKey });
+    textEl.style.margin = "12px 0 20px 0";
+    textEl.style.fontSize = "14px";
+    textEl.style.color = "var(--ryp-sub)";
+
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
+    const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: dict.confirm });
+
+    const buttonsRow = el("div", { className: "ryp-modal-buttons" }, [cancelBtn, confirmBtn]);
+    const modal = el("div", { className: "ryp-modal-content" }, [
+      titleEl,
+      textEl,
+      buttonsRow
+    ]);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const escListener = (e) => {
+      if (e.key === "Escape") close();
+    };
+    const close = () => {
+      window.removeEventListener("keydown", escListener);
+      overlay.classList.add("ryp-modal-closing");
+      setTimeout(() => overlay.remove(), 220);
+    };
+
+    cancelBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
     });
+
+    confirmBtn.addEventListener("click", async () => {
+      if (confirmBtn.disabled) return;
+      confirmBtn.disabled = true;
+      cancelBtn.disabled = true;
+      try {
+        await onConfirm();
+        close();
+      } catch (err) {
+        showToast(err.message || "The operation failed");
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+      }
+    });
+
+    confirmBtn.focus();
+
+    window.addEventListener("keydown", escListener);
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -781,5 +1065,6 @@
     saveCurrentOrder,
     renderList,
     showSaveModal,
+    showSaveOptionsModal,
   };
 })();

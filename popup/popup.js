@@ -10,6 +10,7 @@
   const settingsPanel = document.getElementById("settings-panel");
   const saveSection = document.getElementById("save-current-section");
   const saveInput = document.getElementById("save-input-popup");
+  const saveTagsInput = document.getElementById("save-tags-popup");
   const saveConfirmBtn = document.getElementById("save-confirm-popup");
   const logoContainer = document.getElementById("popup-title-icon");
   const importBtn = document.getElementById("import-btn");
@@ -25,6 +26,7 @@
   const resumeToggle = document.getElementById("resume-toggle");
 
   let activeTabId = null;
+  let activeTabPlaylistId = null;
   let currentSettings = { lang: "en", autoSkip: false, showBadges: true, compact: false, loop: false, resumePrompt: true };
 
   // ── Translations Dictionary ────────────────────────────────────────────────
@@ -66,8 +68,6 @@
       saveCurrentSectionLabel: "Save current playlist state:",
       loop: "Loop playlist order",
       resumePrompt: "Offer to resume playlists",
-      duplicate: "Duplicate",
-      copySuffix: "(copy)",
       videosWord: "videos",
       rateUs: "Enjoying it? Leave a review ★",
       export: "Export",
@@ -76,7 +76,17 @@
       importTitle: "Import saved playlists from a file",
       exportEmpty: "Nothing to export yet.",
       importDone: "✓ Imported {added} playlist(s), skipped {skipped} duplicate(s).",
-      importInvalid: "Invalid backup file — nothing imported."
+      importInvalid: "Invalid backup file — nothing imported.",
+      searchSnapshots: "Search names or tags...",
+      tagsPlaceholder: "Tags (comma separated)",
+      noMatchingSnapshots: "No matching snapshots found.",
+      clearWatchedConfirmPromptCurrent: "Are you sure you want to clear watched badges for this playlist?",
+      clearWatchedConfirmPromptAll: "Are you sure you want to clear all watched badges across all playlists?",
+      saveOptionsTitle: "Save Options",
+      saveOptionsPrompt: "Existing snapshots found for this playlist. Would you like to update one or save as a new snapshot?",
+      saveAsNew: "Save as New",
+      updateExisting: "Update",
+      updateConfirm: "Snapshot updated!"
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -114,8 +124,6 @@
       saveCurrentSectionLabel: "Enregistrer l'état actuel :",
       loop: "Lecture en boucle",
       resumePrompt: "Proposer la reprise de lecture",
-      duplicate: "Dupliquer",
-      copySuffix: "(copie)",
       videosWord: "vidéos",
       rateUs: "Vous aimez ? Laissez un avis ★",
       export: "Exporter",
@@ -124,7 +132,17 @@
       importTitle: "Importer des playlists depuis un fichier",
       exportEmpty: "Rien à exporter pour l'instant.",
       importDone: "✓ {added} playlist(s) importée(s), {skipped} doublon(s) ignoré(s).",
-      importInvalid: "Fichier de sauvegarde invalide — rien n'a été importé."
+      importInvalid: "Fichier de sauvegarde invalide — rien n'a été importé.",
+      searchSnapshots: "Rechercher par nom ou tag...",
+      tagsPlaceholder: "Tags (séparés par des virgules)",
+      noMatchingSnapshots: "Aucun instantané ne correspond.",
+      clearWatchedConfirmPromptCurrent: "Voulez-vous vraiment effacer les badges vus pour cette playlist ?",
+      clearWatchedConfirmPromptAll: "Voulez-vous vraiment effacer tous les badges vus de toutes les playlists ?",
+      saveOptionsTitle: "Options d'enregistrement",
+      saveOptionsPrompt: "Des instantanés existent déjà pour cette playlist. Voulez-vous en mettre un à jour ou enregistrer un nouvel instantané ?",
+      saveAsNew: "Enregistrer comme nouveau",
+      updateExisting: "Mettre à jour",
+      updateConfirm: "Instantané mis à jour !"
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -162,8 +180,6 @@
       saveCurrentSectionLabel: "حفظ حالة قائمة التشغيل الحالية:",
       loop: "تكرار قائمة التشغيل",
       resumePrompt: "اقتراح استئناف المشاهدة",
-      duplicate: "تكرار اللقطة",
-      copySuffix: "(نسخة)",
       videosWord: "فيديو",
       rateUs: "أعجبك الامتداد؟ اترك تقييمًا ★",
       export: "تصدير",
@@ -172,7 +188,17 @@
       importTitle: "استيراد قوائم تشغيل من ملف",
       exportEmpty: "لا يوجد شيء للتصدير بعد.",
       importDone: "✓ تم استيراد {added} قائمة، وتخطي {skipped} مكررة.",
-      importInvalid: "ملف نسخ احتياطي غير صالح — لم يتم استيراد أي شيء."
+      importInvalid: "ملف نسخ احتياطي غير صالح — لم يتم استيراد أي شيء.",
+      searchSnapshots: "البحث بالاسم أو الوسم...",
+      tagsPlaceholder: "وسوم (مفصولة بفواصل)",
+      noMatchingSnapshots: "لم يتم العثور على لقطات مطابقة.",
+      clearWatchedConfirmPromptCurrent: "هل أنت متأكد من مسح شارات المشاهدة لهذه القائمة؟",
+      clearWatchedConfirmPromptAll: "هل أنت متأكد من مسح جميع شارات المشاهدة لجميع قوائم التشغيل؟",
+      saveOptionsTitle: "خيارات الحفظ",
+      saveOptionsPrompt: "تم العثور على لقطات محفوظة لهذه القائمة. هل تريد تحديث إحداها أم حفظها كلقطة جديدة؟",
+      saveAsNew: "حفظ كلقطة جديدة",
+      updateExisting: "تحديث",
+      updateConfirm: "تم تحديث اللقطة بنجاح!"
     }
   };
 
@@ -215,10 +241,6 @@
     ]),
     play: () => svg("play-icon-svg", "0 0 24 24", 2, [
       { tag: "polygon", attrs: { points: "5 3 19 12 5 21 5 3" } }
-    ]),
-    copy: () => svg("copy-icon-svg", "0 0 24 24", 2, [
-      { tag: "rect", attrs: { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" } },
-      { tag: "path", attrs: { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" } }
     ]),
     edit: () => svg("edit-icon-svg", "0 0 24 24", 2, [
       { tag: "path", attrs: { d: "M12 20h9" } },
@@ -323,7 +345,7 @@
 
   // ── Custom Popup Modals ───────────────────────────────────────────────────
 
-  function showPopupModal({ titleKey, placeholderKey, defaultValue, confirmLabelKey, onConfirm }) {
+  function showPopupModal({ titleKey, placeholderKey, defaultValue, defaultTags, confirmLabelKey, onConfirm }) {
     const existing = document.getElementById("ryp-popup-modal");
     if (existing) existing.remove();
 
@@ -338,6 +360,13 @@
       maxlength: "80"
     });
     input.value = defaultValue || "";
+    const tagsInput = el("input", {
+      type: "text",
+      className: "ryp-modal-input",
+      placeholder: dict.tagsPlaceholder,
+      maxlength: "200"
+    });
+    tagsInput.value = Array.isArray(defaultTags) ? defaultTags.join(", ") : "";
 
     const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
     const confirmBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: dict[confirmLabelKey] || confirmLabelKey });
@@ -346,6 +375,7 @@
     const modal = el("div", { className: "ryp-modal-content" }, [
       titleEl,
       input,
+      tagsInput,
       buttonsRow
     ]);
     
@@ -367,7 +397,8 @@
       if (e.target === overlay) close();
     });
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
+      if (confirmBtn.disabled) return;
       const val = input.value.trim();
       if (!val) {
         input.classList.add("input-error");
@@ -375,15 +406,25 @@
         setTimeout(() => input.classList.remove("input-error"), 1200);
         return;
       }
-      onConfirm(val);
-      close();
+      confirmBtn.disabled = true;
+      cancelBtn.disabled = true;
+      try {
+        await onConfirm(val, Backup.normalizeTags(tagsInput.value));
+        close();
+      } catch (err) {
+        showPopupToast(err.message || "The operation failed.", true);
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+      }
     };
 
     confirmBtn.addEventListener("click", handleConfirm);
-    input.addEventListener("keydown", (e) => {
+    const handleKeydown = (e) => {
       if (e.key === "Enter") handleConfirm();
       if (e.key === "Escape") close();
-    });
+    };
+    input.addEventListener("keydown", handleKeydown);
+    tagsInput.addEventListener("keydown", handleKeydown);
   }
 
   function showConfirmModal(textKey, onConfirm) {
@@ -418,36 +459,132 @@
       if (e.target === overlay) close();
     });
 
-    confirmBtn.addEventListener("click", () => {
-      onConfirm();
-      close();
+    confirmBtn.addEventListener("click", async () => {
+      if (confirmBtn.disabled) return;
+      confirmBtn.disabled = true;
+      cancelBtn.disabled = true;
+      try {
+        await onConfirm();
+        close();
+      } catch (err) {
+        showPopupToast(err.message || "The operation failed.", true);
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+      }
     });
+  }
+
+  function showSaveOptionsModal(existingSnapshots, newName, onComplete, onCancel) {
+    const existing = document.getElementById("ryp-popup-modal");
+    if (existing) existing.remove();
+
+    const dict = getDict();
+    const overlay = el("div", { id: "ryp-popup-modal", className: "ryp-modal-overlay" });
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: dict.saveOptionsTitle });
+    const textEl = el("p", {
+      className: "ryp-modal-text",
+      textContent: dict.saveOptionsPrompt
+    });
+    textEl.style.margin = "8px 0 16px 0";
+    textEl.style.fontSize = "13px";
+    textEl.style.color = "var(--sub)";
+
+    const buttonsList = el("div", { className: "ryp-modal-buttons-vertical" });
+    buttonsList.style.display = "flex";
+    buttonsList.style.flexDirection = "column";
+    buttonsList.style.gap = "8px";
+    buttonsList.style.width = "100%";
+
+    // Button to Save as New
+    const saveNewBtn = el("button", {
+      className: "ryp-modal-btn ryp-modal-btn-confirm",
+      textContent: `${dict.saveAsNew}: "${newName}"`
+    });
+    saveNewBtn.style.justifyContent = "center";
+    saveNewBtn.addEventListener("click", () => selectSnapshot(null));
+    buttonsList.appendChild(saveNewBtn);
+
+    // Buttons for each existing snapshot to update
+    existingSnapshots.forEach((snap) => {
+      const btn = el("button", {
+        className: "ryp-modal-btn",
+        textContent: `${dict.updateExisting}: "${snap.name}"`
+      });
+      btn.style.justifyContent = "center";
+      btn.style.background = "rgba(16, 185, 129, 0.08)";
+      btn.style.borderColor = "#10b981";
+      btn.style.color = "#10b981";
+
+      btn.addEventListener("click", () => selectSnapshot(snap.id));
+      buttonsList.appendChild(btn);
+    });
+
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
+    cancelBtn.style.justifyContent = "center";
+    buttonsList.appendChild(cancelBtn);
+
+    const modal = el("div", { className: "ryp-modal-content" }, [
+      titleEl,
+      textEl,
+      buttonsList
+    ]);
+    modal.style.maxWidth = "280px";
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    let escListener;
+    let submitted = false;
+    const close = () => {
+      if (escListener) window.removeEventListener("keydown", escListener);
+      overlay.classList.add("ryp-modal-closing");
+      setTimeout(() => overlay.remove(), 220);
+    };
+    const selectSnapshot = (snapshotId) => {
+      if (submitted) return;
+      submitted = true;
+      for (const button of buttonsList.querySelectorAll("button")) button.disabled = true;
+      close();
+      onComplete(snapshotId);
+    };
+
+    const cancel = () => {
+      if (submitted) return;
+      close();
+      onCancel?.();
+    };
+    cancelBtn.addEventListener("click", cancel);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) cancel();
+    });
+
+    saveNewBtn.focus();
+    escListener = (e) => {
+      if (e.key === "Escape") cancel();
+    };
+    window.addEventListener("keydown", escListener);
   }
 
   // ── Settings Handler ──────────────────────────────────────────────────────
 
   async function loadSettings() {
-    return new Promise((resolve) => {
-      api.storage.local.get("ryp_settings", (res) => {
-        const defaultLang = api.i18n.getUILanguage().startsWith("ar") ? "ar" : (api.i18n.getUILanguage().startsWith("fr") ? "fr" : "en");
-        const loaded = res.ryp_settings || {};
-        currentSettings = {
-          lang: loaded.lang || defaultLang,
-          autoSkip: loaded.autoSkip ?? false,
-          showBadges: loaded.showBadges ?? true,
-          compact: loaded.compact ?? false,
-          loop: loaded.loop ?? false,
-          resumePrompt: loaded.resumePrompt ?? true,
-        };
-        resolve(currentSettings);
-      });
-    });
+    const res = await api.storage.local.get("ryp_settings");
+    const uiLanguage = api.i18n.getUILanguage();
+    const defaultLang = uiLanguage.startsWith("ar") ? "ar" : (uiLanguage.startsWith("fr") ? "fr" : "en");
+    const loaded = res.ryp_settings || {};
+    currentSettings = {
+      lang: loaded.lang || defaultLang,
+      autoSkip: loaded.autoSkip ?? false,
+      showBadges: loaded.showBadges ?? true,
+      compact: loaded.compact ?? false,
+      loop: loaded.loop ?? false,
+      resumePrompt: loaded.resumePrompt ?? true,
+    };
+    return currentSettings;
   }
 
   async function saveSettings() {
-    await new Promise((resolve) => {
-      api.storage.local.set({ ryp_settings: currentSettings }, resolve);
-    });
+    await api.storage.local.set({ ryp_settings: currentSettings });
     applySettingsUI();
   }
 
@@ -533,9 +670,8 @@
 
   // ── Tab Management & URL Queries ──────────────────────────────────────────
 
-  // Check if active tab is a YouTube playlist *watch* page and show the save
-  // section. /playlist browse pages are excluded — the content script can
-  // only read the sidebar on watch pages, so saving there would fail.
+  // Check if active tab is a YouTube playlist watch or playlist overview page
+  // and show the save section.
   api.tabs.query({ active: true, currentWindow: true })
     .then((tabs) => {
       const activeTab = tabs && tabs[0];
@@ -544,6 +680,12 @@
         if (url.includes("youtube.com/") && url.includes("/watch") && url.includes("list=")) {
           activeTabId = activeTab.id;
           saveSection.style.display = "block";
+          try {
+            const urlObj = new URL(url);
+            activeTabPlaylistId = urlObj.searchParams.get("list");
+          } catch (e) {
+            console.warn("Failed to parse playlist ID from URL:", url, e);
+          }
         }
       }
     })
@@ -552,8 +694,10 @@
     });
 
   // Save current playlist state via message to content script (Create)
-  saveConfirmBtn.addEventListener("click", () => {
+  let savePending = false;
+  saveConfirmBtn.addEventListener("click", async () => {
     if (!activeTabId) return;
+    if (savePending) return;
     const name = saveInput.value.trim();
     if (!name) {
       saveInput.classList.add("input-error");
@@ -562,36 +706,117 @@
       return;
     }
 
-    api.tabs.sendMessage(activeTabId, { action: "SAVE_PLAYLIST", name: name })
-      .then((response) => {
-        if (response && response.success) {
-          saveInput.value = "";
-          renderPlaylists();
-          showPopupToast(getDict().saveConfirm);
-        } else {
-          showPopupToast(response?.error || "Failed to save playlist state.", true);
+    savePending = true;
+    saveConfirmBtn.disabled = true;
+    let saved;
+    try {
+      const result = await api.storage.local.get("savedPlaylists");
+      saved = result.savedPlaylists || [];
+    } catch (err) {
+      savePending = false;
+      saveConfirmBtn.disabled = false;
+      showPopupToast(err.message || "Could not read saved snapshots.", true);
+      return;
+    }
+    const existing = saved.filter((p) => p.sourceListId === activeTabPlaylistId);
+    const tags = Backup.normalizeTags(saveTagsInput.value);
+
+    const sendSave = async (updateId = null) => {
+      try {
+        const response = await api.tabs.sendMessage(activeTabId, {
+          action: "SAVE_PLAYLIST",
+          name,
+          tags,
+          sourceListId: activeTabPlaylistId,
+          updateSnapshotId: updateId
+        });
+        if (!response?.success) {
+          throw new Error(response?.error || "Failed to save playlist state.");
         }
-      })
-      .catch((err) => {
-        console.error("Error sending message to content script:", err);
-        showPopupToast("Cannot communicate with the YouTube tab. Please refresh the page and try again.", true);
+        saveInput.value = "";
+        saveTagsInput.value = "";
+        await renderPlaylists();
+        showPopupToast(updateId ? getDict().updateConfirm : getDict().saveConfirm);
+      } catch (err) {
+        console.error("Error saving playlist snapshot:", err);
+        showPopupToast(err.message || "Cannot communicate with the YouTube tab. Please refresh the page and try again.", true);
+      } finally {
+        savePending = false;
+        saveConfirmBtn.disabled = false;
+      }
+    };
+
+    if (existing.length > 0) {
+      showSaveOptionsModal(existing, name, (updateId) => {
+        sendSave(updateId);
+      }, () => {
+        savePending = false;
+        saveConfirmBtn.disabled = false;
       });
+    } else {
+      sendSave();
+    }
   });
+
+  const clearWatchedBtn = document.getElementById("clear-watched-btn");
+  if (clearWatchedBtn) {
+    clearWatchedBtn.addEventListener("click", async () => {
+      const tabs = await api.tabs.query({ active: true, currentWindow: true });
+      const activeTab = tabs && tabs[0];
+      const urlStr = activeTab?.url || "";
+      let currentListId = null;
+
+      if (urlStr.includes("youtube.com/watch") && urlStr.includes("list=")) {
+        try {
+          const url = new URL(urlStr);
+          currentListId = url.searchParams.get("list");
+        } catch (e) {
+          console.warn("Failed to parse active tab URL:", e);
+        }
+      }
+
+      const dict = getDict();
+      if (currentListId) {
+        showConfirmModal("clearWatchedConfirmPromptCurrent", async () => {
+          await api.storage.local.remove(`watched:${currentListId}`);
+          showPopupToast(dict.clearWatchedConfirm);
+        });
+      } else {
+        showConfirmModal("clearWatchedConfirmPromptAll", async () => {
+          const items = await api.storage.local.get(null);
+          const keysToRemove = Object.keys(items).filter(k => k.startsWith("watched:"));
+          if (keysToRemove.length > 0) {
+            await api.storage.local.remove(keysToRemove);
+          }
+          showPopupToast(dict.clearWatchedConfirm);
+        });
+      }
+    });
+  }
+
+  const popupSearchInput = document.getElementById("popup-search-input");
+  if (popupSearchInput) {
+    popupSearchInput.addEventListener("input", () => {
+      renderPlaylists();
+    });
+  }
 
   // Render playlists list (Read)
   async function renderPlaylists() {
     listContainer.replaceChildren();
 
     const dict = getDict();
-    const data = await new Promise((resolve) => {
-      api.storage.local.get("savedPlaylists", (res) => {
-        resolve(res.savedPlaylists || []);
-      });
-    });
+    const stored = await api.storage.local.get("savedPlaylists");
+    const data = stored.savedPlaylists || [];
 
     if (listCountEl) {
       listCountEl.textContent = String(data.length);
       listCountEl.style.display = data.length > 0 ? "inline-flex" : "none";
+    }
+
+    const searchContainer = document.getElementById("search-container");
+    if (searchContainer) {
+      searchContainer.style.display = data.length > 0 ? "block" : "none";
     }
 
     if (data.length === 0) {
@@ -604,9 +829,28 @@
       return;
     }
 
+    const searchQuery = document.getElementById("popup-search-input")?.value?.trim()?.toLowerCase() || "";
+    const filteredData = searchQuery
+      ? data.filter((pl) => {
+          const name = typeof pl.name === "string" ? pl.name : "";
+          const tags = Array.isArray(pl.tags) ? pl.tags : [];
+          return name.toLowerCase().includes(searchQuery) ||
+            tags.some((tag) => String(tag).toLowerCase().includes(searchQuery));
+        })
+      : data;
+
+    if (filteredData.length === 0) {
+      deleteAllBtn.style.display = "block";
+      const emptyIcon = el("div", { className: "empty-icon" });
+      emptyIcon.appendChild(ICONS.folder());
+      const emptyText = el("p", { className: "empty-text", textContent: dict.noMatchingSnapshots });
+      listContainer.appendChild(el("div", { className: "empty-state" }, [emptyIcon, emptyText]));
+      return;
+    }
+
     deleteAllBtn.style.display = "block";
 
-    for (const pl of data) {
+    for (const pl of filteredData) {
       const date = new Date(pl.savedAt).toLocaleDateString(currentSettings.lang, {
         year: "numeric",
         month: "short",
@@ -619,7 +863,11 @@
         className: "playlist-meta",
         textContent: `${pl.order.length} ${dict.videosWord} · ${date}`,
       });
-      const infoCol = el("div", { className: "playlist-info" }, [nameEl, metaEl]);
+      const tagsEl = el("div", { className: "snapshot-tags" });
+      for (const tag of Array.isArray(pl.tags) ? pl.tags : []) {
+        tagsEl.appendChild(el("span", { className: "snapshot-tag", textContent: `#${tag}` }));
+      }
+      const infoCol = el("div", { className: "playlist-info" }, [nameEl, metaEl, tagsEl]);
 
       const playBtn = el("button", {
         className: "action-play",
@@ -627,12 +875,6 @@
       });
       playBtn.appendChild(ICONS.play());
       playBtn.appendChild(document.createTextNode(" " + dict.play));
-
-      const duplicateBtn = el("button", {
-        className: "action-duplicate",
-        title: dict.duplicate,
-      });
-      duplicateBtn.appendChild(ICONS.copy());
 
       const renameBtn = el("button", {
         className: "action-rename",
@@ -646,7 +888,7 @@
       });
       deleteBtn.appendChild(ICONS.trash());
 
-      const actionsCol = el("div", { className: "playlist-actions" }, [playBtn, duplicateBtn, renameBtn, deleteBtn]);
+      const actionsCol = el("div", { className: "playlist-actions" }, [playBtn, renameBtn, deleteBtn]);
       const card = el("div", { className: "playlist-card" }, [infoCol, actionsCol]);
 
       // Play action
@@ -687,60 +929,34 @@
           });
       });
 
-      // Duplicate action — inserts the copy right after the original
-      duplicateBtn.addEventListener("click", () => {
-        api.storage.local.get("savedPlaylists", (res) => {
-          const saved = res.savedPlaylists || [];
-          const pos = saved.findIndex((p) => p.id === pl.id);
-          if (pos === -1) return;
-          const src = saved[pos];
-          const copy = {
-            ...src,
-            id: Backup.freshId(),
-            name: `${src.name} ${dict.copySuffix}`.slice(0, 80),
-            order: [...src.order],
-            videos: src.videos.map((v) => ({ ...v })),
-            savedAt: new Date().toISOString(),
-          };
-          saved.splice(pos + 1, 0, copy);
-          api.storage.local.set({ savedPlaylists: saved }, () => {
-            renderPlaylists();
-          });
-        });
-      });
-
       // Rename action (Update)
       renameBtn.addEventListener("click", () => {
         showPopupModal({
           titleKey: "renamePrompt",
           placeholderKey: "saveInputPlaceholder",
           defaultValue: pl.name,
+          defaultTags: pl.tags,
           confirmLabelKey: "rename",
-          onConfirm: (trimmed) => {
-            api.storage.local.get("savedPlaylists", (res) => {
-              const saved = res.savedPlaylists || [];
-              const index = saved.findIndex((p) => p.id === pl.id);
-              if (index !== -1) {
-                saved[index].name = trimmed;
-                api.storage.local.set({ savedPlaylists: saved }, () => {
-                  renderPlaylists();
-                });
-              }
-            });
+          onConfirm: async (trimmed, tags) => {
+            const res = await api.storage.local.get("savedPlaylists");
+            const saved = res.savedPlaylists || [];
+            const index = saved.findIndex((p) => p.id === pl.id);
+            if (index === -1) return;
+            saved[index].name = trimmed;
+            saved[index].tags = tags;
+            await api.storage.local.set({ savedPlaylists: saved });
+            await renderPlaylists();
           }
         });
       });
 
       // Delete action (Delete)
       deleteBtn.addEventListener("click", () => {
-        showConfirmModal("deleteConfirm", () => {
-          api.storage.local.get("savedPlaylists", (res) => {
-            let saved = res.savedPlaylists || [];
-            saved = saved.filter((p) => p.id !== pl.id);
-            api.storage.local.set({ savedPlaylists: saved }, () => {
-              renderPlaylists();
-            });
-          });
+        showConfirmModal("deleteConfirm", async () => {
+          const res = await api.storage.local.get("savedPlaylists");
+          const saved = (res.savedPlaylists || []).filter((p) => p.id !== pl.id);
+          await api.storage.local.set({ savedPlaylists: saved });
+          await renderPlaylists();
         });
       });
 
@@ -750,10 +966,9 @@
 
   // Delete all action (Delete All)
   deleteAllBtn.addEventListener("click", () => {
-    showConfirmModal("deleteAllConfirm", () => {
-      api.storage.local.set({ savedPlaylists: [] }, () => {
-        renderPlaylists();
-      });
+    showConfirmModal("deleteAllConfirm", async () => {
+      await api.storage.local.set({ savedPlaylists: [] });
+      await renderPlaylists();
     });
   });
 

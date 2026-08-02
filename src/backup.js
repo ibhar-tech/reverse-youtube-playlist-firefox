@@ -7,7 +7,7 @@
  * extension APIs — callers own all storage reads/writes.
  *
  * Backup file schema:
- *   { schema: "ryp-saved-playlists", schemaVersion: 1, exportedAt, playlists }
+ *   { schema: "ryp-saved-playlists", schemaVersion: 2, exportedAt, playlists }
  */
 (() => {
   "use strict";
@@ -23,14 +23,33 @@
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
+  function normalizeTags(tags) {
+    const values = Array.isArray(tags) ? tags : String(tags || "").split(",");
+    const unique = [];
+    for (const value of values) {
+      const tag = String(value).trim().replace(/^#+/, "").slice(0, 24);
+      if (tag && !unique.some((item) => item.toLowerCase() === tag.toLowerCase())) {
+        unique.push(tag);
+      }
+      if (unique.length === 8) break;
+    }
+    return unique;
+  }
+
   function isValidSnapshot(p) {
+    const order = Array.isArray(p?.order) ? p.order.map(Number) : [];
     return (
       p && typeof p === "object" &&
       typeof p.name === "string" && p.name.trim() &&
       typeof p.sourceListId === "string" && ID_RE.test(p.sourceListId) &&
-      Array.isArray(p.order) && p.order.length > 0 &&
-      p.order.every((n) => Number.isFinite(Number(n))) &&
-      Array.isArray(p.videos)
+      order.length > 0 &&
+      order.every((index) => Number.isInteger(index) && index > 0) &&
+      new Set(order).size === order.length &&
+      Array.isArray(p.videos) && p.videos.some((video) => (
+        video && typeof video === "object" &&
+        Number.isInteger(Number(video.index)) && Number(video.index) > 0 &&
+        ID_RE.test(video.videoId || "")
+      ))
     );
   }
 
@@ -39,6 +58,7 @@
     return {
       id: typeof p.id === "string" && p.id ? p.id.slice(0, 64) : freshId(),
       name: p.name.trim().slice(0, 80),
+      tags: normalizeTags(p.tags),
       sourceListId: p.sourceListId,
       order: p.order.map(Number),
       videos: p.videos
@@ -62,32 +82,49 @@
     const data = JSON.parse(text);
     const incoming = Array.isArray(data) ? data : data && data.playlists;
     if (!Array.isArray(incoming)) throw new Error("not a backup file");
-    const valid = incoming.filter(isValidSnapshot).map(normalizeSnapshot);
+    const valid = incoming
+      .filter(isValidSnapshot)
+      .map(normalizeSnapshot)
+      .filter((snapshot) => {
+        const videoIndices = new Set(snapshot.videos.map((video) => video.index));
+        return snapshot.order.every((index) => videoIndices.has(index));
+      });
     if (valid.length === 0) throw new Error("no valid playlists");
     return valid;
   }
 
   /**
    * Merge imported snapshots into the existing list.
-   * Exact duplicates (same id + savedAt + name) are skipped; id collisions
-   * with different content get a fresh id so both copies survive.
+   * Content-identical snapshots are skipped; id collisions with different
+   * content get a fresh id so both snapshots survive.
    * Returns { merged, added, skipped }; `existing` is not mutated.
    */
   function mergeSnapshots(existing, incoming) {
     const merged = existing.slice();
     const byId = new Map(merged.map((p) => [p.id, p]));
+    const fingerprint = (p) => JSON.stringify({
+      name: p.name,
+      tags: normalizeTags(p.tags),
+      sourceListId: p.sourceListId,
+      order: p.order,
+      videos: p.videos,
+      savedAt: p.savedAt,
+    });
+    const fingerprints = new Set(merged.map(fingerprint));
     let added = 0;
     let skipped = 0;
 
     for (const pl of incoming) {
-      const dup = byId.get(pl.id);
-      if (dup && dup.savedAt === pl.savedAt && dup.name === pl.name) {
+      const contentKey = fingerprint(pl);
+      if (fingerprints.has(contentKey)) {
         skipped++;
         continue;
       }
-      if (dup) pl.id = freshId();
-      byId.set(pl.id, pl);
-      merged.push(pl);
+      const dup = byId.get(pl.id);
+      const candidate = dup ? { ...pl, id: freshId() } : pl;
+      byId.set(candidate.id, candidate);
+      fingerprints.add(contentKey);
+      merged.push(candidate);
       added++;
     }
     return { merged, added, skipped };
@@ -97,9 +134,12 @@
   function triggerDownload(playlists) {
     const payload = {
       schema: SCHEMA,
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: new Date().toISOString(),
-      playlists,
+      playlists: playlists.map((playlist) => ({
+        ...playlist,
+        tags: normalizeTags(playlist.tags),
+      })),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
@@ -115,7 +155,7 @@
   }
 
   window.RYP.Backup = {
-    freshId,
+    normalizeTags,
     isValidSnapshot,
     normalizeSnapshot,
     parseImport,

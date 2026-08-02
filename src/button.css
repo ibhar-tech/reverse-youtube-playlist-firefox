@@ -90,6 +90,22 @@ html[dark], [dark] {
   outline: none;
 }
 
+#ryp-btn-reset {
+  display: none !important;
+}
+
+#ryp-btn-reset.ryp-visible {
+  display: inline-flex !important;
+}
+
+/* Custom Order active styling for Reorder button */
+.ryp-btn.ryp-custom-active {
+  border-color: var(--ryp-accent-start) !important;
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: var(--ryp-accent-start) !important;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.2) !important;
+}
+
 .ryp-btn:hover {
   background: var(--ryp-btn-hover-bg);
   transform: translateY(-1px);
@@ -170,6 +186,10 @@ html[dark], [dark] {
   animation: ryp-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+.ryp-hide-badges .ryp-watched::after {
+  display: none !important;
+}
+
 @keyframes ryp-pop {
   0% { transform: scale(0); }
   100% { transform: scale(1); }
@@ -177,20 +197,60 @@ html[dark], [dark] {
 
 /* ── Sidebar Drag and Drop Styling ──────────────────────────────────────── */
 
-ytd-playlist-panel-renderer #items.ryp-reversed {
-  display: flex;
-  flex-direction: column-reverse;
+ytd-playlist-panel-renderer #items.ryp-reversed,
+#contents.ryp-reversed,
+.ryp-reversed {
+  display: flex !important;
+  flex-direction: column-reverse !important;
 }
 
-ytd-playlist-panel-renderer #items.ryp-reorder-mode {
-  display: flex;
-  flex-direction: column;
+ytd-playlist-panel-renderer #items.ryp-reorder-mode,
+#contents.ryp-reorder-mode,
+.ryp-reorder-mode {
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .ryp-draggable {
   cursor: grab;
   transition: background 0.2s ease, border-left-color 0.2s ease;
   border-left: 3px solid transparent;
+}
+
+.ryp-drag-handle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 100%;
+  color: var(--ryp-sub);
+  font-size: 14px;
+  font-family: monospace;
+  cursor: grab;
+  user-select: none;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  margin-left: 6px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+#items.ryp-reorder-mode ytd-playlist-panel-video-renderer,
+#contents.ryp-reorder-mode ytd-playlist-video-renderer,
+.ryp-reorder-mode > * {
+  display: flex !important;
+  align-items: center !important;
+}
+
+#items.ryp-reorder-mode .ryp-drag-handle,
+#contents.ryp-reorder-mode .ryp-drag-handle,
+.ryp-reorder-mode .ryp-drag-handle {
+  display: flex !important;
+}
+
+.ryp-drag-handle:hover {
+  opacity: 1;
+  color: var(--ryp-accent-start);
 }
 
 .ryp-draggable:hover {
@@ -358,6 +418,31 @@ html[dark] .ryp-save-input {
   40%, 80% { transform: translateX(4px); }
 }
 
+.ryp-search-input {
+  box-sizing: border-box;
+  width: calc(100% - 24px);
+  margin: 6px 12px 10px 12px;
+  padding: 8px 12px;
+  font-family: var(--ryp-font);
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-md);
+  color: var(--ryp-text);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+html[dark] .ryp-search-input {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ryp-search-input:focus {
+  background: var(--ryp-bg-solid);
+  border-color: var(--ryp-accent-start);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
 .ryp-save-confirm {
   padding: 10px 16px;
   font-family: var(--ryp-font);
@@ -378,6 +463,12 @@ html[dark] .ryp-save-input {
 .ryp-save-confirm:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px var(--ryp-accent-glow);
+}
+
+.ryp-save-confirm:disabled,
+.ryp-modal-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .ryp-save-confirm svg {
@@ -528,6 +619,26 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
   margin-top: 4px;
 }
 
+.ryp-snapshot-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.ryp-tag {
+  max-width: 120px;
+  padding: 2px 7px;
+  overflow: hidden;
+  color: var(--ryp-accent-start);
+  font-size: 10px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: var(--ryp-radius-pill);
+}
+
 .ryp-saved-actions {
   display: flex;
   align-items: center;
@@ -586,33 +697,6 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
 }
 
 .ryp-action-delete svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* Duplicate snapshot button — same shape as delete, indigo hover */
-.ryp-action-duplicate {
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: 1px solid var(--ryp-border);
-  border-radius: var(--ryp-radius-md);
-  color: var(--ryp-sub);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.ryp-action-duplicate:hover {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.3);
-  color: var(--ryp-accent-start);
-  transform: scale(1.05);
-}
-
-.ryp-action-duplicate svg {
   width: 12px;
   height: 12px;
 }
@@ -923,4 +1007,3 @@ html[dark] .ryp-modal-btn-cancel:hover,
   transform: translateY(-1px);
   box-shadow: 0 4px 10px var(--ryp-accent-glow);
 }
-

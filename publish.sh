@@ -42,6 +42,15 @@ export AMO_JWT_ISSUER AMO_JWT_SECRET AMO_ADDON_ID
 : "${AMO_JWT_SECRET:?  Set AMO_JWT_SECRET in .env}"
 : "${AMO_ADDON_ID:?    Set AMO_ADDON_ID in .env}"
 
+[[ "$AMO_JWT_ISSUER" != "user:XXXXX:XX" ]] || {
+  echo "❌  Replace the placeholder AMO_JWT_ISSUER in .env with your AMO API key."
+  exit 1
+}
+[[ "$AMO_JWT_SECRET" != "your-long-api-secret-here" ]] || {
+  echo "❌  Replace the placeholder AMO_JWT_SECRET in .env with your AMO API secret."
+  exit 1
+}
+
 # ── Config ───────────────────────────────────────────────────────────────────
 ADDON_SLUG="reverse-playlist@benmoussa"
 SOURCE_DIR="$SCRIPT_DIR"
@@ -162,8 +171,8 @@ done
 log "Creating version $VERSION on the listing..."
 JWT=$(make_jwt)
 
-RELEASE_NOTES_EN="v${VERSION}: Resume where you left off — a one-click prompt jumps back to your last position in any playlist (per-playlist, stored locally, can be disabled in settings). Import/export buttons are now also available in the in-page panel, and a new Duplicate action clones any saved snapshot so you can build variants of a list."
-RELEASE_NOTES_FR="v${VERSION}: Reprenez où vous étiez — une invite en un clic vous ramène à votre dernière position dans chaque playlist (stockée localement, désactivable dans les paramètres). Les boutons d'import/export sont désormais aussi dans le panneau intégré, et une nouvelle action Dupliquer clone n'importe quel instantané pour créer des variantes d'une liste."
+RELEASE_NOTES_EN="v${VERSION}: Add tags and name/tag filtering for saved snapshots. Saving a playlist with existing snapshots now lets you update a specific snapshot or create a new one. This release also fixes My Lists button state, Firefox popup storage, reversed-order snapshots, drag/drop ordering, SPA navigation races, and backup validation."
+RELEASE_NOTES_FR="v${VERSION}: Ajout de tags et du filtrage par nom ou tag pour les instantanés. Lorsqu'une playlist possède déjà des instantanés, vous pouvez désormais en mettre un à jour ou en créer un nouveau. Cette version corrige aussi l'état du bouton Mes Listes, le stockage de la fenêtre Firefox, les instantanés inversés, le glisser-déposer, la navigation SPA et la validation des sauvegardes."
 
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
