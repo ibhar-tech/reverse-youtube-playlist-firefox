@@ -254,15 +254,14 @@ def main():
 
         # Auto-advance: seek to the end and confirm playback moves to item 2 on
         # its own. A local playlist that cannot advance is not a playlist.
-        # Drive YouTube's own player to the very end. Headless Firefox often
-        # stalls before the final second, so a miss here is reported as
-        # inconclusive rather than a failure — the advance arithmetic itself is
-        # covered deterministically by tests/test_add_to_playlist.js.
+        # Seek to the final fraction of a second rather than trying to play
+        # through several seconds — headless Firefox stalls on sustained
+        # playback, but the near-end trigger fires straight after this seek.
         seeked = d.js("""const p=document.getElementById('movie_player');
             if (!p || !p.seekTo) return false;
             p.mute(); const dur=p.getDuration();
             if (!dur || dur < 5) return false;
-            p.seekTo(dur - 3, true); p.playVideo(); return true;""")
+            p.seekTo(dur - 0.2, true); p.playVideo(); return true;""")
         moved = False
         if seeked:
             deadline = time.time() + 60
