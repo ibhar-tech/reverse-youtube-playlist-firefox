@@ -15,7 +15,10 @@
   window.RYP = window.RYP || {};
 
   const SCHEMA = "ryp-saved-playlists";
-  const ID_RE = /^[A-Za-z0-9_-]{5,64}$/; // YouTube video/playlist id charset
+  // YouTube video/playlist id charset. Snapshots built from "Add to List" have
+  // no source playlist — that is expressed as an empty sourceListId, not as a
+  // short id, so the length floor stays put.
+  const ID_RE = /^[A-Za-z0-9_-]{5,64}$/;
 
   function freshId() {
     return crypto.randomUUID
@@ -38,10 +41,10 @@
 
   function isValidSnapshot(p) {
     const order = Array.isArray(p?.order) ? p.order.map(Number) : [];
-    return (
+    return Boolean(
       p && typeof p === "object" &&
       typeof p.name === "string" && p.name.trim() &&
-      typeof p.sourceListId === "string" && ID_RE.test(p.sourceListId) &&
+      typeof p.sourceListId === "string" && (p.sourceListId === "" || ID_RE.test(p.sourceListId)) &&
       order.length > 0 &&
       order.every((index) => Number.isInteger(index) && index > 0) &&
       new Set(order).size === order.length &&
@@ -59,7 +62,7 @@
       id: typeof p.id === "string" && p.id ? p.id.slice(0, 64) : freshId(),
       name: p.name.trim().slice(0, 80),
       tags: normalizeTags(p.tags),
-      sourceListId: p.sourceListId,
+      sourceListId: p.sourceListId || "",
       order: p.order.map(Number),
       videos: p.videos
         .filter((v) => v && typeof v === "object" && ID_RE.test(v.videoId || ""))
@@ -68,6 +71,7 @@
           videoId: v.videoId,
           title: typeof v.title === "string" ? v.title.slice(0, 300) : "",
           thumbnail: typeof v.thumbnail === "string" ? v.thumbnail.slice(0, 500) : "",
+          durationStr: typeof v.durationStr === "string" ? v.durationStr.slice(0, 20) : "",
         })),
       savedAt: typeof p.savedAt === "string" ? p.savedAt : new Date().toISOString(),
     };

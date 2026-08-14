@@ -1,8 +1,8 @@
 /*
- * YouTube Playlist Tools — button.css (Premium Redesign)
+ * YouTube Playlist Tools — button.css (v3.3.0 Redesign)
  *
  * Modern, premium glassmorphism design with sleek animations, custom scrollbars,
- * and high-end interactive states.
+ * dropdown sorting, duration pills, overview page tools, and responsive buttons.
  */
 
 /* ── Design Tokens ──────────────────────────────────────────────────────── */
@@ -61,11 +61,13 @@ html[dark], [dark] {
 #ryp-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 6px;
+  padding: 10px 14px;
   align-items: center;
   border-bottom: 1px solid var(--ryp-border);
   background: var(--ryp-bg-solid);
+  position: relative;
+  z-index: 100;
 }
 
 /* ── Premium Buttons ────────────────────────────────────────────────────── */
@@ -74,10 +76,10 @@ html[dark], [dark] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 5px;
+  padding: 6px 12px;
   font-family: var(--ryp-font);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--ryp-btn-text);
   background: var(--ryp-btn-bg);
@@ -85,7 +87,7 @@ html[dark], [dark] {
   border-radius: var(--ryp-radius-pill);
   cursor: pointer;
   user-select: none;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   outline: none;
 }
@@ -118,32 +120,11 @@ html[dark], [dark] {
 
 /* Icon formatting inside toolbar buttons */
 .ryp-btn .ryp-icon-svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   display: inline-block;
   vertical-align: middle;
   transition: transform 0.25s ease;
-}
-
-/* Hover effects for specific button icons */
-#ryp-btn-reverse:hover .ryp-icon-svg {
-  transform: rotate(180deg);
-}
-
-#ryp-btn-shuffle:hover .ryp-icon-svg {
-  transform: scale(1.15) rotate(15deg);
-}
-
-#ryp-btn-reorder:hover .ryp-icon-svg {
-  transform: scale(1.1) translateY(-1px);
-}
-
-#ryp-btn-save:hover .ryp-icon-svg {
-  transform: scale(1.1) rotate(-10deg);
-}
-
-#ryp-btn-playlists:hover .ryp-icon-svg {
-  transform: translateY(-1px) rotate(5deg);
 }
 
 /* Active (ON) State */
@@ -157,6 +138,180 @@ html[dark], [dark] {
 .ryp-btn.ryp-active:hover {
   transform: translateY(-1.5px);
   box-shadow: 0 8px 20px var(--ryp-accent-glow) !important;
+}
+
+/* ── Sort Dropdown Menu ──────────────────────────────────────────────────── */
+
+.ryp-dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.ryp-chevron {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
+.ryp-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: var(--ryp-bg-solid);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-md);
+  box-shadow: var(--ryp-shadow-hover);
+  padding: 6px;
+  min-width: 180px;
+  z-index: 1000;
+  flex-direction: column;
+  gap: 2px;
+  animation: ryp-pop 0.2s ease forwards;
+}
+
+.ryp-dropdown-menu.ryp-menu-show {
+  display: flex;
+}
+
+.ryp-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  font-family: var(--ryp-font);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ryp-text);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[dir="rtl"] .ryp-dropdown-item {
+  text-align: right;
+}
+
+.ryp-dropdown-item:hover {
+  background: var(--ryp-btn-hover-bg);
+  color: var(--ryp-accent-start);
+  transform: translateX(2px);
+}
+
+[dir="rtl"] .ryp-dropdown-item:hover {
+  transform: translateX(-2px);
+}
+
+/* ── Duration Stats Pill & Tooltip ───────────────────────────────────────── */
+
+.ryp-duration-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--ryp-font);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ryp-sub);
+  background: var(--ryp-card-bg);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-pill);
+  cursor: default;
+  user-select: none;
+}
+
+.ryp-duration-pill .ryp-icon-svg {
+  width: 12px;
+  height: 12px;
+  color: var(--ryp-accent-start);
+}
+
+.ryp-duration-tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ryp-bg-solid);
+  border: 1px solid var(--ryp-border);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--ryp-shadow-hover);
+  min-width: 220px;
+  z-index: 10000;
+  font-family: var(--ryp-font);
+  color: var(--ryp-text);
+  pointer-events: none;
+}
+
+.ryp-duration-pill:hover .ryp-duration-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: ryp-pop 0.2s ease forwards;
+}
+
+.ryp-tooltip-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ryp-text);
+  border-bottom: 1px solid var(--ryp-border);
+  padding-bottom: 4px;
+}
+
+.ryp-tooltip-row {
+  font-size: 11px;
+  color: var(--ryp-sub);
+}
+
+.ryp-tooltip-row strong {
+  color: var(--ryp-text);
+}
+
+.ryp-tooltip-highlight {
+  color: var(--ryp-accent-start) !important;
+}
+
+.ryp-tooltip-speeds {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--ryp-border);
+}
+
+.ryp-speeds-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ryp-sub);
+  margin-bottom: 4px;
+}
+
+.ryp-speed-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  font-size: 10.5px;
+}
+
+.ryp-speed-grid span b {
+  color: var(--ryp-text);
+}
+
+/* ── Lazy Load All Button Pill ───────────────────────────────────────────── */
+
+.ryp-load-all-pill {
+  background: rgba(99, 102, 241, 0.08) !important;
+  border-color: var(--ryp-accent-start) !important;
+  color: var(--ryp-accent-start) !important;
+  font-weight: 700 !important;
+}
+
+.ryp-load-all-pill:hover {
+  background: var(--ryp-accent-grad) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px var(--ryp-accent-glow) !important;
 }
 
 /* ── Watched Indicator Badge ────────────────────────────────────────────── */
@@ -191,11 +346,11 @@ html[dark], [dark] {
 }
 
 @keyframes ryp-pop {
-  0% { transform: scale(0); }
-  100% { transform: scale(1); }
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-/* ── Sidebar Drag and Drop Styling ──────────────────────────────────────── */
+/* ── Sidebar Drag and Drop & Quick Move Buttons ──────────────────────────── */
 
 ytd-playlist-panel-renderer #items.ryp-reversed,
 #contents.ryp-reversed,
@@ -217,39 +372,124 @@ ytd-playlist-panel-renderer #items.ryp-reorder-mode,
   border-left: 3px solid transparent;
 }
 
-.ryp-drag-handle {
+/* ── Virtual Playlist Panel (for local playlists) ────────────────────────── */
+
+#ryp-virtual-playlist-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  background: var(--ryp-bg-solid) !important;
+  border: 1px solid var(--ryp-border) !important;
+  border-radius: 12px !important;
+  margin-bottom: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+.ryp-virtual-header {
+  padding: 12px 16px !important;
+  background: rgba(99, 102, 241, 0.08) !important;
+  border-bottom: 1px solid var(--ryp-border) !important;
+}
+
+.ryp-virtual-header-contents {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.ryp-virtual-title {
+  font-family: var(--ryp-font) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  color: var(--ryp-text) !important;
+}
+
+.ryp-virtual-count {
+  font-family: var(--ryp-font) !important;
+  font-size: 11.5px !important;
+  color: var(--ryp-sub) !important;
+}
+
+.ryp-virtual-items {
+  max-height: 420px !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 4px 0 !important;
+}
+
+/* ── Custom Injected Playlist Item (Added from outside) ─────────────────── */
+
+.ryp-custom-playlist-item {
+  display: block;
+  border-left: 3px solid var(--ryp-accent-start) !important;
+  background: rgba(99, 102, 241, 0.05) !important;
+  border-radius: 8px;
+  margin: 2px 4px;
+  transition: all 0.2s ease;
+}
+
+.ryp-custom-playlist-item[selected],
+.ryp-custom-playlist-item.selected {
+  background: rgba(99, 102, 241, 0.15) !important;
+}
+
+.ryp-custom-playlist-item:hover {
+  background: rgba(99, 102, 241, 0.12) !important;
+}
+
+.ryp-custom-playlist-item a#wc-endpoint {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 8px !important;
+  text-decoration: none !important;
+  color: inherit !important;
+}
+
+.ryp-reorder-controls {
   display: none;
   align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 100%;
-  color: var(--ryp-sub);
-  font-size: 14px;
-  font-family: monospace;
-  cursor: grab;
-  user-select: none;
-  opacity: 0.5;
-  transition: opacity 0.2s ease;
-  margin-left: 6px;
-  margin-right: 2px;
+  gap: 2px;
+  margin-left: 4px;
+  margin-right: 4px;
   flex-shrink: 0;
 }
 
-#items.ryp-reorder-mode ytd-playlist-panel-video-renderer,
-#contents.ryp-reorder-mode ytd-playlist-video-renderer,
-.ryp-reorder-mode > * {
-  display: flex !important;
-  align-items: center !important;
-}
-
-#items.ryp-reorder-mode .ryp-drag-handle,
-#contents.ryp-reorder-mode .ryp-drag-handle,
-.ryp-reorder-mode .ryp-drag-handle {
+#items.ryp-reorder-mode .ryp-reorder-controls,
+#contents.ryp-reorder-mode .ryp-reorder-controls,
+.ryp-reorder-mode .ryp-reorder-controls {
   display: flex !important;
 }
 
-.ryp-drag-handle:hover {
+.ryp-drag-handle {
+  width: 14px;
+  height: 100%;
+  color: var(--ryp-sub);
+  font-size: 13px;
+  font-family: monospace;
+  cursor: grab;
+  user-select: none;
+  opacity: 0.6;
+}
+
+.ryp-quick-move-btn {
+  background: transparent;
+  border: none;
+  color: var(--ryp-sub);
+  font-size: 13px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.15s ease;
+}
+
+.ryp-quick-move-btn:hover {
   opacity: 1;
+  background: var(--ryp-btn-hover-bg);
   color: var(--ryp-accent-start);
 }
 
@@ -267,14 +507,58 @@ ytd-playlist-panel-renderer #items.ryp-reorder-mode,
 .ryp-drag-over {
   background: rgba(99, 102, 241, 0.15) !important;
   border-left: 3px solid var(--ryp-accent-start) !important;
-  box-shadow: inset 0 0 8px rgba(99, 102, 241, 0.1);
+}
+
+/* ── Overview Page Banner Toolbar (/playlist?list=...) ─────────────────── */
+
+.ryp-overview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  background: var(--ryp-bg-solid);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-lg);
+  box-shadow: var(--ryp-shadow);
+  align-items: center;
+  z-index: 50;
+}
+
+/* ── Video Player Action Bar Button ─────────────────────────────────────── */
+
+.ryp-action-bar-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  margin: 0 4px !important;
+  background: var(--ryp-btn-bg) !important;
+  border: 1px solid var(--ryp-border) !important;
+  border-radius: var(--ryp-radius-pill) !important;
+  color: var(--ryp-text) !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  height: 36px !important;
+  box-sizing: border-box !important;
+  z-index: 10 !important;
+  transition: all 0.2s ease !important;
+}
+
+.ryp-action-bar-btn:hover {
+  background: var(--ryp-accent-grad) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px var(--ryp-accent-glow) !important;
 }
 
 /* ── Slide-in side panel (#ryp-saved-panel) ──────────────────────────────── */
 
 #ryp-saved-panel {
   position: fixed;
-  top: 56px; /* below standard YouTube top nav */
+  top: 56px;
   right: 0;
   width: 360px;
   max-height: calc(100vh - 72px);
@@ -294,42 +578,51 @@ ytd-playlist-panel-renderer #items.ryp-reorder-mode,
   overflow: hidden;
 }
 
+[dir="rtl"] #ryp-saved-panel {
+  right: auto;
+  left: 0;
+  border-left: none;
+  border-right: 1px solid var(--ryp-border);
+  transform: translateX(-105%);
+  border-radius: 0 24px 24px 0;
+}
+
 #ryp-saved-panel.ryp-panel-visible {
-  transform: translateX(0);
+  transform: translateX(0) !important;
   box-shadow: var(--ryp-shadow-hover);
 }
 
-/* Header inside Panel */
 .ryp-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 18px 22px;
   border-bottom: 1px solid var(--ryp-border);
-  background: transparent;
 }
 
 .ryp-panel-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: -0.02em;
 }
 
 .ryp-panel-icon {
   width: 20px;
   height: 20px;
-  color: var(--ryp-accent-start);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--ryp-accent-start);
+  flex-shrink: 0;
 }
 
 .ryp-panel-icon svg {
-  width: 100%;
-  height: 100%;
+  width: 18px !important;
+  height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
 }
 
 .ryp-panel-close {
@@ -344,37 +637,29 @@ ytd-playlist-panel-renderer #items.ryp-reorder-mode,
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
-html[dark] .ryp-panel-close {
-  background: rgba(255, 255, 255, 0.06);
+.ryp-panel-close svg {
+  width: 13px !important;
+  height: 13px !important;
+  max-width: 13px !important;
+  max-height: 13px !important;
+  pointer-events: none;
 }
 
 .ryp-panel-close:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
-  transform: scale(1.05);
 }
 
-.ryp-panel-close svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Save / Config Section */
 .ryp-panel-save-section {
-  padding: 20px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--ryp-border);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.ryp-save-label {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--ryp-sub);
+  gap: 10px;
 }
 
 .ryp-save-row {
@@ -384,10 +669,11 @@ html[dark] .ryp-panel-close {
 }
 
 .ryp-save-input {
-  flex: 1;
-  padding: 10px 14px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 9px 12px;
   font-family: var(--ryp-font);
-  font-size: 13px;
+  font-size: 12.5px;
   background: rgba(0, 0, 0, 0.03);
   border: 1px solid var(--ryp-border);
   border-radius: var(--ryp-radius-md);
@@ -406,365 +692,248 @@ html[dark] .ryp-save-input {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-.ryp-save-input.ryp-input-error {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
-  animation: ryp-shake 0.35s ease;
+.ryp-save-confirm {
+  padding: 8px 14px;
+  font-family: var(--ryp-font);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--ryp-accent-grad);
+  border: none;
+  border-radius: var(--ryp-radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-shrink: 0;
 }
 
-@keyframes ryp-shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-4px); }
-  40%, 80% { transform: translateX(4px); }
+.ryp-save-confirm svg {
+  width: 13px !important;
+  height: 13px !important;
+  max-width: 13px !important;
+  max-height: 13px !important;
+}
+
+.ryp-clear-watched {
+  font-family: var(--ryp-font);
+  font-size: 11.5px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px dashed var(--ryp-border);
+  color: var(--ryp-sub);
+  border-radius: var(--ryp-radius-md);
+  cursor: pointer;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ryp-clear-watched svg {
+  width: 13px !important;
+  height: 13px !important;
+  max-width: 13px !important;
+  max-height: 13px !important;
+  flex-shrink: 0;
+}
+
+.ryp-clear-watched:hover {
+  background: rgba(239, 68, 68, 0.06);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.ryp-panel-tools-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ryp-panel-tool {
+  font-family: var(--ryp-font);
+  font-size: 11.5px;
+  padding: 6px 12px;
+  background: var(--ryp-btn-bg);
+  border: 1px solid var(--ryp-border);
+  color: var(--ryp-text);
+  border-radius: var(--ryp-radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ryp-panel-tool svg {
+  width: 13px !important;
+  height: 13px !important;
+  max-width: 13px !important;
+  max-height: 13px !important;
+  flex-shrink: 0;
+}
+
+/* ── Panel List & Empty State ────────────────────────────────────────────── */
+
+.ryp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 36px 20px;
+  gap: 6px;
+}
+
+.ryp-empty-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.ryp-empty-icon svg {
+  width: 40px !important;
+  height: 40px !important;
+  max-width: 40px !important;
+  max-height: 40px !important;
+  color: var(--ryp-sub);
+  opacity: 0.4;
+}
+
+.ryp-empty-state p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ryp-sub);
+}
+
+.ryp-empty-hint {
+  font-size: 11.5px !important;
+  opacity: 0.75;
+}
+
+.ryp-panel-section-title {
+  padding: 12px 20px 4px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ryp-sub);
 }
 
 .ryp-search-input {
   box-sizing: border-box;
-  width: calc(100% - 24px);
-  margin: 6px 12px 10px 12px;
+  width: calc(100% - 32px);
+  margin: 6px 16px 10px 16px;
   padding: 8px 12px;
   font-family: var(--ryp-font);
-  font-size: 13px;
+  font-size: 12.5px;
   background: rgba(0, 0, 0, 0.03);
   border: 1px solid var(--ryp-border);
   border-radius: var(--ryp-radius-md);
   color: var(--ryp-text);
   outline: none;
-  transition: all 0.2s ease;
 }
 
 html[dark] .ryp-search-input {
   background: rgba(255, 255, 255, 0.04);
 }
 
-.ryp-search-input:focus {
-  background: var(--ryp-bg-solid);
-  border-color: var(--ryp-accent-start);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.ryp-save-confirm {
-  padding: 10px 16px;
-  font-family: var(--ryp-font);
-  font-size: 13px;
-  font-weight: 600;
-  color: #ffffff;
-  background: var(--ryp-accent-grad);
-  border: none;
-  border-radius: var(--ryp-radius-md);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 2px 8px var(--ryp-accent-glow);
-  transition: all 0.2s ease;
-}
-
-.ryp-save-confirm:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--ryp-accent-glow);
-}
-
-.ryp-save-confirm:disabled,
-.ryp-modal-btn:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
-.ryp-save-confirm svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Clear watched button */
-.ryp-clear-watched {
-  background: transparent;
-  border: 1px solid var(--ryp-border);
-  border-radius: var(--ryp-radius-md);
-  color: var(--ryp-sub);
-  font-family: var(--ryp-font);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 10px 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.ryp-clear-watched:hover {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-
-/* Import / Export backup row */
-.ryp-panel-tools-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.ryp-panel-tool {
-  flex: 1;
-  background: transparent;
-  border: 1px solid var(--ryp-border);
-  border-radius: var(--ryp-radius-md);
-  color: var(--ryp-sub);
-  font-family: var(--ryp-font);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 9px 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.ryp-panel-tool:hover {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.3);
-  color: var(--ryp-accent-start);
-}
-
-.ryp-panel-tool svg {
-  width: 14px !important;
-  height: 14px !important;
-  flex-shrink: 0;
-}
-
-/* Snapshots Section Header */
-.ryp-panel-section-title {
-  padding: 20px 24px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ryp-sub);
-}
-
-/* Dynamic list area */
 .ryp-panel-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 16px 20px;
+  padding: 0 16px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-/* Scrollbar styling for a high-end feel */
-.ryp-panel-list::-webkit-scrollbar,
-#ryp-saved-panel::-webkit-scrollbar {
-  width: 6px;
-}
-
-.ryp-panel-list::-webkit-scrollbar-track,
-#ryp-saved-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.ryp-panel-list::-webkit-scrollbar-thumb,
-#ryp-saved-panel::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-  border-radius: 10px;
-}
-
-html[dark] .ryp-panel-list::-webkit-scrollbar-thumb,
-html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-/* Snapshot Cards */
 .ryp-saved-card {
+  background: var(--ryp-card-bg);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-md);
+  padding: 10px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--ryp-card-bg);
-  border: 1px solid var(--ryp-border);
-  border-radius: var(--ryp-radius-lg);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ryp-saved-card:hover {
-  background: var(--ryp-card-hover);
-  border-color: rgba(99, 102, 241, 0.25);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-.ryp-saved-info {
-  flex: 1;
-  min-width: 0;
+  gap: 8px;
 }
 
 .ryp-saved-name {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--ryp-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ryp-saved-meta {
   font-size: 11px;
   color: var(--ryp-sub);
-  margin-top: 4px;
 }
 
 .ryp-snapshot-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .ryp-tag {
-  max-width: 120px;
-  padding: 2px 7px;
-  overflow: hidden;
-  color: var(--ryp-accent-start);
   font-size: 10px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 4px;
   background: rgba(99, 102, 241, 0.1);
-  border-radius: var(--ryp-radius-pill);
+  color: var(--ryp-accent-start);
 }
 
 .ryp-saved-actions {
   display: flex;
-  align-items: center;
   gap: 6px;
-  flex-shrink: 0;
 }
 
-/* Play button on snapshot cards */
 .ryp-action-play {
-  padding: 8px 12px;
+  padding: 6px 12px;
   font-family: var(--ryp-font);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #ffffff;
   background: var(--ryp-accent-grad);
   border: none;
-  border-radius: var(--ryp-radius-md);
+  border-radius: var(--ryp-radius-pill);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px var(--ryp-accent-glow);
 }
 
-.ryp-action-play:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px var(--ryp-accent-glow);
-}
-
-.ryp-action-play svg {
-  width: 10px;
-  height: 10px;
-}
-
-/* Delete / Action buttons */
 .ryp-action-delete {
-  width: 28px;
-  height: 28px;
+  padding: 6px;
   background: transparent;
-  border: 1px solid var(--ryp-border);
-  border-radius: var(--ryp-radius-md);
+  border: none;
   color: var(--ryp-sub);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+  border-radius: 6px;
 }
 
 .ryp-action-delete:hover {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
-  transform: scale(1.05);
 }
 
-.ryp-action-delete svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* Empty State */
-.ryp-empty-state {
-  text-align: center;
-  padding: 40px 24px;
-  color: var(--ryp-sub);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.ryp-empty-icon {
-  font-size: 28px;
-  width: 48px;
-  height: 48px;
-  background: rgba(99, 102, 241, 0.08);
-  border-radius: var(--ryp-radius-pill);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 14px;
-  color: var(--ryp-accent-start);
-}
-
-.ryp-empty-state p {
-  margin: 4px 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ryp-text);
-}
-
-.ryp-empty-hint {
-  font-size: 11.5px !important;
-  font-weight: 400 !important;
-  color: var(--ryp-sub) !important;
-  line-height: 1.5;
-  margin-top: 6px !important;
-}
-
-/* ── Premium Toast Notification ─────────────────────────────────────────── */
-
-/* ── Premium Toast Notification ─────────────────────────────────────────── */
+/* ── Toast Notifications ─────────────────────────────────────────────────── */
 
 #ryp-toast {
   position: fixed;
-  bottom: 32px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: rgba(15, 23, 42, 0.9);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: #0f172a;
   color: #f8fafc;
+  padding: 10px 20px;
   font-family: var(--ryp-font);
   font-size: 13px;
   font-weight: 600;
-  padding: 12px 24px;
   border-radius: var(--ryp-radius-pill);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  z-index: 10000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  z-index: 100000;
   opacity: 0;
-  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
-              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
+  transition: all 0.25s ease;
 }
 
 #ryp-toast.ryp-toast-show {
@@ -772,34 +941,26 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ── Resume Toast (with action button) ──────────────────────────────────── */
+/* ── Resume Toast ────────────────────────────────────────────────────────── */
 
 #ryp-resume-toast {
   position: fixed;
-  bottom: 32px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%) translateY(20px);
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 10px 16px;
+  font-family: var(--ryp-font);
+  font-size: 13px;
+  border-radius: var(--ryp-radius-pill);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   gap: 12px;
-  max-width: min(560px, calc(100vw - 48px));
-  background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #f8fafc;
-  font-family: var(--ryp-font);
-  font-size: 13px;
-  font-weight: 500;
-  padding-block: 10px;
-  padding-inline-start: 20px;
-  padding-inline-end: 12px;
-  border-radius: var(--ryp-radius-pill);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  z-index: 10000;
+  z-index: 100000;
   opacity: 0;
-  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s ease;
 }
 
 #ryp-resume-toast.ryp-toast-show {
@@ -807,67 +968,26 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
   transform: translateX(-50%) translateY(0);
 }
 
-.ryp-resume-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .ryp-resume-btn {
-  flex-shrink: 0;
-  padding: 7px 16px;
+  padding: 6px 14px;
   font-family: var(--ryp-font);
   font-size: 12px;
   font-weight: 700;
   color: #ffffff;
-  background: var(--ryp-accent-grad, linear-gradient(135deg, #6366f1, #a855f7));
+  background: var(--ryp-accent-grad);
   border: none;
   border-radius: var(--ryp-radius-pill);
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.ryp-resume-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
 }
 
 .ryp-resume-close {
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
   background: transparent;
   border: none;
-  border-radius: var(--ryp-radius-pill);
-  color: rgba(248, 250, 252, 0.6);
-  font-size: 12px;
+  color: #94a3b8;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
 }
 
-.ryp-resume-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #f8fafc;
-}
-
-/* ── Icon Constraint Fixes ──────────────────────────────────────────────── */
-
-.ryp-clear-watched svg {
-  width: 14px !important;
-  height: 14px !important;
-  flex-shrink: 0;
-}
-
-.ryp-empty-icon svg {
-  width: 24px !important;
-  height: 24px !important;
-  flex-shrink: 0;
-}
-
-/* ── Premium Custom Modal Dialogs ───────────────────────────────────────── */
+/* ── Modal Dialogs ───────────────────────────────────────────────────────── */
 
 .ryp-modal-overlay {
   position: fixed;
@@ -875,53 +995,25 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  animation: ryp-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: ryp-pop 0.2s ease forwards;
 }
 
 .ryp-modal-content {
   background: var(--ryp-bg-solid);
   border: 1px solid var(--ryp-border);
-  border-radius: 24px;
-  padding: 24px;
+  border-radius: 20px;
+  padding: 22px;
   width: 320px;
   box-shadow: var(--ryp-shadow-hover);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  transform: scale(0.9) translateY(10px);
-  animation: ryp-modal-scale-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes ryp-fade-in {
-  to { opacity: 1; }
-}
-
-@keyframes ryp-modal-scale-up {
-  to { transform: scale(1) translateY(0); }
-}
-
-.ryp-modal-overlay.ryp-modal-closing {
-  animation: ryp-fade-out 0.2s ease forwards;
-}
-
-.ryp-modal-overlay.ryp-modal-closing .ryp-modal-content {
-  animation: ryp-modal-scale-down 0.2s ease forwards;
-}
-
-@keyframes ryp-fade-out {
-  to { opacity: 0; }
-}
-
-@keyframes ryp-modal-scale-down {
-  to { transform: scale(0.9) translateY(10px); }
+  gap: 12px;
 }
 
 .ryp-modal-title {
@@ -929,7 +1021,6 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
   font-size: 15px;
   font-weight: 700;
   color: var(--ryp-text);
-  letter-spacing: -0.01em;
 }
 
 .ryp-modal-input {
@@ -943,18 +1034,10 @@ html[dark] #ryp-saved-panel::-webkit-scrollbar-thumb {
   border-radius: var(--ryp-radius-md);
   color: var(--ryp-text);
   outline: none;
-  transition: all 0.2s ease;
 }
 
-html[dark] .ryp-modal-input,
-[dark] .ryp-modal-input {
+html[dark] .ryp-modal-input {
   background: rgba(255, 255, 255, 0.04);
-}
-
-.ryp-modal-input:focus {
-  background: var(--ryp-bg-solid);
-  border-color: var(--ryp-accent-start);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .ryp-modal-buttons {
@@ -971,8 +1054,6 @@ html[dark] .ryp-modal-input,
   border-radius: var(--ryp-radius-md);
   cursor: pointer;
   border: none;
-  transition: all 0.2s ease;
-  outline: none;
 }
 
 .ryp-modal-btn-cancel {
@@ -980,30 +1061,74 @@ html[dark] .ryp-modal-input,
   color: var(--ryp-sub);
 }
 
-html[dark] .ryp-modal-btn-cancel,
-[dark] .ryp-modal-btn-cancel {
+html[dark] .ryp-modal-btn-cancel {
   background: rgba(255, 255, 255, 0.06);
-  color: var(--ryp-sub);
-}
-
-.ryp-modal-btn-cancel:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: var(--ryp-text);
-}
-
-html[dark] .ryp-modal-btn-cancel:hover,
-[dark] .ryp-modal-btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--ryp-text);
 }
 
 .ryp-modal-btn-confirm {
   background: var(--ryp-accent-grad);
   color: #ffffff;
-  box-shadow: 0 2px 6px var(--ryp-accent-glow);
 }
 
-.ryp-modal-btn-confirm:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px var(--ryp-accent-glow);
+/* ── Modal exit + inline states ──────────────────────────────────────────── */
+
+.ryp-modal-overlay.ryp-modal-closing {
+  animation: ryp-fade-out 0.2s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes ryp-fade-out {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+
+.ryp-modal-text {
+  margin: 0;
+  font-family: var(--ryp-font);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ryp-sub);
+}
+
+/* Empty-name feedback on the "new playlist" input. */
+.ryp-input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18) !important;
+  animation: ryp-shake 0.3s ease;
+}
+
+@keyframes ryp-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+
+/* Per-row "+ Add" button inside the Add-to-Playlist modal. */
+.ryp-btn-add {
+  font-family: var(--ryp-font);
+  font-weight: 600;
+  color: var(--ryp-btn-text);
+  background: var(--ryp-btn-bg);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ryp-btn-add:hover {
+  background: var(--ryp-accent-grad);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+/* Section label above the target list in the Add-to-Playlist modal. */
+.ryp-modal-subhead {
+  font-family: var(--ryp-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ryp-sub);
+  margin-bottom: 6px;
 }

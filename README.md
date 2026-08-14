@@ -2,7 +2,7 @@
 
 > **Reverse, shuffle, drag-reorder, and save YouTube playlists — locally, privately, with zero logins.**
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
 [![Firefox](https://img.shields.io/badge/Firefox-≥140-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 [![Privacy: No data collected](https://img.shields.io/badge/Privacy-No%20data%20collected-brightgreen?style=flat-square)]()
@@ -15,13 +15,17 @@
 |--------|-------------|
 | **⮃ Reverse** | Plays the playlist last-to-first. Great for watching a series from newest to oldest or a course in chronological upload order. Toggle persists per playlist. |
 | **⤮ Shuffle** | Fisher-Yates randomises the play order and remembers it so the same random sequence survives in-app navigation. |
-| **⠿ Reorder** | Enables drag-and-drop on the sidebar. Drag any video to a new position; the custom order is saved automatically. |
+| **⇅ Sort** | Smart sorting presets: Title A→Z, Title Z→A, Shortest first, Longest first, Channel A→Z, Unwatched first, Watched first. |
+| **⠿ Reorder** | Enables drag-and-drop on the sidebar with quick ⤒ Top / ⤓ Bottom move helpers. Custom order is saved automatically. |
+| **⚡ Load All** | Resolves lazy-loading for long playlists (> 50 items) with a single click. |
+| **⏱️ Watch Time** | Live duration calculator showing total time, watched time, remaining time, and 1.25x/1.5x/2x speed estimates. |
+| **＋ Add to List** | Add the video you're watching to a local playlist — a list you build yourself, held entirely in local storage and played from the extension's own sidebar. Available under the player and from the popup. |
 | **🎵 My Lists** | Opens a slide-in panel to name and save a snapshot of the current order. Playing a snapshot restores its exact saved order — your lists are permanent. |
-| **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and Firefox profiles. Available from the popup and the in-page panel. |
-| **⏯️ Resume** | A one-click prompt jumps back to the video and timestamp where you left off in any playlist. Per-playlist, stored locally, can be turned off in settings. |
+| **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and browser profiles. |
+| **⏯️ Resume** | A one-click prompt jumps back to the video and timestamp where you left off in any playlist. |
 | **# Tags** | Add tags to snapshots and filter saved lists by name or tag. |
 | **🔁 Loop** | Optional setting: when the active play order ends, start it over instead of stopping. |
-| **✓ Watched badges** | A blue ✓ badge appears on any video you've fully watched. Tracked by video ID, so badges survive playlist edits. Optional auto-skip of watched videos. |
+| **✓ Watched badges** | A badge appears on fully watched videos with optional auto-skipping. |
 
 ---
 
@@ -36,11 +40,11 @@
 
 ## 🚀 How it works
 
-A content script runs on `youtube.com` watch pages that have a `?list=` parameter. It:
+A content script runs on `youtube.com` watch and overview pages. It:
 
-1. Reads sidebar items (`ytd-playlist-panel-video-renderer`) to build the play order.
+1. Reads playlist items to build and calculate the play order.
 2. Intercepts the `timeupdate` event ~0.35 s before the video ends to pre-empt YouTube's autoplay-forward and navigate to the correct next item instead.
-3. Stores all state (mode flags, custom order, watched video IDs, saved snapshots) in `browser.storage.local` keyed by playlist ID.
+3. Stores all state (mode flags, custom order, watched video IDs, saved snapshots) in `browser.storage.local`.
 4. Re-injects the toolbar after every YouTube SPA navigation via a `MutationObserver` + `yt-navigate-finish` listener.
 
 Nothing is changed on YouTube's servers. Purely client-side.
@@ -69,13 +73,13 @@ manifest.json          MV3 manifest — file load order, permissions, metadata
 src/
   backup.js            Shared import/export helpers — validate, merge, download (RYP.Backup)
   state.js             Storage key definitions + read/write helpers (RYP.State)
-  playlist.js          DOM reading, navigation, YouTube selector constants (RYP.Playlist)
-  playback.js          Reverse / shuffle / custom-order engine + watch tracking (RYP.Playback)
-  sidebar.js           Visual ordering, drag-and-drop, watched badges (RYP.Sidebar)
-  panel.js             Slide-in saved-playlists panel (RYP.Panel)
-  toolbar.js           Button injection and state sync (RYP.Toolbar)
+  playlist.js          DOM reading, navigation, duration parser, lazy-loader (RYP.Playlist)
+  playback.js          Reverse / shuffle / smart sorting / custom-order engine (RYP.Playback)
+  sidebar.js           Visual ordering, drag-and-drop, quick move buttons (RYP.Sidebar)
+  panel.js             Slide-in saved-playlists panel & universal Add to List modal (RYP.Panel)
+  toolbar.js           Button injection, sort dropdown, duration pill, overview bar (RYP.Toolbar)
   content.js           Bootstrap: wires modules, MutationObserver, SPA nav events
-  button.css           Full design-system CSS (tokens, buttons, panel, toast, badges)
+  button.css           Full design-system CSS (tokens, dropdowns, duration pills, modal)
 icons/
   icon-16.png
   icon-48.png
@@ -84,31 +88,16 @@ icons/
 
 ---
 
-## ⚙️ Architecture — module namespace
-
-All modules share the `window.RYP` global namespace. Script load order in `manifest.json` guarantees each module's dependencies are defined before it runs:
-
-```
-window.RYP.State     ← state.js
-window.RYP.Playlist  ← playlist.js
-window.RYP.Playback  ← playback.js   (needs State, Playlist)
-window.RYP.Sidebar   ← sidebar.js    (needs Playlist, Playback)
-window.RYP.Panel     ← panel.js      (needs State, Playlist, Playback)
-window.RYP.Toolbar   ← toolbar.js    (needs State, Playlist, Playback, Sidebar, Panel)
-bootstrap            ← content.js    (needs all of the above)
-```
-
----
-
-## 🐛 Known limitations
-
-- **YouTube's DOM changes often.** If the toolbar stops appearing, the selectors in `src/playlist.js` (`SEL` object) are the place to fix.
-- **Sidebar items must be loaded.** YouTube lazy-loads playlist items on scroll; the custom order only covers what's visible at enable time.
-- **Watched tracking is per-device.** No cloud sync — by design.
-
----
-
 ## 📋 Changelog
+
+### v3.3.0 — 2026-08
+- ✨ **Smart Sorting Dropdown** — 1-click sorting presets: Title A→Z, Title Z→A, Duration (shortest/longest), Channel A→Z, Watched/Unwatched first.
+- ✨ **Lazy Loading "Load All" Resolver** — one-click fast auto-scroll loader for long playlists (> 50 items) so Reverse, Shuffle, Sort, and Snapshots work on the 100% complete playlist.
+- ✨ **Playlist Duration & Speed Calculator** — live pill displaying total duration, watched time, remaining time, and speed breakdowns (1.25x, 1.5x, 1.75x, 2.0x).
+- ✨ **Overview Page Support (`/playlist?list=...`)** — Play in Reverse, Play Shuffled, or Save Snapshot directly from YouTube playlist overview tables.
+- ✨ **Local playlists** — build your own playlist from videos you watch, via the ＋ button under the player or the popup. Local playlists live only in browser storage and play from the extension's own sidebar, so they can hold any video regardless of what YouTube's playlists contain.
+- ✨ **Quick Move Helpers** — ⤒ Move to Top and ⤓ Move to Bottom action buttons in sidebar Reorder mode.
+- 🎨 **Responsive Toolbar Redesign** — compact density with dropdown menus preventing wrapping on narrow sidebars and small screens.
 
 ### v3.2.0 — 2026-07
 - ✨ **Snapshot tags and filtering** — add comma-separated tags and search saved snapshots by name or tag

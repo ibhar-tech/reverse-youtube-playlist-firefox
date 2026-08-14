@@ -8,6 +8,8 @@
   const deleteAllBtn = document.getElementById("delete-all-btn");
   const settingsBtn = document.getElementById("settings-btn");
   const settingsPanel = document.getElementById("settings-panel");
+  const addVideoSection = document.getElementById("add-video-section");
+  const addCurrentVideoBtn = document.getElementById("add-current-video-btn");
   const saveSection = document.getElementById("save-current-section");
   const saveInput = document.getElementById("save-input-popup");
   const saveTagsInput = document.getElementById("save-tags-popup");
@@ -27,6 +29,7 @@
 
   let activeTabId = null;
   let activeTabPlaylistId = null;
+  let isWatchPage = false;
   let currentSettings = { lang: "en", autoSkip: false, showBadges: true, compact: false, loop: false, resumePrompt: true };
 
   // ── Translations Dictionary ────────────────────────────────────────────────
@@ -86,7 +89,16 @@
       saveOptionsPrompt: "Existing snapshots found for this playlist. Would you like to update one or save as a new snapshot?",
       saveAsNew: "Save as New",
       updateExisting: "Update",
-      updateConfirm: "Snapshot updated!"
+      updateConfirm: "Snapshot updated!",
+      addCurrentVideo: "Add Current Video to Playlist",
+      reloadPageHint: "Reload the YouTube page, then try again.",
+      addToPlaylistTitle: "Add to Local Playlist",
+      addToPlaylistPrompt: "Choose a playlist to add this video to:",
+      createAndAdd: "Create & Add",
+      createNewPlaylist: "New playlist name...",
+      addBtn: "Add",
+      addedToPlaylist: "✓ Added video to \"{playlist}\"",
+      videoAlreadyInPlaylist: "Video is already in \"{playlist}\"",
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -142,7 +154,16 @@
       saveOptionsPrompt: "Des instantanés existent déjà pour cette playlist. Voulez-vous en mettre un à jour ou enregistrer un nouvel instantané ?",
       saveAsNew: "Enregistrer comme nouveau",
       updateExisting: "Mettre à jour",
-      updateConfirm: "Instantané mis à jour !"
+      updateConfirm: "Instantané mis à jour !",
+      addCurrentVideo: "Ajouter la vidéo actuelle à une playlist",
+      reloadPageHint: "Rechargez la page YouTube, puis réessayez.",
+      addToPlaylistTitle: "Ajouter à une playlist locale",
+      addToPlaylistPrompt: "Choisissez une playlist :",
+      createAndAdd: "Créer et ajouter",
+      createNewPlaylist: "Nom de la nouvelle playlist...",
+      addBtn: "Ajouter",
+      addedToPlaylist: "✓ Vidéo ajoutée à \"{playlist}\"",
+      videoAlreadyInPlaylist: "La vidéo est déjà dans \"{playlist}\"",
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -198,7 +219,16 @@
       saveOptionsPrompt: "تم العثور على لقطات محفوظة لهذه القائمة. هل تريد تحديث إحداها أم حفظها كلقطة جديدة؟",
       saveAsNew: "حفظ كلقطة جديدة",
       updateExisting: "تحديث",
-      updateConfirm: "تم تحديث اللقطة بنجاح!"
+      updateConfirm: "تم تحديث اللقطة بنجاح!",
+      addCurrentVideo: "إضافة الفيديو الحالي إلى قائمة تشغيل",
+      reloadPageHint: "أعد تحميل صفحة يوتيوب ثم حاول مرة أخرى.",
+      addToPlaylistTitle: "إضافة إلى قائمة تشغيل محلية",
+      addToPlaylistPrompt: "اختر قائمة لإضافة هذا الفيديو إليها:",
+      createAndAdd: "إنشاء وإضافة",
+      createNewPlaylist: "اسم القائمة الجديدة...",
+      addBtn: "إضافة",
+      addedToPlaylist: "✓ تمت إضافة الفيديو إلى \"{playlist}\"",
+      videoAlreadyInPlaylist: "الفيديو موجود بالفعل في \"{playlist}\"",
     }
   };
 
@@ -268,11 +298,9 @@
     ])
   };
 
-  // Initialize static layout elements
   if (logoContainer) logoContainer.appendChild(ICONS.logo());
   if (settingsBtn) settingsBtn.appendChild(ICONS.settings());
 
-  // DOM creation helper (safe from XSS)
   function el(tag, attrs = {}, children = []) {
     const node = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -308,14 +336,12 @@
       }
     });
 
-    // Rebuild save confirm button to ensure translation + icon are matched
     if (saveConfirmBtn) {
       saveConfirmBtn.replaceChildren();
       saveConfirmBtn.appendChild(ICONS.save());
       saveConfirmBtn.appendChild(document.createTextNode(" " + dict.save));
     }
 
-    // Footer action buttons: icon + visible label
     if (exportBtn) {
       exportBtn.replaceChildren();
       exportBtn.appendChild(ICONS.download());
@@ -495,7 +521,6 @@
     buttonsList.style.gap = "8px";
     buttonsList.style.width = "100%";
 
-    // Button to Save as New
     const saveNewBtn = el("button", {
       className: "ryp-modal-btn ryp-modal-btn-confirm",
       textContent: `${dict.saveAsNew}: "${newName}"`
@@ -504,7 +529,6 @@
     saveNewBtn.addEventListener("click", () => selectSnapshot(null));
     buttonsList.appendChild(saveNewBtn);
 
-    // Buttons for each existing snapshot to update
     existingSnapshots.forEach((snap) => {
       const btn = el("button", {
         className: "ryp-modal-btn",
@@ -589,7 +613,6 @@
   }
 
   function applySettingsUI() {
-    // Sync settings controls
     langSelect.value = currentSettings.lang;
     skipToggle.checked = currentSettings.autoSkip;
     badgesToggle.checked = currentSettings.showBadges;
@@ -597,20 +620,15 @@
     loopToggle.checked = currentSettings.loop;
     resumeToggle.checked = currentSettings.resumePrompt;
 
-    // Apply translation & direction
     translateUI();
-
-    // Toggle compact class
     document.body.classList.toggle("ryp-compact", currentSettings.compact);
   }
 
-  // Bind settings panel toggle
   settingsBtn.addEventListener("click", () => {
     const isVisible = settingsPanel.style.display === "flex" || settingsPanel.style.display === "block";
     settingsPanel.style.display = isVisible ? "none" : "flex";
   });
 
-  // Bind settings changes
   langSelect.addEventListener("change", (e) => {
     currentSettings.lang = e.target.value;
     saveSettings().then(() => renderPlaylists());
@@ -642,8 +660,6 @@
   });
 
   // ── Import / Export ───────────────────────────────────────────────────────
-  // Validation/merge/download logic is shared with the in-page panel via
-  // window.RYP.Backup (src/backup.js, loaded by popup.html).
 
   const Backup = window.RYP.Backup;
 
@@ -660,9 +676,6 @@
 
   exportBtn.addEventListener("click", exportPlaylists);
 
-  // Importing needs a file picker, but Firefox closes the browser-action
-  // popup as soon as the picker takes focus — the chosen file would never
-  // reach us. Run the import from a dedicated extension tab instead.
   importBtn.addEventListener("click", () => {
     api.tabs.create({ url: api.runtime.getURL("popup/import.html") });
     window.close();
@@ -670,15 +683,21 @@
 
   // ── Tab Management & URL Queries ──────────────────────────────────────────
 
-  // Check if active tab is a YouTube playlist watch or playlist overview page
-  // and show the save section.
   api.tabs.query({ active: true, currentWindow: true })
     .then((tabs) => {
       const activeTab = tabs && tabs[0];
       if (activeTab && activeTab.url) {
         const url = activeTab.url;
-        if (url.includes("youtube.com/") && url.includes("/watch") && url.includes("list=")) {
-          activeTabId = activeTab.id;
+        activeTabId = activeTab.id;
+
+        // Check if on a watch page (with or without playlist)
+        if (url.includes("youtube.com/watch")) {
+          isWatchPage = true;
+          addVideoSection.style.display = "block";
+        }
+
+        // Check if on a watch page with playlist
+        if (url.includes("youtube.com/watch") && url.includes("list=")) {
           saveSection.style.display = "block";
           try {
             const urlObj = new URL(url);
@@ -692,6 +711,21 @@
     .catch((err) => {
       console.warn("Could not query active tab on startup:", err);
     });
+
+  // Add Current Video Button Listener
+  addCurrentVideoBtn.addEventListener("click", async () => {
+    if (!activeTabId || !isWatchPage) return;
+    try {
+      await api.tabs.sendMessage(activeTabId, { action: "OPEN_ADD_TO_PLAYLIST_MODAL" });
+      window.close();
+    } catch (e) {
+      // The content script isn't in the page — usually a tab that was already
+      // open when the extension was installed or reloaded.
+      console.warn("Could not reach the content script:", e);
+      const dict = TRANSLATIONS[currentSettings.lang] || TRANSLATIONS.en;
+      showPopupToast(dict.reloadPageHint, true);
+    }
+  });
 
   // Save current playlist state via message to content script (Create)
   let savePending = false;
@@ -861,7 +895,7 @@
       nameEl.title = pl.name;
       const metaEl = el("div", {
         className: "playlist-meta",
-        textContent: `${pl.order.length} ${dict.videosWord} · ${date}`,
+        textContent: `${pl.videos?.length ?? pl.order.length} ${dict.videosWord} · ${date}`,
       });
       const tagsEl = el("div", { className: "snapshot-tags" });
       for (const tag of Array.isArray(pl.tags) ? pl.tags : []) {
@@ -893,20 +927,29 @@
 
       // Play action
       playBtn.addEventListener("click", async () => {
-        if (!pl.order || pl.order.length === 0) return;
-        const firstIndex = pl.order[0];
-        const firstVideo = pl.videos.find((v) => v.index === firstIndex);
+        if (!pl || !pl.videos || pl.videos.length === 0) return;
+        const firstIndex = (pl.order && pl.order.length > 0) ? pl.order[0] : pl.videos[0].index;
+        const firstVideo = pl.videos.find((v) => v.index === firstIndex) || pl.videos[0];
         if (!firstVideo) return;
 
-        // Restore the snapshot's order as the active custom order so the
-        // content script plays the saved sequence (keys match src/state.js).
-        await api.storage.local.set({
-          [`customOrder:${pl.sourceListId}`]: pl.order,
-          [`reverse:${pl.sourceListId}`]: false,
-          [`shuffle:${pl.sourceListId}`]: false,
-        });
+        // Native snapshots replay inside the real playlist; only source-less
+        // snapshots open as a virtual playlist (keys match src/state.js).
+        const isNative = pl.sourceListId && pl.sourceListId !== "custom" && !pl.sourceListId.startsWith("virtual:");
+        // The virtual params ride in the hash: YouTube drops unknown query
+        // params from watch URLs (mirrors Playlist.rypHash in src/playlist.js).
+        const suffix = isNative
+          ? `&list=${pl.sourceListId}&index=${firstIndex}`
+          : `#ryp_list=${encodeURIComponent(pl.id)}&ryp_index=${firstIndex}`;
 
-        const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}&list=${pl.sourceListId}&index=${firstIndex}`;
+        if (isNative) {
+          await api.storage.local.set({
+            [`customOrder:${pl.sourceListId}`]: pl.order,
+            [`reverse:${pl.sourceListId}`]: false,
+            [`shuffle:${pl.sourceListId}`]: false,
+          });
+        }
+
+        const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}${suffix}`;
 
         api.tabs.query({ active: true, currentWindow: true })
           .then((tabs) => {

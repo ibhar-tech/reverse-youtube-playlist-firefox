@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Playlist Tools — Comprehensive UI/UX Test Harness</title>
+  
+  <!-- WebExtension API Mock for Standalone Browser Testing -->
+  <script>
+    const mockStorage = {
+      ryp_settings: { lang: "en", autoSkip: false, showBadges: true, compact: false, loop: false, resumePrompt: true },
+      savedPlaylists: [
+        {
+          id: "snap-demo-1",
+          name: "Full Stack Mastery Order",
+          tags: ["webdev", "courses"],
+          sourceListId: "PLdemo123",
+          order: [3, 1, 2, 5, 4],
+          videos: [
+            { index: 1, videoId: "v1", title: "1. Introduction to Web Development", thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg" },
+            { index: 2, videoId: "v2", title: "2. JavaScript ES2026 Mastery", thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg" },
+            { index: 3, videoId: "v3", title: "3. CSS Glassmorphism & Layouts", thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg" },
+            { index: 4, videoId: "v4", title: "4. Building Scalable WebExtensions", thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg" },
+            { index: 5, videoId: "v5", title: "5. Production Deployment & Security", thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg" }
+          ],
+          savedAt: new Date().toISOString()
+        }
+      ]
+    };
+
+    window.chrome = {
+      storage: {
+        local: {
+          get: (keys) => {
+            return new Promise((resolve) => {
+              if (!keys) return resolve({ ...mockStorage });
+              const res = {};
+              if (typeof keys === "string") {
+                res[keys] = mockStorage[keys];
+              } else if (Array.isArray(keys)) {
+                keys.forEach(k => res[k] = mockStorage[k]);
+              } else if (typeof keys === "object") {
+                Object.keys(keys).forEach(k => res[k] = mockStorage[k] !== undefined ? mockStorage[k] : keys[k]);
+              }
+              resolve(res);
+            });
+          },
+          set: (items) => {
+            return new Promise((resolve) => {
+              Object.assign(mockStorage, items);
+              if (window.chrome.storage.onChanged._listeners) {
+                const changes = {};
+                for (const [k, v] of Object.entries(items)) changes[k] = { newValue: v };
+                window.chrome.storage.onChanged._listeners.forEach(fn => fn(changes, "local"));
+              }
+              resolve();
+            });
+          },
+          remove: (keys) => {
+            return new Promise((resolve) => {
+              const arr = Array.isArray(keys) ? keys : [keys];
+              arr.forEach(k => delete mockStorage[k]);
+              resolve();
+            });
+          }
+        },
+        onChanged: {
+          _listeners: [],
+          addListener: function(fn) { this._listeners.push(fn); },
+          removeListener: function(fn) { this._listeners = this._listeners.filter(l => l !== fn); }
+        }
+      },
+      runtime: {
+        onMessage: {
+          addListener: () => {},
+          removeListener: () => {}
+        },
+        sendMessage: () => Promise.resolve({ success: true }),
+        getURL: (path) => path
+      },
+      tabs: {
+        query: () => Promise.resolve([{ id: 1, active: true, url: window.location.href + "?list=PLdemo123" }]),
+        sendMessage: (id, msg) => {
+          if (msg.action === "OPEN_ADD_TO_PLAYLIST_MODAL") {
+            window.RYP.Panel.showAddToPlaylistModal({
+              videoId: "vid_demo_current",
+              title: "Building a Fast WebExtension with Modern JavaScript (2026)",
+              thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg",
+              durationStr: "12:30"
+            });
+            return Promise.resolve({ success: true });
+          }
+          return Promise.resolve({ success: true });
+        }
+      },
+      i18n: {
+        getUILanguage: () => "en",
+        getMessage: (key) => key
+      }
+    };
+    window.browser = window.chrome;
+  </script>
+
+  <link rel="stylesheet" href="../src/button.css">
+  <style>
+    :root {
+      --yt-bg: #0f0f0f;
+      --yt-surface: #18181b;
+      --yt-text: #f1f1f1;
+      --yt-sub: #a1a1aa;
+      --yt-border: rgba(255, 255, 255, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #09090b;
+      color: #f1f1f1;
+    }
+
+    .harness-header {
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .harness-title {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .harness-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .harness-btn {
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .harness-btn:hover {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: #818cf8;
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .test-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Mock YouTube Watch Area */
+    .mock-video-area {
+      background: var(--yt-surface);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--yt-border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mock-player {
+      width: 100%;
+      height: 380px;
+      background: #000000;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #888;
+      font-size: 18px;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .mock-video-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mock-video-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f1f1f1;
+      margin: 0;
+    }
+
+    .mock-action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid var(--yt-border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .mock-yt-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Mock Sidebar */
+    .mock-sidebar {
+      background: var(--yt-surface);
+      border-radius: 16px;
+      border: 1px solid var(--yt-border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-height: 720px;
+    }
+
+    ytd-playlist-panel-renderer {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .mock-sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--yt-border);
+    }
+
+    .mock-playlist-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .mock-playlist-meta {
+      font-size: 12px;
+      color: var(--yt-sub);
+    }
+
+    /* Mock Items List */
+    #items {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px;
+      flex: 1;
+    }
+
+    ytd-playlist-panel-video-renderer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      transition: background 0.15s;
+      user-select: none;
+      border: 1px solid transparent;
+    }
+
+    ytd-playlist-panel-video-renderer:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    ytd-playlist-panel-video-renderer.selected {
+      background: rgba(99, 102, 241, 0.12);
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .mock-index {
+      font-size: 12px;
+      color: var(--yt-sub);
+      width: 20px;
+      text-align: center;
+    }
+
+    .mock-thumb {
+      width: 80px;
+      height: 48px;
+      background: #27272a;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #71717a;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .mock-thumb-duration {
+      position: absolute;
+      bottom: 3px;
+      right: 3px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      font-size: 10px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+
+    .mock-item-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .mock-item-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--yt-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mock-item-channel {
+      font-size: 11.5px;
+      color: var(--yt-sub);
+      margin-top: 2px;
+    }
+
+    /* Overview Page Section */
+    .overview-section {
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      border: 1px solid var(--yt-border);
+      padding: 16px;
+    }
+
+    /* Popup preview frame */
+    .popup-preview-section {
+      margin-top: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .popup-frame-wrapper {
+      background: #000;
+      border-radius: 16px;
+      border: 1px solid var(--yt-border);
+      overflow: hidden;
+      width: 340px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .popup-frame-wrapper iframe {
+      width: 340px;
+      height: 520px;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="harness-header">
+    <div>
+      <div class="harness-title">⚡ YouTube Playlist Tools v3.3.0 — UI Verification Harness</div>
+      <div style="font-size: 13px; color: #a1a1aa; margin-top: 4px;">Interactive live test environment with simulated YouTube DOM & extension components</div>
+    </div>
+    <div class="harness-controls">
+      <button class="harness-btn" id="btn-toggle-lang">🌐 Toggle Language (EN / FR / AR)</button>
+      <button class="harness-btn" id="btn-toggle-panel">🎵 Toggle Side Drawer</button>
+      <button class="harness-btn" id="btn-open-modal">＋ Test Add-Video Modal</button>
+    </div>
+  </div>
+
+  <div class="test-grid">
+    <!-- Left: Watch Video Page Simulation -->
+    <div class="mock-video-area">
+      <div class="mock-player">
+        <span>▶ YouTube Video Player Active (time: 04:15 / 12:30)</span>
+      </div>
+
+      <div class="mock-video-info">
+        <h1 class="mock-video-title" id="video-title">Building a Fast WebExtension with Modern JavaScript (2026)</h1>
+        
+        <div class="mock-action-bar">
+          <div style="font-size: 13px; color: #a1a1aa;">142,500 views • Premiered Aug 12, 2026</div>
+          <div class="mock-yt-actions" id="top-level-buttons-computed">
+            <button class="ryp-btn" style="background: rgba(255,255,255,0.06);">👍 12K</button>
+            <button class="ryp-btn" style="background: rgba(255,255,255,0.06);">Share</button>
+            <!-- Injected Add to Local Playlist button will appear here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Overview Page Simulation -->
+      <div class="overview-section">
+        <h2 style="font-size: 14px; margin: 0 0 10px 0; color: #a1a1aa;">📺 Overview Page Banner Simulation (/playlist?list=...)</h2>
+        <div id="overview-container">
+          <ytd-browse-header-renderer>
+            <div id="wrapper">
+              <h1 id="title" style="font-size: 16px; margin: 0 0 4px 0;">Full Web Engineering Bootcamp 2026</h1>
+              <div id="publisher-container">
+                <span class="byline-item" style="font-size: 12px; color: #888;">60 videos • Updated today</span>
+              </div>
+            </div>
+          </ytd-browse-header-renderer>
+          <!-- Injected overview bar will be placed here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Playlist Sidebar Simulation -->
+    <div class="mock-sidebar">
+      <ytd-playlist-panel-renderer>
+        <div class="mock-sidebar-header" id="playlist-header">
+          <div class="mock-playlist-title">Full Web Engineering Bootcamp 2026</div>
+          <div class="mock-playlist-meta">
+            <span id="publisher-container"><span class="byline-item">1 / 60 videos</span></span>
+          </div>
+        </div>
+
+        <!-- Playlist Items -->
+        <div id="items">
+          <ytd-playlist-panel-video-renderer class="selected" data-index="1">
+            <a id="wc-endpoint" style="display: flex; align-items: center; gap: 8px; width: 100%; text-decoration: none; color: inherit;">
+              <div class="mock-index">▶</div>
+              <div class="mock-thumb">
+                <span>THUMB</span>
+                <span class="mock-thumb-duration ytd-thumbnail-overlay-time-status-renderer">12:30</span>
+              </div>
+              <div class="mock-item-info">
+                <div class="mock-item-title" id="video-title">1. Introduction to Web Development</div>
+                <div class="mock-item-channel" id="byline">TechAcademy</div>
+              </div>
+            </a>
+          </ytd-playlist-panel-video-renderer>
+
+          <ytd-playlist-panel-video-renderer data-index="2">
+            <a id="wc-endpoint" style="display: flex; align-items: center; gap: 8px; width: 100%; text-decoration: none; color: inherit;">
+              <div class="mock-index">2</div>
+              <div class="mock-thumb">
+                <span>THUMB</span>
+                <span class="mock-thumb-duration ytd-thumbnail-overlay-time-status-renderer">24:15</span>
+              </div>
+              <div class="mock-item-info">
+                <div class="mock-item-title" id="video-title">2. JavaScript ES2026 Mastery</div>
+                <div class="mock-item-channel" id="byline">CodeLab</div>
+              </div>
+            </a>
+          </ytd-playlist-panel-video-renderer>
+
+          <ytd-playlist-panel-video-renderer data-index="3">
+            <a id="wc-endpoint" style="display: flex; align-items: center; gap: 8px; width: 100%; text-decoration: none; color: inherit;">
+              <div class="mock-index">3</div>
+              <div class="mock-thumb">
+                <span>THUMB</span>
+                <span class="mock-thumb-duration ytd-thumbnail-overlay-time-status-renderer">08:45</span>
+              </div>
+              <div class="mock-item-info">
+                <div class="mock-item-title" id="video-title">3. CSS Glassmorphism & Layouts</div>
+                <div class="mock-item-channel" id="byline">DesignHub</div>
+              </div>
+            </a>
+          </ytd-playlist-panel-video-renderer>
+
+          <ytd-playlist-panel-video-renderer data-index="4">
+            <a id="wc-endpoint" style="display: flex; align-items: center; gap: 8px; width: 100%; text-decoration: none; color: inherit;">
+              <div class="mock-index">4</div>
+              <div class="mock-thumb">
+                <span>THUMB</span>
+                <span class="mock-thumb-duration ytd-thumbnail-overlay-time-status-renderer">45:00</span>
+              </div>
+              <div class="mock-item-info">
+                <div class="mock-item-title" id="video-title">4. Building Scalable WebExtensions</div>
+                <div class="mock-item-channel" id="byline">TechAcademy</div>
+              </div>
+            </a>
+          </ytd-playlist-panel-video-renderer>
+
+          <ytd-playlist-panel-video-renderer data-index="5">
+            <a id="wc-endpoint" style="display: flex; align-items: center; gap: 8px; width: 100%; text-decoration: none; color: inherit;">
+              <div class="mock-index">5</div>
+              <div class="mock-thumb">
+                <span>THUMB</span>
+                <span class="mock-thumb-duration ytd-thumbnail-overlay-time-status-renderer">18:20</span>
+              </div>
+              <div class="mock-item-info">
+                <div class="mock-item-title" id="video-title">5. Production Deployment & Security</div>
+                <div class="mock-item-channel" id="byline">DevOpsPro</div>
+              </div>
+            </a>
+          </ytd-playlist-panel-video-renderer>
+        </div>
+      </ytd-playlist-panel-renderer>
+    </div>
+  </div>
+
+  <!-- Popup Preview Section -->
+  <div class="popup-preview-section">
+    <h3 style="font-size: 16px; margin: 0; color: #f1f1f1;">📱 Extension Browser-Action Popup Preview</h3>
+    <div class="popup-frame-wrapper">
+      <iframe src="../popup/popup.html"></iframe>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../src/backup.js"></script>
+  <script src="../src/state.js"></script>
+  <script src="../src/playlist.js"></script>
+  <script src="../src/playback.js"></script>
+  <script src="../src/sidebar.js"></script>
+  <script src="../src/panel.js"></script>
+  <script src="../src/toolbar.js"></script>
+  <script src="../src/content.js"></script>
+
+  <script>
+    // Force watch page mocks
+    window.RYP.Playlist.isPlaylistWatchPage = () => true;
+    window.RYP.Playlist.isWatchPage = () => true;
+    window.RYP.Playlist.getPlaylistId = () => "PLdemo123";
+
+    const { Toolbar, Panel, Sidebar } = window.RYP;
+
+    // Inject toolbar into sidebar & panel into page
+    Toolbar.injectToolbar();
+    Panel.injectPanel();
+
+    // Harness Controls
+    const langs = ["en", "fr", "ar"];
+    let langIdx = 0;
+
+    document.getElementById("btn-toggle-lang").addEventListener("click", () => {
+      langIdx = (langIdx + 1) % langs.length;
+      const lang = langs[langIdx];
+      chrome.storage.local.set({ ryp_settings: { lang } });
+    });
+
+    document.getElementById("btn-toggle-panel").addEventListener("click", () => {
+      Panel.togglePanel();
+    });
+
+    document.getElementById("btn-open-modal").addEventListener("click", () => {
+      Panel.showAddToPlaylistModal({
+        videoId: "demo123",
+        title: "Building a Fast WebExtension with Modern JavaScript (2026)",
+        thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg",
+        durationStr: "12:30"
+      });
+    });
+  </script>
+</body>
+</html>

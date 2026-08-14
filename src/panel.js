@@ -8,6 +8,7 @@
  *  - "Save Current Order" with a name input (saves to storage.local)
  *  - Lists all saved playlists with play and delete actions
  *  - "Clear Watched" shortcut for the current playlist
+ *  - "Add Video to Playlist" universal modal from anywhere on YouTube
  *  - Zero external requests — all data lives in browser storage
  *
  * Security note: all user-supplied strings (playlist names) are inserted
@@ -59,7 +60,16 @@
       saveOptionsPrompt: "Existing snapshots found for this playlist. Would you like to update one or save as a new snapshot?",
       saveAsNew: "Save as New",
       updateExisting: "Update",
-      updateConfirm: "Snapshot updated!"
+      updateConfirm: "Snapshot updated!",
+      addToPlaylistTitle: "Add to Local Playlist",
+      localPlaylists: "Your local playlists",
+      noLocalPlaylists: "No local playlists yet — create one above.",
+      addToPlaylistPrompt: "Choose a playlist to add this video to, or create a new one:",
+      createAndAdd: "Create & Add",
+      createNewPlaylist: "New playlist name...",
+      addBtn: "Add",
+      addedToPlaylist: "✓ Added video to \"{playlist}\"",
+      videoAlreadyInPlaylist: "Video is already in \"{playlist}\"",
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -96,7 +106,16 @@
       saveOptionsPrompt: "Des instantanés existent déjà pour cette playlist. Voulez-vous en mettre un à jour ou enregistrer un nouvel instantané ?",
       saveAsNew: "Enregistrer comme nouveau",
       updateExisting: "Mettre à jour",
-      updateConfirm: "Instantané mis à jour !"
+      updateConfirm: "Instantané mis à jour !",
+      addToPlaylistTitle: "Ajouter à une playlist locale",
+      localPlaylists: "Vos playlists locales",
+      noLocalPlaylists: "Aucune playlist locale — créez-en une ci-dessus.",
+      addToPlaylistPrompt: "Choisissez une playlist ou créez-en une nouvelle :",
+      createAndAdd: "Créer et ajouter",
+      createNewPlaylist: "Nom de la nouvelle playlist...",
+      addBtn: "Ajouter",
+      addedToPlaylist: "✓ Vidéo ajoutée à \"{playlist}\"",
+      videoAlreadyInPlaylist: "La vidéo est déjà dans \"{playlist}\"",
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -133,7 +152,16 @@
       saveOptionsPrompt: "تم العثور على لقطات محفوظة لهذه القائمة. هل تريد تحديث إحداها أم حفظها كلقطة جديدة؟",
       saveAsNew: "حفظ كلقطة جديدة",
       updateExisting: "تحديث",
-      updateConfirm: "تم تحديث اللقطة بنجاح!"
+      updateConfirm: "تم تحديث اللقطة بنجاح!",
+      addToPlaylistTitle: "إضافة إلى قائمة تشغيل محلية",
+      localPlaylists: "قوائم التشغيل المحلية",
+      noLocalPlaylists: "لا توجد قوائم محلية — أنشئ واحدة بالأعلى.",
+      addToPlaylistPrompt: "اختر قائمة لإضافة هذا الفيديو إليها أو أنشئ قائمة جديدة:",
+      createAndAdd: "إنشاء وإضافة",
+      createNewPlaylist: "اسم القائمة الجديدة...",
+      addBtn: "إضافة",
+      addedToPlaylist: "✓ تمت إضافة الفيديو إلى \"{playlist}\"",
+      videoAlreadyInPlaylist: "الفيديو موجود بالفعل في \"{playlist}\"",
     }
   };
 
@@ -418,9 +446,14 @@
       renderList();
     });
 
-    panel
-      .querySelector("#ryp-panel-close")
-      .addEventListener("click", () => togglePanel(false));
+    const closeBtn = panel.querySelector("#ryp-panel-close");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePanel(false);
+      });
+    }
 
     panel.querySelector("#ryp-save-confirm").addEventListener("click", async (event) => {
       const saveButton = event.currentTarget;
@@ -496,10 +529,10 @@
     });
 
     importInput.addEventListener("change", async () => {
-      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
       const file = importInput.files && importInput.files[0];
-      importInput.value = ""; // allow re-selecting the same file
+      importInput.value = "";
       if (!file) return;
+      const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
       try {
         const incoming = Backup.parseImport(await file.text());
         const existing = (await State.get(State.keys.savedPlaylists)) || [];
@@ -517,13 +550,20 @@
       }
     });
 
-    // Close when clicking outside the panel.
+    // Close when clicking outside the panel or pressing Escape.
     document.addEventListener("click", (e) => {
       if (
         panelVisible &&
         !panel.contains(e.target) &&
-        e.target.id !== "ryp-btn-playlists"
+        e.target.id !== "ryp-btn-playlists" &&
+        !e.target.closest("#ryp-btn-playlists")
       ) {
+        togglePanel(false);
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && panelVisible) {
         togglePanel(false);
       }
     });
@@ -537,10 +577,14 @@
     if (expectedListId && listId !== expectedListId) {
       throw new Error("The active playlist changed before the snapshot was saved");
     }
-    const items = Playlist.readItems();
+    // Works on both the watch sidebar and the /playlist overview table.
+    const items = Playlist.getAllCurrentItems();
     if (items.length === 0) throw new Error("No playlist videos are loaded");
 
-    const { reverseOn, customOrder } = Playback.getState();
+    // The overview page has no active playback mode — its order is as listed.
+    const { reverseOn, customOrder } = Playlist.isPlaylistWatchPage()
+      ? Playback.getState()
+      : { reverseOn: false, customOrder: null };
     const originalOrder = items.map((it) => it.index);
     const order =
       customOrder && customOrder.length > 0
@@ -549,6 +593,13 @@
           ? originalOrder.reverse()
           : originalOrder;
     const normalizedTags = window.RYP.Backup.normalizeTags(tags);
+    const videos = items.map((it) => ({
+      index: it.index,
+      videoId: it.videoId,
+      title: it.title,
+      thumbnail: it.thumbnail,
+      durationStr: it.durationStr || "",
+    }));
 
     let saved = (await State.get(State.keys.savedPlaylists)) || [];
 
@@ -565,12 +616,7 @@
             ...p,
             tags: normalizedTags.length > 0 ? normalizedTags : (p.tags || []),
             order,
-            videos: items.map((it) => ({
-              index: it.index,
-              videoId: it.videoId,
-              title: it.title,
-              thumbnail: it.thumbnail,
-            })),
+            videos,
             savedAt: new Date().toISOString(),
           };
         }
@@ -585,17 +631,253 @@
         tags: normalizedTags,
         sourceListId: listId,
         order,
-        videos: items.map((it) => ({
-          index: it.index,
-          videoId: it.videoId,
-          title: it.title,
-          thumbnail: it.thumbnail,
-        })),
+        videos,
         savedAt: new Date().toISOString(),
       };
       saved.unshift(entry);
     }
     await State.set(State.keys.savedPlaylists, saved);
+  }
+
+  // ── Universal Add Video to Playlist Modal ─────────────────────────────────
+
+  /**
+   * A local playlist holds arbitrary videos and plays through our own sidebar
+   * panel (`ryp_list`). Anything carrying a real playlist id is a *view* over
+   * YouTube's own list and plays through `list=` — it cannot hold videos that
+   * YouTube's playlist does not have. "custom" is the pre-3.3.0 spelling of "".
+   */
+  function isLocalPlaylist(snapshot) {
+    const source = snapshot?.sourceListId;
+    return !source || source === "custom" || source.startsWith("virtual:");
+  }
+
+  async function showAddToPlaylistModal(videoData) {
+    const existing = document.getElementById("ryp-custom-modal");
+    if (existing) existing.remove();
+
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    const overlay = el("div", { id: "ryp-custom-modal", className: "ryp-modal-overlay" });
+    overlay.dir = activeLang === "ar" ? "rtl" : "ltr";
+
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: dict.addToPlaylistTitle });
+    const promptEl = el("p", { className: "ryp-modal-text", textContent: dict.addToPlaylistPrompt });
+    promptEl.style.margin = "8px 0 14px 0";
+    promptEl.style.fontSize = "13px";
+    promptEl.style.color = "var(--ryp-sub)";
+
+    // Video preview header
+    const preview = el("div", { className: "ryp-add-preview" });
+    preview.style.display = "flex";
+    preview.style.alignItems = "center";
+    preview.style.gap = "10px";
+    preview.style.padding = "10px";
+    preview.style.background = "var(--ryp-card-bg)";
+    preview.style.borderRadius = "8px";
+    preview.style.marginBottom = "14px";
+
+    if (videoData.thumbnail) {
+      const thumb = el("img", { src: videoData.thumbnail, className: "ryp-preview-thumb" });
+      thumb.style.width = "48px";
+      thumb.style.height = "36px";
+      thumb.style.objectFit = "cover";
+      thumb.style.borderRadius = "4px";
+      preview.appendChild(thumb);
+    }
+    const previewTitle = el("div", { className: "ryp-preview-title", textContent: videoData.title || "Current Video" });
+    previewTitle.style.fontWeight = "600";
+    previewTitle.style.fontSize = "12px";
+    previewTitle.style.overflow = "hidden";
+    previewTitle.style.textOverflow = "ellipsis";
+    previewTitle.style.whiteSpace = "nowrap";
+    preview.appendChild(previewTitle);
+
+    // Create New Playlist Form
+    const createRow = el("div", { className: "ryp-save-row" });
+    createRow.style.marginBottom = "14px";
+
+    const newNameInput = el("input", {
+      type: "text",
+      className: "ryp-modal-input",
+      placeholder: dict.createNewPlaylist,
+      maxlength: "80",
+    });
+    newNameInput.style.flex = "1";
+
+    const createBtn = el("button", {
+      className: "ryp-modal-btn ryp-modal-btn-confirm",
+      textContent: dict.createAndAdd,
+    });
+    createRow.append(newNameInput, createBtn);
+
+    // Existing Playlists List
+    const playlistsList = el("div", { className: "ryp-add-playlists-list" });
+    playlistsList.style.display = "flex";
+    playlistsList.style.flexDirection = "column";
+    playlistsList.style.gap = "6px";
+    playlistsList.style.maxHeight = "200px";
+    playlistsList.style.overflowY = "auto";
+    playlistsList.style.marginBottom = "14px";
+
+    // Only local playlists can hold arbitrary videos. A snapshot with a
+    // sourceListId is a view over a real YouTube playlist — adding a foreign
+    // video to it would count but could never play. See isLocalPlaylist().
+    const saved = ((await State.get(State.keys.savedPlaylists)) || []).filter(isLocalPlaylist);
+
+    const close = () => {
+      window.removeEventListener("keydown", escListener);
+      overlay.classList.add("ryp-modal-closing");
+      setTimeout(() => overlay.remove(), 220);
+    };
+
+    const addVideoToSnapshot = async (snapshot) => {
+      // Re-read: the modal may have been open while the popup or another tab
+      // edited storage. `saved` is only good enough to render the list.
+      const current = (await State.get(State.keys.savedPlaylists)) || [];
+      const target = current.find((pl) => pl.id === snapshot.id);
+      if (!target) {
+        showToast(dict.noSnapshots);
+        close();
+        return;
+      }
+
+      const alreadyIn = (target.videos || []).some((v) => v.videoId === videoData.videoId);
+      if (alreadyIn) {
+        showToast(dict.videoAlreadyInPlaylist.replace("{playlist}", target.name));
+        close();
+        return;
+      }
+
+      const indices = (target.videos || [])
+        .map((v) => Number(v.index))
+        .filter((n) => Number.isFinite(n));
+      const nextIndex = (indices.length ? Math.max(...indices) : 0) + 1;
+      const newVideoEntry = {
+        index: nextIndex,
+        videoId: videoData.videoId,
+        title: videoData.title || "",
+        thumbnail: videoData.thumbnail || "",
+        durationStr: videoData.durationStr || "",
+      };
+
+      const updatedSnapshots = current.map((pl) => {
+        if (pl.id === target.id) {
+          const videos = [...(pl.videos || []), newVideoEntry];
+          const order = [...(pl.order || []), nextIndex];
+          return { ...pl, videos, order, savedAt: new Date().toISOString() };
+        }
+        return pl;
+      });
+
+      await State.set(State.keys.savedPlaylists, updatedSnapshots);
+      showToast(dict.addedToPlaylist.replace("{playlist}", target.name));
+      if (panelVisible) renderList();
+      close();
+    };
+
+    const listHeading = el("div", { className: "ryp-modal-subhead", textContent: dict.localPlaylists });
+
+    if (saved.length === 0) {
+      const emptyNote = el("p", { className: "ryp-modal-text", textContent: dict.noLocalPlaylists });
+      emptyNote.style.fontStyle = "italic";
+      emptyNote.style.fontSize = "12px";
+      playlistsList.appendChild(emptyNote);
+    } else {
+      saved.forEach((pl) => {
+        const itemRow = el("div", { className: "ryp-playlist-select-item" });
+        itemRow.style.display = "flex";
+        itemRow.style.alignItems = "center";
+        itemRow.style.justifyContent = "space-between";
+        itemRow.style.padding = "8px 12px";
+        itemRow.style.background = "var(--ryp-card-bg)";
+        itemRow.style.borderRadius = "6px";
+        itemRow.style.border = "1px solid var(--ryp-border)";
+
+        const nameSpan = el("span", { textContent: `${pl.name} (${pl.videos?.length || 0} ${dict.videosWord})` });
+        nameSpan.style.fontSize = "12.5px";
+        nameSpan.style.fontWeight = "500";
+
+        const addBtn = el("button", {
+          className: "ryp-btn ryp-btn-add",
+          textContent: `+ ${dict.addBtn}`,
+        });
+        addBtn.style.padding = "4px 10px";
+        addBtn.style.fontSize = "11px";
+
+        addBtn.addEventListener("click", () => addVideoToSnapshot(pl));
+
+        itemRow.append(nameSpan, addBtn);
+        playlistsList.appendChild(itemRow);
+      });
+    }
+
+    createBtn.addEventListener("click", async () => {
+      const name = newNameInput.value.trim();
+      if (!name) {
+        newNameInput.classList.add("ryp-input-error");
+        newNameInput.focus();
+        setTimeout(() => newNameInput.classList.remove("ryp-input-error"), 1200);
+        return;
+      }
+
+      createBtn.disabled = true;
+      try {
+        const newSnapshot = {
+          id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          name,
+          tags: [],
+          // Always local, even when created from inside a YouTube playlist —
+          // stamping the current playlist id would make the new list a view
+          // that can never receive another video.
+          sourceListId: "",
+          order: [1],
+          videos: [{
+            index: 1,
+            videoId: videoData.videoId,
+            title: videoData.title || "",
+            thumbnail: videoData.thumbnail || "",
+            durationStr: videoData.durationStr || "",
+          }],
+          savedAt: new Date().toISOString(),
+        };
+        const currentSaved = (await State.get(State.keys.savedPlaylists)) || [];
+        currentSaved.unshift(newSnapshot);
+        await State.set(State.keys.savedPlaylists, currentSaved);
+        showToast(dict.addedToPlaylist.replace("{playlist}", name));
+        if (panelVisible) renderList();
+        close();
+      } catch (err) {
+        showToast(err.message || "Failed to create playlist");
+        createBtn.disabled = false;
+      }
+    });
+
+    const cancelBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.cancel });
+    cancelBtn.style.width = "100%";
+    cancelBtn.style.justifyContent = "center";
+    cancelBtn.addEventListener("click", close);
+
+    const modal = el("div", { className: "ryp-modal-content" }, [
+      titleEl,
+      promptEl,
+      preview,
+      createRow,
+      listHeading,
+      playlistsList,
+      cancelBtn
+    ]);
+    modal.style.maxWidth = "360px";
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const escListener = (e) => {
+      if (e.key === "Escape") close();
+    };
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+    window.addEventListener("keydown", escListener);
   }
 
   function showSaveOptionsModal({ existingSnapshots, newName, tags, expectedListId, onComplete }) {
@@ -621,7 +903,6 @@
     buttonsList.style.gap = "8px";
     buttonsList.style.width = "100%";
 
-    // Button to Save as New
     const saveNewBtn = el("button", {
       className: "ryp-modal-btn ryp-modal-btn-confirm",
       textContent: `${dict.saveAsNew}: "${newName}"`
@@ -629,7 +910,6 @@
     saveNewBtn.style.justifyContent = "center";
     buttonsList.appendChild(saveNewBtn);
 
-    // Buttons for each existing snapshot to update
     existingSnapshots.forEach((snap) => {
       const btn = el("button", {
         className: "ryp-modal-btn ryp-modal-btn-action",
@@ -686,7 +966,6 @@
     });
 
     saveNewBtn.focus();
-
     window.addEventListener("keydown", escListener);
   }
 
@@ -698,7 +977,6 @@
 
     const playlists = (await State.get(State.keys.savedPlaylists)) || [];
 
-    // Toggle search input visibility based on whether we have any snapshots saved
     const searchInput = document.getElementById("ryp-search-input");
     if (searchInput) {
       searchInput.style.display = playlists.length > 0 ? "block" : "none";
@@ -714,7 +992,7 @@
         })
       : playlists;
 
-    listEl.replaceChildren(); // clear safely without innerHTML
+    listEl.replaceChildren();
 
     const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
 
@@ -758,13 +1036,12 @@
         day: "numeric",
       });
 
-      // Info column
       const nameEl = el("div", { className: "ryp-saved-name" });
-      nameEl.textContent = pl.name; // textContent — safe
+      nameEl.textContent = pl.name;
       nameEl.title = pl.name;
       const metaEl = el("div", {
         className: "ryp-saved-meta",
-        textContent: `${pl.order.length} ${dict.videosWord} · ${date}`,
+        textContent: `${pl.videos?.length ?? pl.order.length} ${dict.videosWord} · ${date}`,
       });
       const tagsEl = el("div", { className: "ryp-snapshot-tags" });
       for (const tag of Array.isArray(pl.tags) ? pl.tags : []) {
@@ -772,7 +1049,6 @@
       }
       const infoCol = el("div", { className: "ryp-saved-info" }, [nameEl, metaEl, tagsEl]);
 
-      // Action buttons — dataset set separately, never via innerHTML
       const playBtn = el("button", {
         className: "ryp-action-play",
         title: dict.play,
@@ -793,14 +1069,23 @@
       const card = el("div", { className: "ryp-saved-card" }, [infoCol, actionsCol]);
 
       playBtn.addEventListener("click", async () => {
-        if (!pl || pl.order.length === 0) return;
-        const firstIndex = pl.order[0];
-        const firstVideo = pl.videos.find((v) => v.index === firstIndex);
+        if (!pl || !pl.videos || pl.videos.length === 0) return;
+        const firstIndex = (pl.order && pl.order.length > 0) ? pl.order[0] : pl.videos[0].index;
+        const firstVideo = pl.videos.find((v) => v.index === firstIndex) || pl.videos[0];
         if (!firstVideo) return;
-        // Restore the snapshot's order as the active custom order so playback
-        // follows the saved sequence, not whatever mode was last active.
-        await Playback.applyCustomOrder(pl.sourceListId, pl.order);
-        const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}&list=${pl.sourceListId}&index=${firstIndex}`;
+        
+        // A snapshot of a real YouTube playlist plays in that playlist with a
+        // custom order. Only snapshots with no real source (built via "Add to
+        // List") play as a virtual playlist off our own sidebar.
+        const isNative = pl.sourceListId && pl.sourceListId !== "custom" && !pl.sourceListId.startsWith("virtual:");
+        const suffix = isNative
+          ? `&list=${pl.sourceListId}&index=${firstIndex}`
+          : Playlist.rypHash(pl.id, firstIndex);
+
+        if (isNative) {
+          await Playback.applyCustomOrder(pl.sourceListId, pl.order);
+        }
+        const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}${suffix}`;
         window.open(url, "_self");
       });
 
@@ -842,9 +1127,8 @@
     toast.id = "ryp-toast";
     toast.setAttribute("role", "status");
     toast.dir = activeLang === "ar" ? "rtl" : "ltr";
-    toast.textContent = message; // textContent — safe
+    toast.textContent = message;
     document.body.appendChild(toast);
-    // Force reflow so the entrance animation triggers.
     void toast.offsetWidth;
     toast.classList.add("ryp-toast-show");
     setTimeout(() => toast.remove(), 3200);
@@ -860,7 +1144,6 @@
     return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
   }
 
-  /** Action toast offering to jump back to the last recorded position. */
   function showResumeToast(prog, listId) {
     const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
     const existing = document.getElementById("ryp-resume-toast");
@@ -920,8 +1203,6 @@
 
     const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
     const overlay = el("div", { id: "ryp-custom-modal", className: "ryp-modal-overlay" });
-    // The modal lives in YouTube's LTR document, so direction must be set
-    // explicitly for the title, input, and placeholder to mirror.
     overlay.dir = activeLang === "ar" ? "rtl" : "ltr";
     const titleEl = el("h3", { className: "ryp-modal-title", textContent: title });
 
@@ -1048,7 +1329,6 @@
     });
 
     confirmBtn.focus();
-
     window.addEventListener("keydown", escListener);
   }
 
@@ -1060,11 +1340,12 @@
     isPanelVisible: () => panelVisible,
     showToast,
     showResumeToast,
-    /** Translated string for the active language (used by other modules). */
     t: (key) => (TRANSLATIONS[activeLang] || TRANSLATIONS.en)[key] || key,
     saveCurrentOrder,
     renderList,
     showSaveModal,
     showSaveOptionsModal,
+    showAddToPlaylistModal,
+    isLocalPlaylist,
   };
 })();

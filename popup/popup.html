@@ -58,14 +58,22 @@
         </div>
       </div>
 
-      <!-- Save current playlist section, only visible on YouTube playlist watch pages -->
+      <!-- Quick Add Current Video Banner (visible on any YouTube watch page) -->
+      <div id="add-video-section" class="add-video-section" style="display: none;">
+        <button id="add-current-video-btn" class="add-current-video-btn">
+          <span>＋</span>
+          <span data-i18n="addCurrentVideo">Add Current Video to Playlist</span>
+        </button>
+      </div>
+
+      <!-- Save current playlist section (visible on watch pages with playlist) -->
       <div id="save-current-section" class="save-current-section" style="display: none;">
         <label for="save-input-popup" class="save-label" data-i18n="saveCurrentSectionLabel">Save current playlist state:</label>
-        <div class="save-row">
+        <div class="save-inputs-stack">
           <input type="text" id="save-input-popup" class="save-input" data-i18n="saveInputPlaceholder" placeholder="e.g. My Custom Sort" maxlength="80">
-          <button id="save-confirm-popup" class="save-confirm"></button>
+          <input type="text" id="save-tags-popup" class="save-input tags-input" data-i18n="tagsPlaceholder" placeholder="Tags (comma separated)" maxlength="200">
         </div>
-        <input type="text" id="save-tags-popup" class="save-input tags-input" data-i18n="tagsPlaceholder" placeholder="Tags (comma separated)" maxlength="200">
+        <button id="save-confirm-popup" class="save-confirm"></button>
       </div>
 
       <!-- Saved snapshots section -->

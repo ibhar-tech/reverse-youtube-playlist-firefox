@@ -137,16 +137,47 @@ body {
   }
 }
 
+/* ── Add Current Video Section ──────────────────────────────────────────── */
+
+.add-video-section {
+  display: flex;
+  width: 100%;
+}
+
+.add-current-video-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: var(--ryp-font);
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--ryp-accent-grad);
+  border: none;
+  border-radius: var(--ryp-radius-md);
+  box-shadow: 0 4px 12px var(--ryp-accent-glow);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-current-video-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px var(--ryp-accent-glow);
+}
+
 /* ── Save Current Playlist Section ──────────────────────────────────────── */
 
 .save-current-section {
-  padding: 16px;
+  padding: 14px 16px;
   background: var(--ryp-card-bg);
   border: 1px solid var(--ryp-border);
   border-radius: var(--ryp-radius-lg);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .save-label {
@@ -156,19 +187,22 @@ body {
   color: var(--ryp-sub);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  margin-bottom: 2px;
 }
 
-.save-row {
+.save-inputs-stack {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   width: 100%;
 }
 
 .save-input {
-  flex: 1;
+  box-sizing: border-box;
+  width: 100%;
   font-family: var(--ryp-font);
-  font-size: 13px;
-  padding: 8px 12px;
+  font-size: 12.5px;
+  padding: 9px 12px;
   background: rgba(0, 0, 0, 0.03);
   border: 1px solid var(--ryp-border);
   border-radius: var(--ryp-radius-md);
@@ -194,9 +228,44 @@ body {
   width: 100%;
 }
 
+.save-confirm {
+  width: 100%;
+  padding: 9px 16px;
+  font-family: var(--ryp-font);
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--ryp-accent-grad);
+  border: none;
+  border-radius: var(--ryp-radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px var(--ryp-accent-glow);
+  transition: all 0.2s ease;
+  outline: none;
+  margin-top: 2px;
+}
+
+.save-confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--ryp-accent-glow);
+}
+
 .save-confirm:disabled {
   cursor: wait;
   opacity: 0.65;
+}
+
+.save-confirm svg {
+  width: 14px;
+  height: 14px;
+  max-width: 14px;
+  max-height: 14px;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .input-error {
@@ -209,34 +278,6 @@ body {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-4px); }
   40%, 80% { transform: translateX(4px); }
-}
-
-.save-confirm {
-  padding: 8px 14px;
-  font-family: var(--ryp-font);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #ffffff;
-  background: var(--ryp-accent-grad);
-  border: none;
-  border-radius: var(--ryp-radius-md);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  box-shadow: 0 2px 6px var(--ryp-accent-glow);
-  transition: all 0.2s ease;
-  outline: none;
-}
-
-.save-confirm:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px var(--ryp-accent-glow);
-}
-
-.save-confirm svg {
-  width: 13px;
-  height: 13px;
 }
 
 /* ── Playlist List area ─────────────────────────────────────────────────── */

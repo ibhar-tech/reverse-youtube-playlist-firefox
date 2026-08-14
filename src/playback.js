@@ -12,6 +12,10 @@
  *   disableReverse(listId)
  *   enableShuffle(listId)
  *   disableShuffle(listId)
+ *   sortByTitle(listId, ascending)
+ *   sortByDuration(listId, shortestFirst)
+ *   sortByChannel(listId, ascending)
+ *   sortByWatched(listId, unwatchedFirst)
  *   applyCustomOrder(listId, order) — set an arbitrary play-order array
  *   disableAll(listId)
  *   getState()                     → { reverseOn, shuffleOn, customOrder }
@@ -63,7 +67,7 @@
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   function isActive() {
-    return reverseOn || shuffleOn || customOrder !== null;
+    return reverseOn || shuffleOn || (customOrder !== null && customOrder.length > 0) || Playlist.isVirtualPlaylist();
   }
 
   function getRawNextIndex(idx) {
@@ -73,7 +77,20 @@
       return customOrder[pos + 1];
     }
     if (reverseOn) {
+      if (Playlist.isVirtualPlaylist()) {
+        const items = Playlist.readItems();
+        const pos = items.findIndex((it) => it.index === idx);
+        return pos > 0 ? items[pos - 1].index : null;
+      }
       return idx - 1 >= 1 ? idx - 1 : null;
+    }
+    if (Playlist.isVirtualPlaylist()) {
+      const items = Playlist.readItems();
+      const pos = items.findIndex((it) => it.index === idx);
+      if (pos >= 0 && pos + 1 < items.length) {
+        return items[pos + 1].index;
+      }
+      return null;
     }
     return null;
   }
@@ -87,8 +104,17 @@
     }
     if (reverseOn) {
       const items = Playlist.readItems();
+      if (Playlist.isVirtualPlaylist()) {
+        const pos = items.findIndex((it) => it.index === idx);
+        return (pos >= 0 && pos + 1 < items.length) ? items[pos + 1].index : null;
+      }
       const max = items.length ? items[items.length - 1].index : null;
       return max !== null && idx + 1 <= max ? idx + 1 : null;
+    }
+    if (Playlist.isVirtualPlaylist()) {
+      const items = Playlist.readItems();
+      const pos = items.findIndex((it) => it.index === idx);
+      return pos > 0 ? items[pos - 1].index : null;
     }
     return null;
   }
@@ -96,9 +122,12 @@
   /** First index of the active order — used when loop mode wraps around. */
   function firstIndexInMode() {
     if (customOrder && customOrder.length > 0) return customOrder[0];
+    const items = Playlist.readItems();
     if (reverseOn) {
-      const items = Playlist.readItems();
       return items.length ? items[items.length - 1].index : null;
+    }
+    if (Playlist.isVirtualPlaylist()) {
+      return items.length ? items[0].index : null;
     }
     return null;
   }
@@ -200,6 +229,7 @@
     if (Playlist.getPlaylistId() === listId) {
       cachedWatched = watched;
       window.RYP.Sidebar?.applyWatchedBadges();
+      window.RYP.Toolbar?.updateDurationStats();
     }
   }
 
@@ -225,11 +255,6 @@
   }
 
   // ── Player next/prev control interception ────────────────────────────────
-  // While a mode is active, YouTube's own next/previous controls still follow
-  // YouTube's order (index+1 / index-1) — pressing Next on the last video
-  // even autoplays out of the playlist. Capture the controls and Shift+N /
-  // Shift+P and route them through the active order instead.
-
   function handleManualStep(e, isNext) {
     const idx = Playlist.currentIndex();
     if (idx === null) return; // can't resolve position — let YouTube handle it
@@ -278,9 +303,6 @@
   // ── Watch-progress recording (resume where you left off) ────────────────
 
   const PROGRESS_SAVE_MS = 5000;
-  // listIds whose stored progress has been read for a resume offer this
-  // session. Recording is held off until then so a fresh save can't clobber
-  // the resume point before it is offered.
   const resumeChecked = new Set();
   let lastProgressSave = 0;
 
@@ -294,7 +316,6 @@
     const listId = Playlist.getPlaylistId();
     const videoId = new URLSearchParams(location.search).get("v");
     if (!listId || !videoId || !resumeChecked.has(listId)) return;
-    // Don't let ad playback positions overwrite real progress.
     if (document.querySelector(".html5-video-player.ad-showing")) return;
 
     lastProgressSave = now;
@@ -352,7 +373,6 @@
         return false;
       }
 
-      // Shuffle requires a custom order to have been stored; if it's gone, reset.
       reverseOn = !!savedReverse;
       shuffleOn = !!savedShuffle && savedOrder != null;
       customOrder = savedOrder || null;
@@ -367,11 +387,10 @@
         return;
       }
       const idx = Playlist.currentIndex();
-      endHandled = false; // new video settled — re-arm the near-end trigger
+      endHandled = false;
 
       maybeOfferResume(Playlist.getPlaylistId());
 
-      // Fallback: catch a forward advance that the near-end trigger missed.
       if (
         isActive() &&
         !navigating &&
@@ -393,7 +412,6 @@
       await State.set(State.keys.shuffle(listId), false);
       await State.remove(State.keys.customOrder(listId));
 
-      // Jump straight to the last video so playback begins from the end.
       const items = Playlist.readItems();
       const last = items.length ? items[items.length - 1].index : null;
       const cur = Playlist.currentIndex();
@@ -412,7 +430,6 @@
       reverseOn = false;
       shuffleOn = true;
 
-      // Fisher-Yates shuffle.
       const indices = items.map((it) => it.index);
       for (let i = indices.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -424,7 +441,6 @@
       await State.set(State.keys.shuffle(listId), true);
       await State.set(State.keys.customOrder(listId), customOrder);
 
-      // Jump to first in the shuffled order.
       Playlist.goToIndex(customOrder[0]);
     },
 
@@ -435,7 +451,65 @@
       await State.remove(State.keys.customOrder(listId));
     },
 
-    /** Set an arbitrary play order (e.g. from drag-and-drop). */
+    /** Smart sorting by video title (A-Z or Z-A). */
+    async sortByTitle(listId, ascending = true) {
+      const items = Playlist.readItems();
+      if (items.length === 0) return null;
+      const sorted = [...items].sort((a, b) => {
+        const diff = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
+        return ascending ? diff : -diff;
+      });
+      const order = sorted.map((it) => it.index);
+      await this.applyCustomOrder(listId, order);
+      Playlist.goToIndex(order[0]);
+      return order;
+    },
+
+    /** Smart sorting by video duration (shortest first or longest first). */
+    async sortByDuration(listId, shortestFirst = true) {
+      const items = Playlist.readItems();
+      if (items.length === 0) return null;
+      const sorted = [...items].sort((a, b) => {
+        const diff = (a.durationSeconds || 0) - (b.durationSeconds || 0);
+        return shortestFirst ? diff : -diff;
+      });
+      const order = sorted.map((it) => it.index);
+      await this.applyCustomOrder(listId, order);
+      Playlist.goToIndex(order[0]);
+      return order;
+    },
+
+    /** Smart sorting by channel / creator name. */
+    async sortByChannel(listId, ascending = true) {
+      const items = Playlist.readItems();
+      if (items.length === 0) return null;
+      const sorted = [...items].sort((a, b) => {
+        const diff = (a.channel || "").localeCompare(b.channel || "");
+        return ascending ? diff : -diff;
+      });
+      const order = sorted.map((it) => it.index);
+      await this.applyCustomOrder(listId, order);
+      Playlist.goToIndex(order[0]);
+      return order;
+    },
+
+    /** Smart sorting by watched status (unwatched first or watched first). */
+    async sortByWatched(listId, unwatchedFirst = true) {
+      const items = Playlist.readItems();
+      if (items.length === 0) return null;
+      const isWatched = (it) => cachedWatched.includes(it.videoId) || cachedWatched.includes(it.index);
+      const sorted = [...items].sort((a, b) => {
+        const aW = isWatched(a) ? 1 : 0;
+        const bW = isWatched(b) ? 1 : 0;
+        return unwatchedFirst ? aW - bW : bW - aW;
+      });
+      const order = sorted.map((it) => it.index);
+      await this.applyCustomOrder(listId, order);
+      Playlist.goToIndex(order[0]);
+      return order;
+    },
+
+    /** Set an arbitrary play order (e.g. from drag-and-drop or sorting). */
     async applyCustomOrder(listId, order) {
       reverseOn = false;
       shuffleOn = false;
@@ -464,6 +538,10 @@
 
     async getWatched(listId) {
       return (await State.get(State.keys.watched(listId))) || [];
+    },
+
+    async markAsWatched(listId, indexOrVideoId) {
+      await markAsWatched(listId, indexOrVideoId);
     },
 
     async clearWatched(listId) {
