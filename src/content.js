@@ -112,7 +112,22 @@
     const titleEl = document.querySelector("h1.ytd-watch-metadata yt-formatted-string, #title h1, h1.title");
     const title = titleEl?.textContent?.trim() || document.title.replace(/ - YouTube$/, "").trim();
     const thumbnail = videoId ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : "";
-    const durationStr = document.querySelector(".ytp-time-duration")?.textContent?.trim() || "";
+
+    // The player's duration label is empty until metadata loads; the media
+    // element knows sooner. Without this the saved video has no duration and
+    // the playlist's watch-time stats read 0s.
+    let durationStr = document.querySelector(".ytp-time-duration")?.textContent?.trim() || "";
+    if (!durationStr) {
+      const seconds = document.querySelector("video")?.duration;
+      if (Number.isFinite(seconds) && seconds > 0) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        durationStr = h > 0
+          ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+          : `${m}:${String(s).padStart(2, "0")}`;
+      }
+    }
 
     return { videoId, title, thumbnail, durationStr };
   }

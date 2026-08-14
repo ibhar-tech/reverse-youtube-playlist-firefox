@@ -15,7 +15,8 @@
   const SEL = {
     // Watch page playlist panel
     panel: "ytd-playlist-panel-renderer",
-    item: "ytd-playlist-panel-video-renderer",
+    // Our virtual-playlist rows are plain divs (see createCustomPlaylistItem).
+    item: "ytd-playlist-panel-video-renderer, .ryp-custom-playlist-item",
     itemLink: "a#wc-endpoint, a.ytd-playlist-panel-video-renderer, a",
     itemsContainer: "ytd-playlist-panel-renderer #items",
     videoTitle: "#video-title",

@@ -109,3 +109,53 @@ describe("Add-to-Local-Playlist rules", async () => {
     assert.equal(parsed[0].videos[0].durationStr, "3:00");
   });
 });
+
+describe("Local playlist playback advances", async () => {
+  before(async () => {
+    await import("../src/state.js");
+    await import("../src/playlist.js");
+    await import("../src/playback.js");
+  });
+
+  beforeEach(() => {
+    globalThis.browser.storage.local.data = {};
+    location.pathname = "/watch";
+    // A local playlist identifies itself through the URL hash.
+    location.search = "?v=aaaaaaaaaaa";
+    location.hash = "#ryp_list=SNAP1&ryp_index=1";
+  });
+
+  test("knows the next video in a local playlist", async () => {
+    const { Playback, Playlist } = window.RYP;
+    const original = Playlist.readItems;
+    Playlist.readItems = () => [
+      { index: 1, videoId: "aaaaaaaaaaa", title: "One" },
+      { index: 2, videoId: "bbbbbbbbbbb", title: "Two" },
+      { index: 3, videoId: "ccccccccccc", title: "Three" },
+    ];
+    try {
+      await Playback.disableAll("virtual:SNAP1");
+      // This is what the end-of-video handler asks for. Returning null here is
+      // what made a local playlist stop instead of advancing.
+      assert.equal(Playback.nextIndexInMode(1), 2);
+      assert.equal(Playback.nextIndexInMode(2), 3);
+      assert.equal(Playback.nextIndexInMode(3), null, "last video ends the list");
+    } finally {
+      Playlist.readItems = original;
+    }
+  });
+
+  test("an empty panel yields no next video", async () => {
+    const { Playback, Playlist } = window.RYP;
+    const original = Playlist.readItems;
+    // Exactly the state the Polymer-gutted rows produced: the panel is there
+    // but readItems finds nothing, so playback had nowhere to go.
+    Playlist.readItems = () => [];
+    try {
+      await Playback.disableAll("virtual:SNAP1");
+      assert.equal(Playback.nextIndexInMode(1), null);
+    } finally {
+      Playlist.readItems = original;
+    }
+  });
+});

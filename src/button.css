@@ -1132,3 +1132,22 @@ html[dark] .ryp-modal-btn-cancel {
   color: var(--ryp-sub);
   margin-bottom: 6px;
 }
+
+/* Local playlist vs. YouTube-playlist snapshot — they behave differently. */
+.ryp-kind-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-right: 6px;
+  border-radius: var(--ryp-radius-pill);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  vertical-align: 1px;
+  background: var(--ryp-btn-bg);
+  color: var(--ryp-sub);
+}
+
+.ryp-kind-badge.ryp-kind-local {
+  background: var(--ryp-accent-grad);
+  color: #ffffff;
+}

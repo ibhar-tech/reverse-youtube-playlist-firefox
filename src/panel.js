@@ -62,6 +62,8 @@
       updateExisting: "Update",
       updateConfirm: "Snapshot updated!",
       addToPlaylistTitle: "Add to Local Playlist",
+      localBadge: "LOCAL",
+      playlistBadge: "YOUTUBE",
       localPlaylists: "Your local playlists",
       noLocalPlaylists: "No local playlists yet — create one above.",
       addToPlaylistPrompt: "Choose a playlist to add this video to, or create a new one:",
@@ -108,6 +110,8 @@
       updateExisting: "Mettre à jour",
       updateConfirm: "Instantané mis à jour !",
       addToPlaylistTitle: "Ajouter à une playlist locale",
+      localBadge: "LOCALE",
+      playlistBadge: "YOUTUBE",
       localPlaylists: "Vos playlists locales",
       noLocalPlaylists: "Aucune playlist locale — créez-en une ci-dessus.",
       addToPlaylistPrompt: "Choisissez une playlist ou créez-en une nouvelle :",
@@ -154,6 +158,8 @@
       updateExisting: "تحديث",
       updateConfirm: "تم تحديث اللقطة بنجاح!",
       addToPlaylistTitle: "إضافة إلى قائمة تشغيل محلية",
+      localBadge: "محلية",
+      playlistBadge: "يوتيوب",
       localPlaylists: "قوائم التشغيل المحلية",
       noLocalPlaylists: "لا توجد قوائم محلية — أنشئ واحدة بالأعلى.",
       addToPlaylistPrompt: "اختر قائمة لإضافة هذا الفيديو إليها أو أنشئ قائمة جديدة:",
@@ -1039,10 +1045,16 @@
       const nameEl = el("div", { className: "ryp-saved-name" });
       nameEl.textContent = pl.name;
       nameEl.title = pl.name;
-      const metaEl = el("div", {
-        className: "ryp-saved-meta",
-        textContent: `${pl.videos?.length ?? pl.order.length} ${dict.videosWord} · ${date}`,
+      const kind = isLocalPlaylist(pl) ? dict.localBadge : dict.playlistBadge;
+      const metaEl = el("div", { className: "ryp-saved-meta" });
+      const kindEl = el("span", {
+        className: isLocalPlaylist(pl) ? "ryp-kind-badge ryp-kind-local" : "ryp-kind-badge",
+        textContent: kind,
       });
+      metaEl.append(
+        kindEl,
+        document.createTextNode(` ${pl.videos?.length ?? pl.order.length} ${dict.videosWord} · ${date}`)
+      );
       const tagsEl = el("div", { className: "ryp-snapshot-tags" });
       for (const tag of Array.isArray(pl.tags) ? pl.tags : []) {
         tagsEl.appendChild(el("span", { className: "ryp-tag", textContent: `#${tag}` }));

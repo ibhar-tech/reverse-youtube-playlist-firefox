@@ -27,6 +27,12 @@
   const loopToggle = document.getElementById("loop-toggle");
   const resumeToggle = document.getElementById("resume-toggle");
 
+  /** Mirrors Panel.isLocalPlaylist (src/panel.js): no real playlist behind it. */
+  function isLocalPlaylist(snapshot) {
+    const source = snapshot?.sourceListId;
+    return !source || source === "custom" || source.startsWith("virtual:");
+  }
+
   let activeTabId = null;
   let activeTabPlaylistId = null;
   let isWatchPage = false;
@@ -91,6 +97,8 @@
       updateExisting: "Update",
       updateConfirm: "Snapshot updated!",
       addCurrentVideo: "Add Current Video to Playlist",
+      localBadge: "LOCAL",
+      playlistBadge: "YOUTUBE",
       reloadPageHint: "Reload the YouTube page, then try again.",
       addToPlaylistTitle: "Add to Local Playlist",
       addToPlaylistPrompt: "Choose a playlist to add this video to:",
@@ -156,6 +164,8 @@
       updateExisting: "Mettre à jour",
       updateConfirm: "Instantané mis à jour !",
       addCurrentVideo: "Ajouter la vidéo actuelle à une playlist",
+      localBadge: "LOCALE",
+      playlistBadge: "YOUTUBE",
       reloadPageHint: "Rechargez la page YouTube, puis réessayez.",
       addToPlaylistTitle: "Ajouter à une playlist locale",
       addToPlaylistPrompt: "Choisissez une playlist :",
@@ -221,6 +231,8 @@
       updateExisting: "تحديث",
       updateConfirm: "تم تحديث اللقطة بنجاح!",
       addCurrentVideo: "إضافة الفيديو الحالي إلى قائمة تشغيل",
+      localBadge: "محلية",
+      playlistBadge: "يوتيوب",
       reloadPageHint: "أعد تحميل صفحة يوتيوب ثم حاول مرة أخرى.",
       addToPlaylistTitle: "إضافة إلى قائمة تشغيل محلية",
       addToPlaylistPrompt: "اختر قائمة لإضافة هذا الفيديو إليها:",
@@ -893,10 +905,18 @@
 
       const nameEl = el("div", { className: "playlist-name", textContent: pl.name });
       nameEl.title = pl.name;
-      const metaEl = el("div", {
-        className: "playlist-meta",
-        textContent: `${pl.videos?.length ?? pl.order.length} ${dict.videosWord} · ${date}`,
-      });
+      // A local playlist holds arbitrary videos and plays from our own sidebar;
+      // a snapshot of a YouTube playlist replays that playlist. They behave
+      // differently, so they must not look identical here.
+      const local = isLocalPlaylist(pl);
+      const metaEl = el("div", { className: "playlist-meta" });
+      metaEl.append(
+        el("span", {
+          className: local ? "kind-badge kind-local" : "kind-badge",
+          textContent: local ? dict.localBadge : dict.playlistBadge,
+        }),
+        document.createTextNode(` ${pl.videos?.length ?? pl.order.length} ${dict.videosWord} · ${date}`)
+      );
       const tagsEl = el("div", { className: "snapshot-tags" });
       for (const tag of Array.isArray(pl.tags) ? pl.tags : []) {
         tagsEl.appendChild(el("span", { className: "snapshot-tag", textContent: `#${tag}` }));

@@ -23,8 +23,13 @@
   let visualStateApplied = false;
 
   function createCustomPlaylistItem(video, listId) {
-    const item = document.createElement("ytd-playlist-panel-video-renderer");
-    item.className = "style-scope ytd-playlist-panel-renderer ryp-custom-playlist-item";
+    // Deliberately a plain <div>. YouTube *defines*
+    // ytd-playlist-panel-video-renderer as a Polymer component, so creating one
+    // gets it upgraded and Polymer stamps its own empty template over our
+    // children — the row renders blank and readItems() finds no anchor, which
+    // silently kills duration stats and next-video navigation too.
+    const item = document.createElement("div");
+    item.className = "ryp-custom-playlist-item";
     item.dataset.index = String(video.index);
     item.dataset.videoId = video.videoId;
 

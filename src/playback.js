@@ -532,6 +532,9 @@
       return isActive();
     },
 
+    /** Index that plays after `idx` in the active mode, or null at the end. */
+    nextIndexInMode,
+
     getState() {
       return { reverseOn, shuffleOn, customOrder };
     },

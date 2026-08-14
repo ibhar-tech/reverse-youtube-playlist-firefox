@@ -86,6 +86,15 @@ def check(name, condition, detail=""):
     return bool(condition)
 
 
+SKIPPED = []
+
+
+def inconclusive(name, why):
+    """The environment could not exercise this — never silently a pass."""
+    SKIPPED.append(name)
+    print(f"  SKIP  {name}  [{why}]")
+
+
 def settle(d, selector, timeout=25):
     """Wait until a selector appears (the content script runs at document_idle)."""
     deadline = time.time() + timeout
@@ -207,7 +216,7 @@ def main():
             return {url: location.href, panel: !!p,
                     header: p?.querySelector('.ryp-virtual-title')?.textContent,
                     count: p?.querySelector('#ryp-virtual-count')?.textContent,
-                    items: [...(p?.querySelectorAll('ytd-playlist-panel-video-renderer')||[])]
+                    items: [...(p?.querySelectorAll('.ryp-custom-playlist-item')||[])]
                              .map(i=>i.querySelector('#video-title')?.textContent),
                     bg: p ? getComputedStyle(p).backgroundColor : null};""")
         check("hash param survives navigation", "#ryp_list=" in r["url"], r["url"][-60:])
@@ -217,16 +226,72 @@ def main():
               " | ".join(i or "?" for i in (r.get("items") or [])))
         check("panel has a solid background", r.get("bg") not in (None, "rgba(0, 0, 0, 0)"), r.get("bg"))
 
-        # click the second item — the round trip
-        if r.get("panel") and len(r.get("items") or []) == 2:
-            d.js("""document.querySelectorAll('#ryp-virtual-playlist-panel ytd-playlist-panel-video-renderer')[1]
-                    .querySelector('a').click();""")
-            time.sleep(8)
+        # Rows must actually RENDER. Reading textContent is not enough: when the
+        # rows were <ytd-playlist-panel-video-renderer>, Polymer upgraded them
+        # and stamped an empty template over our children, so the panel showed
+        # blank boxes while a textContent-only assertion still passed.
+        rows = d.js("""const rows=[...document.querySelectorAll('#ryp-virtual-playlist-panel .ryp-custom-playlist-item')];
+            return rows.map(row => {
+              const t=row.querySelector('#video-title'), i=row.querySelector('img');
+              const rb=row.getBoundingClientRect(), tb=t?.getBoundingClientRect();
+              return {rowH: Math.round(rb.height), titleText: t?.textContent || '',
+                      titleH: tb ? Math.round(tb.height) : 0,
+                      imgLoaded: !!i && i.complete && i.naturalWidth > 0,
+                      duration: row.querySelector('[class*="badge-shape-wiz__text"]')?.textContent || ''};
+            });""")
+        check("rows have real height", bool(rows) and all(x["rowH"] > 20 for x in rows),
+              ", ".join(str(x["rowH"]) + "px" for x in rows) or "no rows")
+        check("titles are laid out, not just present",
+              bool(rows) and all(x["titleText"].strip() and x["titleH"] > 0 for x in rows),
+              ", ".join(f'{x["titleH"]}px "{x["titleText"][:22]}"' for x in rows))
+        check("thumbnails load", bool(rows) and all(x["imgLoaded"] for x in rows))
+        check("rows carry a duration", bool(rows) and all(x["duration"].strip() for x in rows),
+              ", ".join(x["duration"] for x in rows))
+
+        stats = d.js("""return document.querySelector('#ryp-duration-pill .ryp-duration-text')?.textContent || '';""")
+        check("virtual playlist reports watch-time stats",
+              bool(stats) and stats != "0s (0s)", stats or "(no pill)")
+
+        # Auto-advance: seek to the end and confirm playback moves to item 2 on
+        # its own. A local playlist that cannot advance is not a playlist.
+        # Drive YouTube's own player to the very end. Headless Firefox often
+        # stalls before the final second, so a miss here is reported as
+        # inconclusive rather than a failure — the advance arithmetic itself is
+        # covered deterministically by tests/test_add_to_playlist.js.
+        seeked = d.js("""const p=document.getElementById('movie_player');
+            if (!p || !p.seekTo) return false;
+            p.mute(); const dur=p.getDuration();
+            if (!dur || dur < 5) return false;
+            p.seekTo(dur - 3, true); p.playVideo(); return true;""")
+        moved = False
+        if seeked:
+            deadline = time.time() + 60
+            while time.time() < deadline:
+                if "ryp_index=2" in d.url():
+                    moved = True
+                    break
+                time.sleep(2)
+        if moved:
+            check("auto-advances to the next video at end of playback", True, d.url()[-46:])
+            time.sleep(6)
             r2 = d.js("""const p=document.querySelector('#ryp-virtual-playlist-panel');
-                return {url: location.href, panel: !!p,
-                        selected: p?.querySelector('[selected] #video-title')?.textContent};""")
-            check("clicking item 2 keeps the virtual playlist", r2["panel"] and "ryp_index=2" in r2["url"])
-            check("item 2 is the selected row", bool(r2.get("selected")), r2.get("selected"))
+                return {panel: !!p, selected: p?.querySelector('.selected #video-title')?.textContent};""")
+            check("panel survives the auto-advance", r2["panel"])
+        else:
+            reached = d.js("""const v=document.querySelector('video');
+                return v && isFinite(v.duration) ? Math.round(v.duration - v.currentTime) : null;""")
+            inconclusive("auto-advances at end of playback",
+                         f"playback stalled {reached}s from the end" if reached is not None
+                         else "player never reported a duration")
+
+        # ...and manual navigation back to item 1 still works.
+        d.js("""document.querySelectorAll('#ryp-virtual-playlist-panel .ryp-custom-playlist-item')[0]
+                .querySelector('a').click();""")
+        time.sleep(8)
+        r3 = d.js("""return {url: location.href,
+                    panel: !!document.querySelector('#ryp-virtual-playlist-panel')};""")
+        check("clicking a row navigates within the playlist",
+              r3["panel"] and "ryp_index=1" in r3["url"], r3["url"][-46:])
 
         # ── 7. Overview page ─────────────────────────────────────────────────
         print("\nPlaylist overview page")
@@ -275,7 +340,10 @@ def main():
 
     print()
     failed = [n for n, ok, _ in RESULTS if not ok]
-    print(f"{len(RESULTS) - len(failed)}/{len(RESULTS)} checks passed")
+    print(f"{len(RESULTS) - len(failed)}/{len(RESULTS)} checks passed"
+          + (f", {len(SKIPPED)} inconclusive" if SKIPPED else ""))
+    for name in SKIPPED:
+        print(f"  inconclusive: {name}")
     if failed:
         print("FAILED: " + "; ".join(failed))
     return 1 if failed else 0

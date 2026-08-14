@@ -1050,3 +1050,24 @@ body.ryp-compact .action-delete {
   margin-top: 6px;
   width: 100%;
 }
+
+/* Local playlist vs. YouTube-playlist snapshot — they behave differently. */
+.kind-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-right: 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  vertical-align: 1px;
+  background: var(--btn-bg, rgba(128, 128, 128, 0.15));
+  color: inherit;
+  opacity: 0.75;
+}
+
+.kind-badge.kind-local {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #ffffff;
+  opacity: 1;
+}
