@@ -96,6 +96,9 @@
     metaDiv.className = "style-scope ytd-playlist-panel-video-renderer";
     metaDiv.style.flex = "1";
     metaDiv.style.overflow = "hidden";
+    // Without this a flex item refuses to shrink past its content, and the
+    // title's text-overflow: ellipsis never gets a narrower box to act on.
+    metaDiv.style.minWidth = "0";
     metaDiv.style.paddingLeft = "8px";
 
     const titleH4 = document.createElement("h4");

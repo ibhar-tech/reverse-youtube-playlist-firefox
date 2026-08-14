@@ -345,6 +345,23 @@
     if (!menu) return;
     const open = forceState !== undefined ? forceState : !menu.classList.contains("ryp-menu-show");
     menu.classList.toggle("ryp-menu-show", open);
+    if (open) keepDropdownOnScreen(menu);
+  }
+
+  // The menu hangs off the Sort button, which lands anywhere along a toolbar
+  // that wraps to the sidebar's width. Left-aligned it runs off the right
+  // edge; right-aligned it would run off the left. Nudge it back instead.
+  function keepDropdownOnScreen(menu) {
+    menu.style.left = "0px";
+    const bar = menu.closest("#ryp-toolbar, #ryp-overview-toolbar");
+    const limit = bar ? bar.getBoundingClientRect() : null;
+    const left = limit ? Math.max(limit.left, 0) : 0;
+    const right = Math.min(limit ? limit.right : window.innerWidth, window.innerWidth);
+    const box = menu.getBoundingClientRect();
+    let shift = 0;
+    if (box.right > right - 4) shift = right - 4 - box.right;
+    if (box.left + shift < left + 4) shift = left + 4 - box.left;
+    if (shift) menu.style.left = `${Math.round(shift)}px`;
   }
 
   function closeSortDropdown() {
