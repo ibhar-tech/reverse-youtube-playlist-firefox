@@ -764,6 +764,7 @@
         title: videoData.title || "",
         thumbnail: videoData.thumbnail || "",
         durationStr: videoData.durationStr || "",
+        channel: videoData.channel || "",
       };
 
       const updatedSnapshots = current.map((pl) => {
@@ -843,6 +844,7 @@
             title: videoData.title || "",
             thumbnail: videoData.thumbnail || "",
             durationStr: videoData.durationStr || "",
+            channel: videoData.channel || "",
           }],
           savedAt: new Date().toISOString(),
         };

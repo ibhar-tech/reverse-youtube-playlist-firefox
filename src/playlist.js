@@ -422,8 +422,15 @@
 
     findOverviewHeaderContainer() {
       for (const sel of SEL.overviewHeaderCandidates) {
-        const el = document.querySelector(sel);
-        if (el) return el;
+        for (const el of document.querySelectorAll(sel)) {
+          // The header keeps hidden legacy nodes around — an empty
+          // ytd-menu-renderer with display:none holds a
+          // #top-level-buttons-computed that matches but never renders.
+          // Injecting there puts the toolbar in the DOM where nobody can see
+          // it, and a presence-only assertion still passes.
+          const r = el.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) return el;
+        }
       }
       return null;
     },

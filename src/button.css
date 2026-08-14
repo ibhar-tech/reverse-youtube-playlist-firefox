@@ -18,7 +18,12 @@
   --ryp-accent-glow:   rgba(99, 102, 241, 0.35);
   
   /* Light Mode Palette */
-  --ryp-bg:            rgba(255, 255, 255, 0.85);
+  /* The glass surfaces sit on top of YouTube's own content. Firefox does not
+     always paint backdrop-filter (it never does through WebDriver), and at
+     0.85 the page bleeds straight through and the panel is unreadable. 0.94
+     still reads as glass where the blur lands, and stays legible where it
+     does not. */
+  --ryp-bg:            rgba(255, 255, 255, 0.94);
   --ryp-bg-solid:      #ffffff;
   --ryp-card-bg:       rgba(0, 0, 0, 0.03);
   --ryp-card-hover:    rgba(0, 0, 0, 0.05);
@@ -42,7 +47,7 @@
 
 /* Dark mode overrides */
 html[dark], [dark] {
-  --ryp-bg:            rgba(15, 15, 15, 0.85);
+  --ryp-bg:            rgba(15, 15, 15, 0.94);
   --ryp-bg-solid:      #0f0f0f;
   --ryp-card-bg:       rgba(255, 255, 255, 0.04);
   --ryp-card-hover:    rgba(255, 255, 255, 0.08);
@@ -233,8 +238,11 @@ html[dark], [dark] {
   display: none;
   position: absolute;
   top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  /* Anchored to the pill's leading edge, not centred. The pill sits at the
+     left of a ~330px sidebar, so a centred 220px tooltip hangs off the panel
+     and gets clipped — and the ryp-pop animation overwrites `transform`
+     anyway, so translateX(-50%) only held until the animation started. */
+  inset-inline-start: 0;
   background: var(--ryp-bg-solid);
   border: 1px solid var(--ryp-border);
   border-radius: 12px;

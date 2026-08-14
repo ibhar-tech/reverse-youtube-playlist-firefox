@@ -129,7 +129,14 @@
       }
     }
 
-    return { videoId, title, thumbnail, durationStr };
+    // Without this every locally added video shows the "Added to Snapshot"
+    // placeholder instead of a byline, and Sort > Channel has nothing to sort.
+    const channel = document.querySelector(
+      "ytd-watch-metadata #owner #channel-name a, #owner ytd-channel-name a, " +
+      "ytd-video-owner-renderer #channel-name a"
+    )?.textContent?.trim() || "";
+
+    return { videoId, title, thumbnail, durationStr, channel };
   }
 
   function injectWatchActionButton() {

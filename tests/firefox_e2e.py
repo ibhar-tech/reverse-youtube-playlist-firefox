@@ -43,15 +43,17 @@ class WebDriver:
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"{method} {path} -> {e.code}: {e.read().decode()[:400]}")
 
-    def start(self):
-        args = [] if self.headed else ["-headless"]
+    def start(self, extra_prefs=None, extra_args=()):
+        args = ([] if self.headed else ["-headless"]) + list(extra_args)
+        prefs = {
+            # Keep the run deterministic and quiet.
+            "datareporting.policy.firstRunURL": "",
+            "browser.shell.checkDefaultBrowser": False,
+        }
+        prefs.update(extra_prefs or {})
         caps = {"capabilities": {"alwaysMatch": {
             "browserName": "firefox",
-            "moz:firefoxOptions": {"args": args, "prefs": {
-                # Keep the run deterministic and quiet.
-                "datareporting.policy.firstRunURL": "",
-                "browser.shell.checkDefaultBrowser": False,
-            }},
+            "moz:firefoxOptions": {"args": args, "prefs": prefs},
         }}}
         self.session = self._req("POST", "/session", caps)["sessionId"]
 
@@ -306,6 +308,16 @@ def main():
                     duration: bar?.querySelector('#ryp-overview-duration-pill .ryp-duration-text')?.textContent,
                     lockups: all.length, mine: mine.length};""" % json.dumps(PLAYLIST))
         check("overview buttons present", len(r["buttons"]) >= 3, ", ".join(r["buttons"]))
+        # Presence is not enough. The header keeps a display:none legacy
+        # ytd-menu-renderer whose #top-level-buttons-computed matched our
+        # container search, so the toolbar existed and read fine while
+        # rendering nowhere at all.
+        box = d.js("""const b=document.querySelector('#ryp-overview-toolbar');
+            if(!b) return null; const r=b.getBoundingClientRect();
+            return [Math.round(r.width), Math.round(r.height)];""")
+        check("overview toolbar is actually laid out",
+              bool(box) and box[0] > 0 and box[1] > 0,
+              f"{box[0]}x{box[1]}" if box else "no toolbar")
         check("overview reads playlist items", r["mine"] > 0, f"{r['mine']} of {r['lockups']} lockups")
         check("overview duration computed", bool(r["duration"]) and r["duration"] != "0s (0s)", r["duration"])
 
