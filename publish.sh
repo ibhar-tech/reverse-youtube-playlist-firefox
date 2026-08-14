@@ -171,8 +171,24 @@ done
 log "Creating version $VERSION on the listing..."
 JWT=$(make_jwt)
 
-RELEASE_NOTES_EN="v${VERSION}: Add tags and name/tag filtering for saved snapshots. Saving a playlist with existing snapshots now lets you update a specific snapshot or create a new one. This release also fixes My Lists button state, Firefox popup storage, reversed-order snapshots, drag/drop ordering, SPA navigation races, and backup validation."
-RELEASE_NOTES_FR="v${VERSION}: Ajout de tags et du filtrage par nom ou tag pour les instantanés. Lorsqu'une playlist possède déjà des instantanés, vous pouvez désormais en mettre un à jour ou en créer un nouveau. Cette version corrige aussi l'état du bouton Mes Listes, le stockage de la fenêtre Firefox, les instantanés inversés, le glisser-déposer, la navigation SPA et la validation des sauvegardes."
+RELEASE_NOTES_EN="v${VERSION} adds six features:
+• Sort dropdown — order a playlist by title, duration, channel, or watched state.
+• Load All — resolves every item of a lazily-loaded long playlist in one click, so Reverse, Shuffle, Sort and Save act on the whole list.
+• Watch-time pill — total, watched and remaining time, with 1.25x/1.5x/1.75x/2x estimates.
+• Playlist overview pages (youtube.com/playlist?list=…) now get their own toolbar: Play Reverse, Play Shuffled, Save Snapshot.
+• Local playlists — build a list of your own from any video you are watching, using the ＋ button under the player or the popup. It is stored only in your browser and plays from the extension's own sidebar.
+• Move to Top / Move to Bottom buttons in Reorder mode.
+
+Fixes: saved snapshots no longer inject rows into YouTube's sidebar (which corrupted reverse, reorder and the item count); playing a snapshot of a real playlist no longer shows a duplicate sidebar; overview-page actions load the full playlist before acting; playlist and search pages read correctly after YouTube's move to the new card layout."
+RELEASE_NOTES_FR="La version ${VERSION} ajoute six fonctionnalités :
+• Menu Trier — classez une playlist par titre, durée, chaîne ou état de visionnage.
+• Tout charger — charge en un clic tous les éléments d'une longue playlist, pour qu'Inverser, Mélanger, Trier et Enregistrer portent sur la liste entière.
+• Pastille de durée — temps total, vu et restant, avec estimations à 1,25x/1,5x/1,75x/2x.
+• Les pages d'aperçu de playlist (youtube.com/playlist?list=…) ont leur propre barre d'outils : Lire à l'envers, Lire en aléatoire, Enregistrer un instantané.
+• Playlists locales — composez votre propre liste à partir de n'importe quelle vidéo, via le bouton ＋ sous le lecteur ou la fenêtre de l'extension. Elle reste dans votre navigateur et se lit depuis la barre latérale de l'extension.
+• Boutons Déplacer en haut / en bas dans le mode Réorganiser.
+
+Corrections : les instantanés n'insèrent plus de lignes dans la barre latérale de YouTube (ce qui faussait l'inversion, la réorganisation et le décompte) ; lire l'instantané d'une vraie playlist n'affiche plus de barre latérale en double ; les actions de la page d'aperçu chargent la playlist complète avant d'agir ; les pages playlist et recherche sont lues correctement depuis le nouveau format de vignettes de YouTube."
 
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
@@ -207,7 +223,12 @@ JWT=$(make_jwt)
 
 LONG_DESC_EN="🎬 REVERSE YouTube playlists — play oldest-first, newest-first, or any custom order.
 🔀 SHUFFLE playlists with a persistent random order that survives in-app navigation.
-↕️ DRAG & REORDER videos in the sidebar without touching YouTube's servers.
+⇅ SORT by title, duration, channel, or watched state — one click, seven presets.
+↕️ DRAG & REORDER videos in the sidebar without touching YouTube's servers, with Move to Top / Move to Bottom shortcuts.
+⚡ LOAD ALL items of a long playlist in one click, so reverse, shuffle, sort and save act on the complete list instead of only the visible rows.
+⏱️ SEE THE WATCH TIME — total, already watched, and remaining, plus how long it takes at 1.25x, 1.5x, 1.75x and 2x.
+📋 PLAYLIST OVERVIEW PAGES too — start a playlist in reverse or shuffled, or save a snapshot, straight from youtube.com/playlist.
+➕ BUILD YOUR OWN LOCAL PLAYLISTS from any video you are watching. They live only in your browser and play from the extension's own sidebar, so they can hold anything — no YouTube playlist required.
 💾 SAVE custom playlists locally — no Google login, no data sent anywhere.
 📤 EXPORT & IMPORT your saved playlists as JSON backup files — your lists are permanent and portable across devices.
 ⏯️ RESUME WHERE YOU LEFT OFF — a one-click prompt jumps back to your last position in any playlist.
@@ -233,7 +254,12 @@ anything outside your browser's own storage.local.
 
 LONG_DESC_FR="🎬 INVERSEZ les playlists YouTube — lisez du plus ancien au plus récent, du plus récent au plus ancien, ou dans n'importe quel ordre personnalisé.
 🔀 MÉLANGEZ les playlists avec un ordre aléatoire persistant qui survit à la navigation.
-↕️ GLISSEZ & RÉORGANISEZ les vidéos dans la barre latérale sans toucher aux serveurs de YouTube.
+⇅ TRIEZ par titre, durée, chaîne ou état de visionnage — un clic, sept préréglages.
+↕️ GLISSEZ & RÉORGANISEZ les vidéos dans la barre latérale sans toucher aux serveurs de YouTube, avec les raccourcis Déplacer en haut / en bas.
+⚡ CHARGEZ TOUS les éléments d'une longue playlist en un clic, pour qu'inverser, mélanger, trier et enregistrer portent sur la liste complète et non sur les seules lignes visibles.
+⏱️ VOYEZ LA DURÉE — temps total, déjà vu et restant, ainsi que la durée à 1,25x, 1,5x, 1,75x et 2x.
+📋 AUSSI SUR LES PAGES D'APERÇU — lancez une playlist à l'envers ou en aléatoire, ou enregistrez un instantané, directement depuis youtube.com/playlist.
+➕ COMPOSEZ VOS PROPRES PLAYLISTS LOCALES à partir de n'importe quelle vidéo que vous regardez. Elles restent dans votre navigateur et se lisent depuis la barre latérale de l'extension : elles peuvent donc contenir n'importe quoi, sans playlist YouTube.
 💾 SAUVEGARDEZ des playlists personnalisées localement — pas de connexion Google, aucune donnée envoyée.
 📤 EXPORTEZ & IMPORTEZ vos playlists sauvegardées en fichiers JSON — vos listes sont permanentes et portables entre appareils.
 ⏯️ REPRENEZ OÙ VOUS ÉTIEZ — une invite en un clic vous ramène à votre dernière position dans chaque playlist.
@@ -255,10 +281,40 @@ Tout s'exécute dans votre navigateur sous forme de script de contenu côté cli
 • Créer une séquence de visionnage personnalisée pour une playlist sélectionnée
 • Reprendre exactement là où vous vous étiez arrêté dans une longue série éducative"
 
+LONG_DESC_AR="🎬 اعكس قوائم تشغيل يوتيوب — شغّلها من الأقدم إلى الأحدث، أو من الأحدث إلى الأقدم، أو بأي ترتيب تختاره.
+🔀 تشغيل عشوائي بترتيب ثابت لا يتغيّر أثناء التنقّل داخل الموقع.
+⇅ الترتيب حسب العنوان أو المدة أو القناة أو حالة المشاهدة — بنقرة واحدة وسبعة خيارات جاهزة.
+↕️ اسحب وأعد ترتيب الفيديوهات في الشريط الجانبي دون المساس بخوادم يوتيوب، مع اختصاري النقل إلى الأعلى وإلى الأسفل.
+⚡ حمّل كل عناصر القائمة الطويلة بنقرة واحدة، ليعمل العكس والعشوائي والترتيب والحفظ على القائمة كاملة لا على الصفوف الظاهرة فقط.
+⏱️ اطّلع على مدة المشاهدة — المدة الكلية والمُشاهَدة والمتبقّية، ومدّتها بسرعة ١٫٢٥x و١٫٥x و١٫٧٥x و٢x.
+📋 وعلى صفحات عرض القوائم أيضًا — ابدأ التشغيل معكوسًا أو عشوائيًا، أو احفظ نسخة، مباشرةً من youtube.com/playlist.
+➕ أنشئ قوائمك المحلية الخاصة من أي فيديو تشاهده. تبقى داخل متصفّحك وتُشغَّل من الشريط الجانبي للإضافة، فيمكنها أن تضمّ أي شيء دون الحاجة إلى قائمة تشغيل على يوتيوب.
+💾 احفظ قوائمك المخصّصة محليًا — دون تسجيل دخول بحساب Google ودون إرسال أي بيانات.
+📤 صدّر واستورد قوائمك المحفوظة كملفات JSON — قوائمك دائمة ويمكن نقلها بين الأجهزة.
+⏯️ تابع من حيث توقّفت — تذكير بنقرة واحدة يعيدك إلى آخر موضع في أي قائمة.
+🔁 كرّر ترتيب التشغيل المخصّص بلا نهاية بخيار واحد.
+✅ علّم الفيديوهات المُشاهَدة وسترى شارة ✓ تلقائيًا — التتبّع يصمد أمام تعديلات القائمة.
+⏭️ تخطَّ الفيديوهات المُشاهَدة تلقائيًا لتوفير الوقت.
+🌐 واجهة متعدّدة اللغات — بدّل فوريًا بين الإنجليزية والفرنسية والعربية مع دعم كامل للاتجاه من اليمين إلى اليسار.
+📐 وضع مضغوط لعرض أنظف وبلا تشتيت.
+🚀 شغّلها من أي مكان — ابدأ قوائمك المحفوظة من نافذة الإضافة على أي موقع.
+
+✨ مجانية بالكامل. بلا إعلانات. بلا تتبّع. مفتوحة المصدر.
+
+--- كيف تعمل ---
+كل شيء يجري داخل متصفّحك عبر برنامج نصي من جهة العميل. لا نتصل بواجهة يوتيوب البرمجية، ولا نقرأ حسابك على Google، ولا نخزّن أي شيء خارج storage.local الخاص بمتصفّحك.
+
+--- مثالية لـ ---
+• متابعة قائمة دورة تعليمية بترتيب النشر الزمني
+• مشاهدة مسلسل متتاليًا من أحدث حلقة إلى أقدمها
+• إنشاء تسلسل مشاهدة خاص بك لقائمة منتقاة
+• استئناف المشاهدة تمامًا من حيث توقّفت في سلسلة تعليمية طويلة"
+
 EXPORT_DESC_EN="$LONG_DESC_EN"
 EXPORT_DESC_FR="$LONG_DESC_FR"
+EXPORT_DESC_AR="$LONG_DESC_AR"
 
-PATCH_PAYLOAD=$(export EXPORT_DESC_EN EXPORT_DESC_FR; python3 -c '
+PATCH_PAYLOAD=$(export EXPORT_DESC_EN EXPORT_DESC_FR EXPORT_DESC_AR; python3 -c '
 import os, sys, json
 enabled_locales = sys.argv[1].split()
 payload = {"name": {}, "summary": {}, "description": {}}
@@ -266,13 +322,18 @@ payload = {"name": {}, "summary": {}, "description": {}}
 translations = {
   "en-US": {
     "name": "YT Playlist Tools — Reverse, Shuffle & Reorder",
-    "summary": "Reverse, shuffle, drag-reorder, save, and export/import YouTube playlists. Watched badges, auto-skip, loop mode, compact layout, and multi-language UI (EN/FR/AR).",
+    "summary": "Reverse, shuffle, sort and drag-reorder YouTube playlists. Load every item of a long list, see total and remaining watch time, build your own local playlists, and save, export and import custom orders. EN/FR/AR.",
     "desc": os.environ.get("EXPORT_DESC_EN", "")
   },
   "fr": {
     "name": "YT Playlist Tools — Reverse, Shuffle & Reorder",
-    "summary": "Inversez, mélangez, réorganisez, sauvegardez et exportez/importez vos playlists YouTube. Badges de vidéos vues, passage automatique, lecture en boucle, mode compact et interface multilingue (EN/FR/AR).",
+    "summary": "Inversez, mélangez, triez et réorganisez vos playlists YouTube. Chargez une longue liste en entier, voyez la durée totale et restante, composez vos playlists locales, enregistrez et exportez vos ordres. EN/FR/AR.",
     "desc": os.environ.get("EXPORT_DESC_FR", "")
+  },
+  "ar": {
+    "name": "أدوات قوائم يوتيوب — عكس وعشوائي وإعادة ترتيب",
+    "summary": "اعكس قوائم تشغيل يوتيوب ورتّبها وشغّلها عشوائيًا وأعد ترتيبها بالسحب. حمّل القوائم الطويلة كاملة، واطّلع على المدة الكلية والمتبقّية، وأنشئ قوائمك المحلية، واحفظ ترتيبك وصدّره. بالعربية والإنجليزية والفرنسية.",
+    "desc": os.environ.get("EXPORT_DESC_AR", "")
   }
 }
 
