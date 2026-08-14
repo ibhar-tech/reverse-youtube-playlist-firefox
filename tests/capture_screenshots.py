@@ -87,6 +87,25 @@ def save(img, out_dir, name):
     print(f"  wrote {name}  {img.size[0]}x{img.size[1]}  {os.path.getsize(path)//1024}KB")
 
 
+def clear_ads(d, timeout=120):
+    """YouTube plays a pre-roll on most loads. A sponsored video in the player
+    is the one thing that must never reach a store listing, so skip it, wait
+    it out, and refuse to shoot until the player is clean."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        showing = d.js("""const p=document.querySelector('#movie_player');
+            const btn = document.querySelector('.ytp-skip-ad-button, '
+              + '.ytp-ad-skip-button-modern, .ytp-ad-skip-button, '
+              + '.ytp-ad-survey-interstitial-skip-button');
+            if (btn) btn.click();
+            return !!p && (p.classList.contains('ad-showing')
+                        || p.classList.contains('ad-interrupting'));""")
+        if not showing:
+            return True
+        time.sleep(2)
+    raise RuntimeError("an ad was still playing after 2 minutes — not shooting")
+
+
 def click(d, selector):
     return d.js(f"const e=document.querySelector({json.dumps(selector)});"
                 "if(!e) return false; e.click(); return true;")
@@ -172,12 +191,14 @@ def main():
         click(d, "#ryp-btn-reverse")
         time.sleep(4)
         d.js("window.scrollTo(0, 0);")
+        clear_ads(d)
         save(d.shot(), args.out, "screenshot-1-reverse.png")
 
         # ── 2. Sort presets ──────────────────────────────────────────────────
         print("2. sort dropdown")
         click(d, "#ryp-btn-sort")
         time.sleep(1)
+        clear_ads(d)
         save(d.shot(), args.out, "screenshot-2-sort.png")
         d.js("document.body.click();")
         time.sleep(1)
@@ -191,6 +212,7 @@ def main():
                         + 'flex-direction:column;gap:6px;}';
             document.head.appendChild(s);""")
         time.sleep(1)
+        clear_ads(d)
         save(d.shot(), args.out, "screenshot-3-watch-time.png")
         d.js("document.getElementById('ryp-shot-style')?.remove();")
 
@@ -201,6 +223,7 @@ def main():
         badges = d.js("""return [...document.querySelectorAll('.ryp-saved-card')]
             .map(c=>c.querySelector('.ryp-kind-badge')?.textContent);""")
         print(f"   badges on the cards: {badges}")
+        clear_ads(d)
         save(d.shot(), args.out, "screenshot-4-my-lists.png")
 
         # ── 5. A local playlist actually playing ─────────────────────────────
@@ -215,6 +238,7 @@ def main():
         print(f"   virtual rows (px tall): {rows}")
         d.js("window.scrollTo(0, 0);")
         time.sleep(1)
+        clear_ads(d)
         save(d.shot(), args.out, "screenshot-5-local-playlist.png")
 
         # ── 6. Playlist overview page ────────────────────────────────────────

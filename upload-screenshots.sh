@@ -46,6 +46,33 @@ make_jwt() { python3 "$JWT_HELPER"; }
 SCREENSHOTS=("$STORE_DIR"/screenshot-*.png)
 [[ ${#SCREENSHOTS[@]} -gt 0 ]] || fail "No screenshot-*.png files found in store/"
 
+# This endpoint only ever appends. Uploading a new set on top of an old one
+# leaves the listing showing both, so check first and say so.
+JWT=$(make_jwt)
+EXISTING=$(curl -sS "$AMO_API/addons/addon/$AMO_ADDON_ID/previews/" \
+  -H "Authorization: JWT $JWT" | jq -r '.results[]?.id // empty')
+EXISTING_COUNT=$(echo "$EXISTING" | grep -c . || true)
+
+if [[ "$EXISTING_COUNT" -gt 0 ]]; then
+  if [[ "${1:-}" == "--replace" ]]; then
+    log "Deleting $EXISTING_COUNT existing preview(s) before upload..."
+    for ID in $EXISTING; do
+      JWT=$(make_jwt)
+      curl -sS -o /dev/null -X DELETE \
+        "$AMO_API/addons/addon/$AMO_ADDON_ID/previews/$ID/" \
+        -H "Authorization: JWT $JWT"
+      log "  deleted preview $ID"
+    done
+  else
+    fail "The listing already has $EXISTING_COUNT screenshot(s); uploading now
+    would leave both sets on the page. Re-run as:
+
+        ./upload-screenshots.sh --replace
+
+    which deletes the existing previews first. That is not reversible."
+  fi
+fi
+
 log "Uploading ${#SCREENSHOTS[@]} screenshot(s) to AMO listing..."
 
 POSITION=1
