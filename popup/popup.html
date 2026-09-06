@@ -25,6 +25,12 @@
       <div id="settings-panel" class="settings-panel" style="display: none;">
         <div class="settings-group">
           <label class="setting-switch-label">
+            <input type="checkbox" id="disable-autoplay-toggle">
+            <span class="setting-switch-text" data-i18n="disableAutoplay">Don't autoplay the next playlist video</span>
+          </label>
+        </div>
+        <div class="settings-group">
+          <label class="setting-switch-label">
             <input type="checkbox" id="skip-watched-toggle">
             <span class="setting-switch-text" data-i18n="autoSkip">Auto-skip watched</span>
           </label>
@@ -53,8 +59,62 @@
             <span class="setting-switch-text" data-i18n="compact">Compact layout</span>
           </label>
         </div>
+
+        <!-- Button Visibility Sub-section -->
+        <div class="settings-divider"></div>
+        <div class="settings-section-title" data-i18n="buttonVisibilitySection">Button Visibility</div>
+        <div class="button-visibility-grid">
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-reverse" data-btn-key="reverse" checked>
+            <span class="btn-vis-label" data-i18n="btnVisReverse">Reverse</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-shuffle" data-btn-key="shuffle" checked>
+            <span class="btn-vis-label" data-i18n="btnVisShuffle">Shuffle</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-sort" data-btn-key="sort" checked>
+            <span class="btn-vis-label" data-i18n="btnVisSort">Sort</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-reorder" data-btn-key="reorder" checked>
+            <span class="btn-vis-label" data-i18n="btnVisReorder">Reorder</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-reset" data-btn-key="reset" checked>
+            <span class="btn-vis-label" data-i18n="btnVisReset">Reset</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-save" data-btn-key="save" checked>
+            <span class="btn-vis-label" data-i18n="btnVisSave">Save</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-myLists" data-btn-key="myLists" checked>
+            <span class="btn-vis-label" data-i18n="btnVisMyLists">My Lists</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-duration" data-btn-key="duration" checked>
+            <span class="btn-vis-label" data-i18n="btnVisDuration">Duration</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-loadAll" data-btn-key="loadAll" checked>
+            <span class="btn-vis-label" data-i18n="btnVisLoadAll">Load All</span>
+          </label>
+          <label class="btn-vis-item">
+            <input type="checkbox" id="btn-vis-addVideo" data-btn-key="addVideo" checked>
+            <span class="btn-vis-label" data-i18n="btnVisAddVideo">Add to Playlist</span>
+          </label>
+        </div>
+
         <div class="settings-group clear-badges-group">
           <button id="clear-watched-btn" class="popup-btn danger-btn" data-i18n="clearWatched">Clear watched badges</button>
+        </div>
+
+        <div class="settings-divider"></div>
+        <div class="settings-section-title" data-i18n="backupSectionTitle">Backup & Restore</div>
+        <div class="settings-backup-actions">
+          <button id="drawer-export-btn" class="popup-btn secondary-btn" data-i18n="exportBackup">Export Playlists & Settings</button>
+          <button id="drawer-import-btn" class="popup-btn secondary-btn" data-i18n="importBackup">Import Backup File</button>
         </div>
       </div>
 

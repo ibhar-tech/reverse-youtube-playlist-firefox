@@ -105,6 +105,13 @@ html[dark], [dark] {
   display: inline-flex !important;
 }
 
+/* Doubled so it outranks the single-class `display: … !important` rules
+   (.ryp-action-bar-btn, .ryp-btn) whatever the source order. */
+.ryp-hidden.ryp-hidden,
+#ryp-btn-reset.ryp-hidden {
+  display: none !important;
+}
+
 /* Custom Order active styling for Reorder button */
 .ryp-btn.ryp-custom-active {
   border-color: var(--ryp-accent-start) !important;

@@ -10,3 +10,4 @@ import "./test_lazy_loader.js";
 import "./test_locale_coverage.js";
 import "./test_translations.js";
 import "./test_add_to_playlist.js";
+import "./test_autoplay_and_buttons.js";

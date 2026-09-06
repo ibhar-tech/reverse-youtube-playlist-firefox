@@ -523,11 +523,13 @@
     panel.querySelector("#ryp-export-btn").addEventListener("click", async () => {
       const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
       const playlists = (await State.get(State.keys.savedPlaylists)) || [];
-      if (playlists.length === 0) {
+      const res = await api.storage.local.get("ryp_settings");
+      const settings = res?.ryp_settings || null;
+      if (playlists.length === 0 && !settings) {
         showToast(dict.exportEmpty);
         return;
       }
-      Backup.triggerDownload(playlists);
+      Backup.triggerDownload(playlists, settings);
     });
 
     panel.querySelector("#ryp-import-btn").addEventListener("click", () => {
@@ -544,6 +546,11 @@
         const existing = (await State.get(State.keys.savedPlaylists)) || [];
         const { merged, added, skipped } = Backup.mergeSnapshots(existing, incoming);
         await State.set(State.keys.savedPlaylists, merged);
+        if (incoming.settings) {
+          const res = await api.storage.local.get("ryp_settings");
+          const mergedSettings = Backup.mergeSettings(res?.ryp_settings, incoming.settings);
+          await api.storage.local.set({ ryp_settings: mergedSettings });
+        }
         await renderList();
         showToast(
           dict.importDone

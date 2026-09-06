@@ -10,7 +10,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const FILES = ["src/panel.js", "src/toolbar.js", "popup/popup.js"];
+const FILES = ["src/panel.js", "src/toolbar.js", "popup/popup.js", "popup/import.js"];
 const LANGS = ["en", "fr", "ar"];
 
 /** Pull the TRANSLATIONS object literal out of a source file and evaluate it. */

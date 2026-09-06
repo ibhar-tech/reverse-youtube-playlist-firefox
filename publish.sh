@@ -171,24 +171,18 @@ done
 log "Creating version $VERSION on the listing..."
 JWT=$(make_jwt)
 
-RELEASE_NOTES_EN="v${VERSION} adds six features:
-• Sort dropdown — order a playlist by title, duration, channel, or watched state.
-• Load All — resolves every item of a lazily-loaded long playlist in one click, so Reverse, Shuffle, Sort and Save act on the whole list.
-• Watch-time pill — total, watched and remaining time, with 1.25x/1.5x/1.75x/2x estimates.
-• Playlist overview pages (youtube.com/playlist?list=…) now get their own toolbar: Play Reverse, Play Shuffled, Save Snapshot.
-• Local playlists — build a list of your own from any video you are watching, using the ＋ button under the player or the popup. It is stored only in your browser and plays from the extension's own sidebar.
-• Move to Top / Move to Bottom buttons in Reorder mode.
+RELEASE_NOTES_EN="v${VERSION} adds three features:
+• Disable autoplay — a new setting stops each playlist video just before its end instead of rolling into the next one, whether the order is YouTube's or the extension's. The end of a Reverse or Shuffle order now holds as well.
+• Button visibility — hide any toolbar button you never use (Reverse, Shuffle, Sort, Reorder, Reset, Save, My Lists, Duration, Load All, Add to Playlist) from the popup's settings.
+• Settings travel with backups — Export now includes your settings, and Import restores them together with your playlists.
 
-Fixes: saved snapshots no longer inject rows into YouTube's sidebar (which corrupted reverse, reorder and the item count); playing a snapshot of a real playlist no longer shows a duplicate sidebar; overview-page actions load the full playlist before acting; playlist and search pages read correctly after YouTube's move to the new card layout."
-RELEASE_NOTES_FR="La version ${VERSION} ajoute six fonctionnalités :
-• Menu Trier — classez une playlist par titre, durée, chaîne ou état de visionnage.
-• Tout charger — charge en un clic tous les éléments d'une longue playlist, pour qu'Inverser, Mélanger, Trier et Enregistrer portent sur la liste entière.
-• Pastille de durée — temps total, vu et restant, avec estimations à 1,25x/1,5x/1,75x/2x.
-• Les pages d'aperçu de playlist (youtube.com/playlist?list=…) ont leur propre barre d'outils : Lire à l'envers, Lire en aléatoire, Enregistrer un instantané.
-• Playlists locales — composez votre propre liste à partir de n'importe quelle vidéo, via le bouton ＋ sous le lecteur ou la fenêtre de l'extension. Elle reste dans votre navigateur et se lit depuis la barre latérale de l'extension.
-• Boutons Déplacer en haut / en bas dans le mode Réorganiser.
+Fix: the Add to Playlist button now always sits under the video next to Like and Share; it could previously land in the playlist panel header and squeeze the playlist title."
+RELEASE_NOTES_FR="La version ${VERSION} ajoute trois fonctionnalités :
+• Désactiver la lecture automatique — un nouveau réglage arrête chaque vidéo d'une playlist juste avant sa fin au lieu d'enchaîner sur la suivante, que l'ordre soit celui de YouTube ou celui de l'extension. La fin d'un ordre Inverser ou Mélanger est désormais respectée aussi.
+• Visibilité des boutons — masquez depuis les paramètres tout bouton de la barre d'outils que vous n'utilisez pas (Inverser, Mélanger, Trier, Réorganiser, Réinitialiser, Enregistrer, Mes Listes, Durée, Tout charger, Ajouter à la playlist).
+• Les paramètres voyagent avec les sauvegardes — l'export inclut désormais vos paramètres et l'import les restaure avec vos playlists.
 
-Corrections : les instantanés n'insèrent plus de lignes dans la barre latérale de YouTube (ce qui faussait l'inversion, la réorganisation et le décompte) ; lire l'instantané d'une vraie playlist n'affiche plus de barre latérale en double ; les actions de la page d'aperçu chargent la playlist complète avant d'agir ; les pages playlist et recherche sont lues correctement depuis le nouveau format de vignettes de YouTube."
+Correction : le bouton Ajouter à la playlist se place toujours sous la vidéo, à côté de J'aime et Partager ; il pouvait auparavant atterrir dans l'en-tête du panneau de playlist et écraser le titre de la playlist."
 
 VERSION_BODY=$(jq -n \
   --arg uuid "$UPLOAD_UUID" \
@@ -230,13 +224,15 @@ LONG_DESC_EN="🎬 REVERSE YouTube playlists — play oldest-first, newest-first
 📋 PLAYLIST OVERVIEW PAGES too — start a playlist in reverse or shuffled, or save a snapshot, straight from youtube.com/playlist.
 ➕ BUILD YOUR OWN LOCAL PLAYLISTS from any video you are watching. They live only in your browser and play from the extension's own sidebar, so they can hold anything — no YouTube playlist required.
 💾 SAVE custom playlists locally — no Google login, no data sent anywhere.
-📤 EXPORT & IMPORT your saved playlists as JSON backup files — your lists are permanent and portable across devices.
+📤 EXPORT & IMPORT your saved playlists and settings as JSON backup files — your lists are permanent and portable across devices.
 ⏯️ RESUME WHERE YOU LEFT OFF — a one-click prompt jumps back to your last position in any playlist.
 🔁 LOOP your custom play order endlessly with one setting.
 ✅ MARK videos as watched and see a ✓ badge automatically — tracking survives playlist edits.
 ⏭️ AUTO-SKIP already watched videos automatically to save time.
 🌐 MULTI-LANGUAGE UI — switch dynamically between English, French, and Arabic (العربية) with full RTL support.
 📐 COMPACT LAYOUT mode for a cleaner, distraction-free view.
+⏸️ DISABLE AUTOPLAY — stop just before the end of each playlist video instead of rolling into the next one.
+🎛️ SHOW ONLY THE BUTTONS YOU USE — hide any toolbar button from the settings.
 🚀 LAUNCH FROM ANYWHERE — play your saved playlists directly from the browser popup on any website.
 
 ✨ Completely free. Zero ads. Zero tracking. Open source.
@@ -261,13 +257,15 @@ LONG_DESC_FR="🎬 INVERSEZ les playlists YouTube — lisez du plus ancien au pl
 📋 AUSSI SUR LES PAGES D'APERÇU — lancez une playlist à l'envers ou en aléatoire, ou enregistrez un instantané, directement depuis youtube.com/playlist.
 ➕ COMPOSEZ VOS PROPRES PLAYLISTS LOCALES à partir de n'importe quelle vidéo que vous regardez. Elles restent dans votre navigateur et se lisent depuis la barre latérale de l'extension : elles peuvent donc contenir n'importe quoi, sans playlist YouTube.
 💾 SAUVEGARDEZ des playlists personnalisées localement — pas de connexion Google, aucune donnée envoyée.
-📤 EXPORTEZ & IMPORTEZ vos playlists sauvegardées en fichiers JSON — vos listes sont permanentes et portables entre appareils.
+📤 EXPORTEZ & IMPORTEZ vos playlists sauvegardées et vos paramètres en fichiers JSON — vos listes sont permanentes et portables entre appareils.
 ⏯️ REPRENEZ OÙ VOUS ÉTIEZ — une invite en un clic vous ramène à votre dernière position dans chaque playlist.
 🔁 LISEZ EN BOUCLE votre ordre de lecture personnalisé avec une seule option.
 ✅ MARQUEZ les vidéos comme lues et voyez un badge ✓ s'afficher automatiquement — le suivi survit aux modifications de playlist.
 ⏭️ PASSEZ AUTOMATIQUEMENT les vidéos déjà vues pour gagner du temps.
 🌐 INTERFACE MULTILINGUE — basculez dynamiquement entre l'anglais, le français et l'arabe (العربية) avec support RTL complet.
 📐 MODE COMPACT pour une vue épurée et sans distraction.
+⏸️ DÉSACTIVEZ LA LECTURE AUTOMATIQUE — arrêtez chaque vidéo d'une playlist juste avant sa fin au lieu d'enchaîner sur la suivante.
+🎛️ N'AFFICHEZ QUE LES BOUTONS UTILES — masquez n'importe quel bouton de la barre d'outils depuis les paramètres.
 🚀 LANCEZ DEPUIS N'IMPORTE OÙ — lancez vos playlists sauvegardées directement depuis le popup sur n'importe quel site.
 
 ✨ Entièrement gratuit. Zéro publicité. Zéro suivi. Open source.
@@ -290,13 +288,15 @@ LONG_DESC_AR="🎬 اعكس قوائم تشغيل يوتيوب — شغّلها 
 📋 وعلى صفحات عرض القوائم أيضًا — ابدأ التشغيل معكوسًا أو عشوائيًا، أو احفظ نسخة، مباشرةً من youtube.com/playlist.
 ➕ أنشئ قوائمك المحلية الخاصة من أي فيديو تشاهده. تبقى داخل متصفّحك وتُشغَّل من الشريط الجانبي للإضافة، فيمكنها أن تضمّ أي شيء دون الحاجة إلى قائمة تشغيل على يوتيوب.
 💾 احفظ قوائمك المخصّصة محليًا — دون تسجيل دخول بحساب Google ودون إرسال أي بيانات.
-📤 صدّر واستورد قوائمك المحفوظة كملفات JSON — قوائمك دائمة ويمكن نقلها بين الأجهزة.
+📤 صدّر واستورد قوائمك المحفوظة وإعداداتك كملفات JSON — قوائمك دائمة ويمكن نقلها بين الأجهزة.
 ⏯️ تابع من حيث توقّفت — تذكير بنقرة واحدة يعيدك إلى آخر موضع في أي قائمة.
 🔁 كرّر ترتيب التشغيل المخصّص بلا نهاية بخيار واحد.
 ✅ علّم الفيديوهات المُشاهَدة وسترى شارة ✓ تلقائيًا — التتبّع يصمد أمام تعديلات القائمة.
 ⏭️ تخطَّ الفيديوهات المُشاهَدة تلقائيًا لتوفير الوقت.
 🌐 واجهة متعدّدة اللغات — بدّل فوريًا بين الإنجليزية والفرنسية والعربية مع دعم كامل للاتجاه من اليمين إلى اليسار.
 📐 وضع مضغوط لعرض أنظف وبلا تشتيت.
+⏸️ عطّل التشغيل التلقائي — توقّف قبل نهاية كل فيديو من القائمة بقليل بدلًا من الانتقال إلى التالي.
+🎛️ أظهر الأزرار التي تستخدمها فقط — أخفِ أي زر من شريط الأدوات عبر الإعدادات.
 🚀 شغّلها من أي مكان — ابدأ قوائمك المحفوظة من نافذة الإضافة على أي موقع.
 
 ✨ مجانية بالكامل. بلا إعلانات. بلا تتبّع. مفتوحة المصدر.

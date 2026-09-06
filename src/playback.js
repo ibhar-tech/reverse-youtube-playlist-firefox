@@ -29,7 +29,15 @@
   const api = (typeof browser !== "undefined" ? browser : chrome);
 
   // How many seconds before the true end we pre-empt YouTube's autoplay.
-  const END_LEAD = 0.35;
+  // Firefox fires `timeupdate` every ~280ms and YouTube declares the video
+  // ended on its own once ~0.1s remain, then navigates ~20ms later. A 0.35s
+  // lead missed: the last event landed at 0.37s, the next at 0.09s — too late
+  // (measured 2026-09-06). One second guarantees an event inside the window.
+  const END_LEAD = 1.0;
+  // A *pause* needs more room: YouTube treats a pause with 0.72s left as the
+  // video ending and advances anyway, while at 1.48s it stays an ordinary
+  // pause (measured 2026-09-06). Two seconds keeps clear of that line.
+  const STOP_LEAD = 2.0;
 
   let reverseOn = false;
   let shuffleOn = false;
@@ -41,6 +49,7 @@
   let autoSkipEnabled = false;
   let loopEnabled = false;
   let resumePromptEnabled = true;
+  let disableAutoplay = false;
   // Watched entries are videoId strings since v3; legacy entries may still be
   // playlist indices (numbers) until migrated by loadState().
   let cachedWatched = [];
@@ -50,6 +59,7 @@
     autoSkipEnabled = !!settings?.autoSkip;
     loopEnabled = !!settings?.loop;
     resumePromptEnabled = settings?.resumePrompt ?? true;
+    disableAutoplay = !!settings?.disableAutoplay;
   }
 
   api.storage.local.get("ryp_settings").then((res) => {
@@ -65,6 +75,57 @@
   });
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  function cancelYouTubeAutonav() {
+    const cancelSelectors = [
+      ".ytp-autonav-endscreen-upnext-cancel-button",
+      ".ytp-autonav-cancel-button",
+      "button.ytp-autonav-endscreen-button-cancel",
+      ".ytp-autonav-endscreen-button-cancel",
+      ".ytp-autonav-endscreen [aria-label*='Cancel']",
+      ".ytp-autonav-endscreen [aria-label*='Annuler']",
+      ".ytp-autonav-endscreen [aria-label*='إلغاء']",
+    ];
+    for (const sel of cancelSelectors) {
+      const cancelBtn = document.querySelector(sel);
+      if (cancelBtn && typeof cancelBtn.click === "function") {
+        try {
+          cancelBtn.click();
+          break;
+        } catch (_) {}
+      }
+    }
+  }
+
+  // YouTube plays ads in the same <video>. An ad reaching its end must not
+  // count as the video ending — it would mark the video watched, arm
+  // endHandled so the real ending is ignored, and in a mode skip the video.
+  function adPlaying() {
+    return !!document.querySelector(
+      ".html5-video-player.ad-showing, .html5-video-player.ad-interrupting"
+    );
+  }
+
+  // Stop here instead of letting the video end. If YouTube still starts a
+  // navigation within half a second of the pause, that is its own
+  // auto-advance (a human click takes longer) — e.g. a background tab whose
+  // throttled `timeupdate` skipped the window — so the arriving video is
+  // stopped as well.
+  let stoppedAt = -Infinity; // never "just now" on a fresh page
+  let stopArrival = false;
+  function stopVideo(v) {
+    stoppedAt = performance.now();
+    if (v && typeof v.pause === "function") v.pause();
+    cancelYouTubeAutonav();
+  }
+  function onNavigateStart() {
+    stopArrival = performance.now() - stoppedAt < 500;
+  }
+  function onPlaying(e) {
+    if (!stopArrival) return;
+    stopArrival = false;
+    e.target.pause();
+  }
 
   function isActive() {
     return reverseOn || shuffleOn || (customOrder !== null && customOrder.length > 0) || Playlist.isVirtualPlaylist();
@@ -178,41 +239,50 @@
   // Primary: intercept a few milliseconds before the video ends so YouTube
   // never gets to fire its own autoplay-forward.
   function onTimeUpdate(e) {
-    if (!isActive() || navigating || endHandled || !Playlist.isPlaylistWatchPage())
+    if (navigating || endHandled || !Playlist.isPlaylistWatchPage() || adPlaying())
       return;
     const v = e.target;
     if (!v || !v.duration || !isFinite(v.duration) || v.duration < 1) return;
-    if (v.duration - v.currentTime <= END_LEAD) {
-      endHandled = true;
-      // We navigate away before `ended` can fire, so the video must be
-      // marked watched here or modes would never record watch progress.
-      const listId = Playlist.getPlaylistId();
-      const finishedIndex = Playlist.currentIndex();
-      if (listId && finishedIndex !== null) markAsWatched(listId, finishedIndex);
+    const left = v.duration - v.currentTime;
+    if (left > STOP_LEAD) return;
+    if (!isActive() && !disableAutoplay) return;
 
-      const next = nextIndexInMode(finishedIndex);
-      if (next !== null) {
-        stepTo(next);
-      } else {
-        // End of the active order: pause so YouTube's own autoplay-forward
-        // cannot hijack playback into the wrong next video.
-        v.pause();
-      }
+    const finishedIndex = Playlist.currentIndex();
+    const next = disableAutoplay ? null : nextIndexInMode(finishedIndex);
+    // Navigating can wait for the last second; pausing cannot (see STOP_LEAD).
+    if (next !== null && left > END_LEAD) return;
+
+    endHandled = true;
+    // We leave before `ended` can fire, so the video must be marked watched
+    // here or modes would never record watch progress.
+    const listId = Playlist.getPlaylistId();
+    if (listId && finishedIndex !== null) markAsWatched(listId, finishedIndex);
+
+    if (next !== null) {
+      stepTo(next);
+    } else {
+      // Autoplay disabled, or end of the active order: YouTube's own
+      // autoplay-forward must never get to fire.
+      stopVideo(v);
     }
   }
 
   // Backup: fires if the near-end trigger above somehow missed.
-  function onEnded() {
-    if (!Playlist.isPlaylistWatchPage()) return;
+  function onEnded(e) {
+    if (!Playlist.isPlaylistWatchPage() || adPlaying()) return;
     // Always mark as watched, regardless of mode.
     const listId = Playlist.getPlaylistId();
     const finishedIndex = Playlist.currentIndex();
     if (listId && finishedIndex !== null) markAsWatched(listId, finishedIndex);
 
-    if (!isActive() || navigating || endHandled) return;
+    if ((!isActive() && !disableAutoplay) || navigating || endHandled) return;
     endHandled = true;
-    const next = nextIndexInMode(finishedIndex);
-    if (next !== null) stepTo(next);
+    const next = disableAutoplay ? null : nextIndexInMode(finishedIndex);
+    if (next !== null) {
+      stepTo(next);
+    } else {
+      stopVideo(e?.target || document.querySelector("#movie_player video, video"));
+    }
   }
 
   async function markAsWatched(listId, index) {
@@ -316,7 +386,7 @@
     const listId = Playlist.getPlaylistId();
     const videoId = new URLSearchParams(location.search).get("v");
     if (!listId || !videoId || !resumeChecked.has(listId)) return;
-    if (document.querySelector(".html5-video-player.ad-showing")) return;
+    if (adPlaying()) return;
 
     lastProgressSave = now;
     State.set(State.keys.progress(listId), {
@@ -346,6 +416,8 @@
   document.addEventListener("timeupdate", onTimeUpdate, true);
   document.addEventListener("timeupdate", onProgressTick, true);
   document.addEventListener("ended", onEnded, true);
+  document.addEventListener("playing", onPlaying, true);
+  document.addEventListener("yt-navigate-start", onNavigateStart, true);
   document.addEventListener("click", onControlClick, true);
   document.addEventListener("keydown", onControlKey, true);
 
@@ -391,8 +463,13 @@
 
       maybeOfferResume(Playlist.getPlaylistId());
 
+      // YouTube's own forward-advance slipped past the near-end trigger:
+      // redirect it to the mode's real next item. Not when autoplay is
+      // disabled — this branch cannot tell an auto-advance from the user
+      // clicking the next row, and a clicked video must play.
       if (
         isActive() &&
+        !disableAutoplay &&
         !navigating &&
         lastIndex !== null &&
         idx === lastIndex + 1
@@ -551,5 +628,11 @@
       cachedWatched = [];
       await State.remove(State.keys.watched(listId));
     },
+
+    cancelYouTubeAutonav,
+    isAutoplayDisabled() {
+      return disableAutoplay;
+    },
+    updateSettings,
   };
 })();

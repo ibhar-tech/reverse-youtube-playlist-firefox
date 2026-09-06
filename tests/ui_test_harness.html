@@ -8,7 +8,27 @@
   <!-- WebExtension API Mock for Standalone Browser Testing -->
   <script>
     const mockStorage = {
-      ryp_settings: { lang: "en", autoSkip: false, showBadges: true, compact: false, loop: false, resumePrompt: true },
+      ryp_settings: {
+        lang: "en",
+        disableAutoplay: false,
+        autoSkip: false,
+        showBadges: true,
+        compact: false,
+        loop: false,
+        resumePrompt: true,
+        buttonVisibility: {
+          reverse: true,
+          shuffle: true,
+          sort: true,
+          reorder: true,
+          reset: true,
+          save: true,
+          myLists: true,
+          duration: true,
+          loadAll: true,
+          addVideo: true,
+        },
+      },
       savedPlaylists: [
         {
           id: "snap-demo-1",

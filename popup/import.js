@@ -16,28 +16,31 @@
   const TRANSLATIONS = {
     en: {
       pageTitle: "Import — Playlist Tools",
-      title: "Import saved playlists",
-      hint: "Choose a backup file (.json) exported from Playlist Tools. Imported lists are merged with your existing ones — exact duplicates are skipped.",
+      title: "Import saved playlists & settings",
+      hint: "Choose a backup file (.json) exported from Playlist Tools. Imported lists are merged with your existing ones — exact duplicates are skipped. Settings are also restored.",
       dropLabel: "Drop your backup file here, or click to browse",
       importDone: "✓ Imported {added} playlist(s), skipped {skipped} duplicate(s).",
+      importSettingsRestored: "Settings restored.",
       importInvalid: "Invalid backup file — nothing imported. Make sure you selected a .json file exported from Playlist Tools.",
       done: "Done"
     },
     fr: {
       pageTitle: "Importer — Outils Playlist",
-      title: "Importer des playlists sauvegardées",
-      hint: "Choisissez un fichier de sauvegarde (.json) exporté depuis Playlist Tools. Les listes importées sont fusionnées avec les vôtres — les doublons exacts sont ignorés.",
+      title: "Importer playlists et paramètres",
+      hint: "Choisissez un fichier de sauvegarde (.json) exporté depuis Playlist Tools. Les listes importées sont fusionnées avec les vôtres — les doublons sont ignorés. Les paramètres sont également restaurés.",
       dropLabel: "Déposez votre fichier ici, ou cliquez pour parcourir",
       importDone: "✓ {added} playlist(s) importée(s), {skipped} doublon(s) ignoré(s).",
+      importSettingsRestored: "Paramètres restaurés.",
       importInvalid: "Fichier de sauvegarde invalide — rien n'a été importé. Vérifiez qu'il s'agit d'un fichier .json exporté depuis Playlist Tools.",
       done: "Terminé"
     },
     ar: {
       pageTitle: "استيراد — أدوات قائمة التشغيل",
-      title: "استيراد قوائم التشغيل المحفوظة",
-      hint: "اختر ملف نسخ احتياطي (.json) تم تصديره من أدوات قائمة التشغيل. تُدمج القوائم المستوردة مع قوائمك الحالية — ويتم تخطي المكررات.",
+      title: "استيراد قوائم التشغيل والإعدادات",
+      hint: "اختر ملف نسخ احتياطي (.json) تم تصديره من أدوات قائمة التشغيل. تُدمج القوائم المستوردة مع قوائمك الحالية — ويتم تخطي المكررات. ستتم استعادة الإعدادات أيضًا.",
       dropLabel: "أسقط ملف النسخ الاحتياطي هنا، أو انقر للاختيار",
       importDone: "✓ تم استيراد {added} قائمة، وتخطي {skipped} مكررة.",
+      importSettingsRestored: "تمت استعادة الإعدادات.",
       importInvalid: "ملف نسخ احتياطي غير صالح — لم يتم استيراد أي شيء. تأكد من اختيار ملف ‎.json تم تصديره من أدوات قائمة التشغيل.",
       done: "تم"
     }
@@ -87,15 +90,27 @@
     errorEl.style.display = "none";
     try {
       const incoming = Backup.parseImport(await file.text());
-      const res = await api.storage.local.get("savedPlaylists");
+      const res = await api.storage.local.get(["savedPlaylists", "ryp_settings"]);
       const { merged, added, skipped } = Backup.mergeSnapshots(
         res.savedPlaylists || [],
         incoming
       );
       await api.storage.local.set({ savedPlaylists: merged });
-      successEl.textContent = dict.importDone
+
+      let settingsRestored = false;
+      if (incoming.settings) {
+        const mergedSettings = Backup.mergeSettings(res.ryp_settings, incoming.settings);
+        await api.storage.local.set({ ryp_settings: mergedSettings });
+        settingsRestored = true;
+      }
+
+      let msg = dict.importDone
         .replace("{added}", String(added))
         .replace("{skipped}", String(skipped));
+      if (settingsRestored && dict.importSettingsRestored) {
+        msg += " " + dict.importSettingsRestored;
+      }
+      successEl.textContent = msg;
       successEl.style.display = "block";
       doneBtn.style.display = "inline-flex";
     } catch (err) {

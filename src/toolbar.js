@@ -20,6 +20,30 @@
   const api = typeof browser !== "undefined" ? browser : chrome;
 
   let activeLang = "en";
+  let buttonVisibility = {};
+
+  const BUTTON_SELECTORS = {
+    reverse: ["#ryp-btn-reverse", "#ryp-ov-reverse"],
+    shuffle: ["#ryp-btn-shuffle", "#ryp-ov-shuffle"],
+    sort: [".ryp-dropdown-wrapper"],
+    reorder: ["#ryp-btn-reorder"],
+    reset: ["#ryp-btn-reset"],
+    save: ["#ryp-btn-save", "#ryp-ov-save"],
+    myLists: ["#ryp-btn-playlists"],
+    duration: ["#ryp-duration-pill", "#ryp-overview-duration-pill"],
+    loadAll: [".ryp-load-all-pill"],
+  };
+
+  function applyButtonVisibility() {
+    for (const [key, selectors] of Object.entries(BUTTON_SELECTORS)) {
+      const isVisible = buttonVisibility[key] !== false;
+      for (const sel of selectors) {
+        document.querySelectorAll(sel).forEach((el) => {
+          el.classList.toggle("ryp-hidden", !isVisible);
+        });
+      }
+    }
+  }
 
   // ── Translations Dictionary ────────────────────────────────────────────────
 
@@ -166,6 +190,8 @@
 
   function applyToolbarSettings(settings) {
     activeLang = settings?.lang || "en";
+    buttonVisibility = settings?.buttonVisibility || {};
+    applyButtonVisibility();
     syncButtonStates();
     updateDurationStats();
   }
@@ -573,6 +599,12 @@
       const label = loadPill.querySelector(".ryp-label");
       if (label) label.textContent = `${loaded}/${total || loaded} · ${dict.loadAll}`;
     }
+
+    if (buttonVisibility.loadAll === false) {
+      if (loadPill) loadPill.classList.add("ryp-hidden");
+    } else if (loadPill) {
+      loadPill.classList.remove("ryp-hidden");
+    }
   }
 
   // ── Toolbar injection on Watch Page ───────────────────────────────────────
@@ -617,6 +649,7 @@
     checkLazyLoadState(toolbar);
     syncButtonStates();
     updateDurationStats();
+    applyButtonVisibility();
     bindEvents(reverseBtn, shuffleBtn, reorderBtn, resetBtn, saveBtn, playlistsBtn);
     return true;
   }
@@ -699,6 +732,7 @@
       openSaveFlow();
     });
 
+    applyButtonVisibility();
     return true;
   }
 
@@ -706,8 +740,8 @@
 
   function syncButtonStates() {
     const { reverseOn, shuffleOn, customOrder } = Playback.getState();
-    const reorderOn = Sidebar.isReorderModeOn();
-    const panelOn = Panel.isPanelVisible();
+    const reorderOn = Sidebar?.isReorderModeOn ? Sidebar.isReorderModeOn() : false;
+    const panelOn = Panel?.isPanelVisible ? Panel.isPanelVisible() : false;
     const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
 
     setActive(
@@ -836,5 +870,10 @@
     injectOverviewToolbar,
     syncButtonStates,
     updateDurationStats,
+    applyButtonVisibility,
+    setButtonVisibility(vis) {
+      buttonVisibility = vis || {};
+      applyButtonVisibility();
+    },
   };
 })();

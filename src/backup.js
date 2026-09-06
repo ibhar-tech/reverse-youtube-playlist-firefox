@@ -20,6 +20,19 @@
   // short id, so the length floor stays put.
   const ID_RE = /^[A-Za-z0-9_-]{5,64}$/;
 
+  const BUTTON_KEYS = [
+    "reverse",
+    "shuffle",
+    "sort",
+    "reorder",
+    "reset",
+    "save",
+    "myLists",
+    "duration",
+    "loadAll",
+    "addVideo",
+  ];
+
   function freshId() {
     return crypto.randomUUID
       ? crypto.randomUUID()
@@ -37,6 +50,50 @@
       if (unique.length === 8) break;
     }
     return unique;
+  }
+
+  // Must match the keys popup/popup.js writes to ryp_settings — a renamed
+  // key here silently stops round-tripping.
+  const BOOL_SETTING_KEYS = [
+    "autoSkip",
+    "showBadges",
+    "compact",
+    "loop",
+    "resumePrompt",
+    "disableAutoplay",
+  ];
+
+  /** Validate and sanitize settings payload for export/import. */
+  function normalizeSettings(s) {
+    if (!s || typeof s !== "object") return null;
+    const norm = {};
+    if (["en", "fr", "ar"].includes(s.lang)) norm.lang = s.lang;
+    for (const key of BOOL_SETTING_KEYS) {
+      if (typeof s[key] === "boolean") norm[key] = s[key];
+    }
+    if (s.buttonVisibility && typeof s.buttonVisibility === "object") {
+      const vis = {};
+      for (const key of BUTTON_KEYS) {
+        if (typeof s.buttonVisibility[key] === "boolean") {
+          vis[key] = s.buttonVisibility[key];
+        }
+      }
+      if (Object.keys(vis).length > 0) norm.buttonVisibility = vis;
+    }
+    return Object.keys(norm).length > 0 ? norm : null;
+  }
+
+  /** Merge incoming settings into existing: unknown keys dropped, unspecified keys preserved. */
+  function mergeSettings(existing, incoming) {
+    const base = existing && typeof existing === "object" ? { ...existing } : {};
+    const inc = normalizeSettings(incoming);
+    if (!inc) return base;
+    const { buttonVisibility, ...flat } = inc;
+    Object.assign(base, flat);
+    if (buttonVisibility) {
+      base.buttonVisibility = { ...(base.buttonVisibility || {}), ...buttonVisibility };
+    }
+    return base;
   }
 
   function isValidSnapshot(p) {
@@ -78,23 +135,51 @@
   }
 
   /**
-   * Parse backup file text into normalized snapshots.
+   * Parse backup file text into normalized snapshots and optional settings.
    * Accepts the backup envelope or a raw snapshot array.
-   * Throws on anything that yields no valid snapshots.
+   * Throws on anything that yields neither valid snapshots nor valid settings.
+   */
+  function parseBackup(text) {
+    const data = JSON.parse(text);
+    const incoming = Array.isArray(data) ? data : (data && data.playlists);
+    const settings = normalizeSettings(data && data.settings);
+
+    if (!Array.isArray(incoming) && !settings) {
+      throw new Error("not a backup file");
+    }
+
+    const playlists = Array.isArray(incoming)
+      ? incoming
+          .filter(isValidSnapshot)
+          .map(normalizeSnapshot)
+          .filter((snapshot) => {
+            const videoIndices = new Set(snapshot.videos.map((video) => video.index));
+            return snapshot.order.every((index) => videoIndices.has(index));
+          })
+      : [];
+
+    if (playlists.length === 0 && !settings) {
+      throw new Error("no valid playlists or settings");
+    }
+
+    return {
+      schema: data?.schema || SCHEMA,
+      schemaVersion: data?.schemaVersion || (Array.isArray(data) ? 1 : 2),
+      exportedAt: data?.exportedAt || null,
+      playlists,
+      settings,
+    };
+  }
+
+  /**
+   * Parse backup file text into normalized snapshots.
+   * Attaches .settings to the returned array when settings are present.
    */
   function parseImport(text) {
-    const data = JSON.parse(text);
-    const incoming = Array.isArray(data) ? data : data && data.playlists;
-    if (!Array.isArray(incoming)) throw new Error("not a backup file");
-    const valid = incoming
-      .filter(isValidSnapshot)
-      .map(normalizeSnapshot)
-      .filter((snapshot) => {
-        const videoIndices = new Set(snapshot.videos.map((video) => video.index));
-        return snapshot.order.every((index) => videoIndices.has(index));
-      });
-    if (valid.length === 0) throw new Error("no valid playlists");
-    return valid;
+    const parsed = parseBackup(text);
+    const result = parsed.playlists;
+    result.settings = parsed.settings;
+    return result;
   }
 
   /**
@@ -135,16 +220,20 @@
   }
 
   /** Trigger a download of the backup file in the caller's document. */
-  function triggerDownload(playlists) {
+  function triggerDownload(playlists, settings = null) {
     const payload = {
       schema: SCHEMA,
       schemaVersion: 2,
       exportedAt: new Date().toISOString(),
-      playlists: playlists.map((playlist) => ({
+      playlists: (playlists || []).map((playlist) => ({
         ...playlist,
         tags: normalizeTags(playlist.tags),
       })),
     };
+    const normSettings = normalizeSettings(settings);
+    if (normSettings) {
+      payload.settings = normSettings;
+    }
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
@@ -159,9 +248,13 @@
   }
 
   window.RYP.Backup = {
+    BUTTON_KEYS,
     normalizeTags,
+    normalizeSettings,
+    mergeSettings,
     isValidSnapshot,
     normalizeSnapshot,
+    parseBackup,
     parseImport,
     mergeSnapshots,
     triggerDownload,

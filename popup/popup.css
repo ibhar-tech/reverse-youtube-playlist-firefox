@@ -823,7 +823,83 @@ body {
   transform: translateX(14px);
 }
 
+.settings-divider {
+  height: 1px;
+  background: var(--ryp-border);
+  margin: 4px 0;
+}
+
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ryp-sub);
+  margin-top: 2px;
+}
+
+.button-visibility-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+
+.btn-vis-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn-vis-item input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--ryp-border);
+  border-radius: 4px;
+  background: var(--ryp-bg);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-vis-item input[type="checkbox"]:checked {
+  background: var(--ryp-accent-start);
+  border-color: var(--ryp-accent-start);
+}
+
+.btn-vis-item input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4.5px;
+  top: 1.5px;
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.btn-vis-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ryp-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Compact Layout Styles ─────────────────────────────────────────────── */
+
+body.ryp-compact .button-visibility-grid {
+  gap: 6px 10px;
+}
+
+body.ryp-compact .btn-vis-label {
+  font-size: 11px;
+}
 
 body.ryp-compact .popup-header {
   padding: 10px 16px;
@@ -1049,6 +1125,27 @@ body.ryp-compact .action-delete {
 .clear-badges-group {
   margin-top: 6px;
   width: 100%;
+}
+
+.settings-backup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.secondary-btn {
+  background: var(--ryp-btn-bg);
+  border: 1px solid var(--ryp-border);
+  color: var(--ryp-btn-text);
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+.secondary-btn:hover {
+  background: var(--ryp-btn-hover-bg);
+  border-color: var(--ryp-accent-start);
 }
 
 /* Local playlist vs. YouTube-playlist snapshot — they behave differently. */

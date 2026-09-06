@@ -21,11 +21,26 @@
 
   // Settings controls
   const langSelect = document.getElementById("lang-select");
+  const disableAutoplayToggle = document.getElementById("disable-autoplay-toggle");
   const skipToggle = document.getElementById("skip-watched-toggle");
   const badgesToggle = document.getElementById("show-badges-toggle");
   const compactToggle = document.getElementById("compact-toggle");
   const loopToggle = document.getElementById("loop-toggle");
   const resumeToggle = document.getElementById("resume-toggle");
+  const btnVisCheckboxes = document.querySelectorAll(".btn-vis-item input[type='checkbox']");
+
+  const DEFAULT_BUTTON_VISIBILITY = {
+    reverse: true,
+    shuffle: true,
+    sort: true,
+    reorder: true,
+    reset: true,
+    save: true,
+    myLists: true,
+    duration: true,
+    loadAll: true,
+    addVideo: true,
+  };
 
   /** Mirrors Panel.isLocalPlaylist (src/panel.js): no real playlist behind it. */
   function isLocalPlaylist(snapshot) {
@@ -36,7 +51,16 @@
   let activeTabId = null;
   let activeTabPlaylistId = null;
   let isWatchPage = false;
-  let currentSettings = { lang: "en", autoSkip: false, showBadges: true, compact: false, loop: false, resumePrompt: true };
+  let currentSettings = {
+    lang: "en",
+    disableAutoplay: false,
+    autoSkip: false,
+    showBadges: true,
+    compact: false,
+    loop: false,
+    resumePrompt: true,
+    buttonVisibility: { ...DEFAULT_BUTTON_VISIBILITY },
+  };
 
   // ── Translations Dictionary ────────────────────────────────────────────────
 
@@ -107,6 +131,21 @@
       addBtn: "Add",
       addedToPlaylist: "✓ Added video to \"{playlist}\"",
       videoAlreadyInPlaylist: "Video is already in \"{playlist}\"",
+      disableAutoplay: "Don't autoplay the next playlist video",
+      buttonVisibilitySection: "Button Visibility",
+      btnVisReverse: "Reverse",
+      btnVisShuffle: "Shuffle",
+      btnVisSort: "Sort",
+      btnVisReorder: "Reorder",
+      btnVisReset: "Reset",
+      btnVisSave: "Save",
+      btnVisMyLists: "My Lists",
+      btnVisDuration: "Duration",
+      btnVisLoadAll: "Load All",
+      btnVisAddVideo: "Add to Playlist",
+      backupSectionTitle: "Backup & Restore",
+      exportBackup: "Export Playlists & Settings",
+      importBackup: "Import Backup File",
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -174,6 +213,21 @@
       addBtn: "Ajouter",
       addedToPlaylist: "✓ Vidéo ajoutée à \"{playlist}\"",
       videoAlreadyInPlaylist: "La vidéo est déjà dans \"{playlist}\"",
+      disableAutoplay: "Ne pas enchaîner la vidéo suivante",
+      buttonVisibilitySection: "Visibilité des boutons",
+      btnVisReverse: "Inverser",
+      btnVisShuffle: "Mélanger",
+      btnVisSort: "Trier",
+      btnVisReorder: "Réorganiser",
+      btnVisReset: "Réinitialiser",
+      btnVisSave: "Enregistrer",
+      btnVisMyLists: "Mes Listes",
+      btnVisDuration: "Durée",
+      btnVisLoadAll: "Tout charger",
+      btnVisAddVideo: "Ajouter à la playlist",
+      backupSectionTitle: "Sauvegarde et Restauration",
+      exportBackup: "Exporter playlists et paramètres",
+      importBackup: "Importer un fichier de sauvegarde",
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -241,6 +295,21 @@
       addBtn: "إضافة",
       addedToPlaylist: "✓ تمت إضافة الفيديو إلى \"{playlist}\"",
       videoAlreadyInPlaylist: "الفيديو موجود بالفعل في \"{playlist}\"",
+      disableAutoplay: "بدون تشغيل تلقائي للفيديو التالي",
+      buttonVisibilitySection: "ظهور الأزرار",
+      btnVisReverse: "عكس",
+      btnVisShuffle: "خلط عشوائي",
+      btnVisSort: "ترتيب",
+      btnVisReorder: "ترتيب يدوي",
+      btnVisReset: "إعادة تعيين",
+      btnVisSave: "حفظ",
+      btnVisMyLists: "قوائمي",
+      btnVisDuration: "المدة",
+      btnVisLoadAll: "تحميل الكل",
+      btnVisAddVideo: "إضافة إلى القائمة",
+      backupSectionTitle: "النسخ الاحتياطي والاستعادة",
+      exportBackup: "تصدير قوائم التشغيل والإعدادات",
+      importBackup: "استيراد ملف النسخ الاحتياطي",
     }
   };
 
@@ -610,11 +679,16 @@
     const loaded = res.ryp_settings || {};
     currentSettings = {
       lang: loaded.lang || defaultLang,
+      disableAutoplay: loaded.disableAutoplay ?? false,
       autoSkip: loaded.autoSkip ?? false,
       showBadges: loaded.showBadges ?? true,
       compact: loaded.compact ?? false,
       loop: loaded.loop ?? false,
       resumePrompt: loaded.resumePrompt ?? true,
+      buttonVisibility: {
+        ...DEFAULT_BUTTON_VISIBILITY,
+        ...(loaded.buttonVisibility || {}),
+      },
     };
     return currentSettings;
   }
@@ -626,11 +700,19 @@
 
   function applySettingsUI() {
     langSelect.value = currentSettings.lang;
+    if (disableAutoplayToggle) disableAutoplayToggle.checked = currentSettings.disableAutoplay;
     skipToggle.checked = currentSettings.autoSkip;
     badgesToggle.checked = currentSettings.showBadges;
     compactToggle.checked = currentSettings.compact;
     loopToggle.checked = currentSettings.loop;
     resumeToggle.checked = currentSettings.resumePrompt;
+
+    btnVisCheckboxes.forEach((cb) => {
+      const key = cb.getAttribute("data-btn-key");
+      if (key) {
+        cb.checked = currentSettings.buttonVisibility[key] !== false;
+      }
+    });
 
     translateUI();
     document.body.classList.toggle("ryp-compact", currentSettings.compact);
@@ -671,27 +753,55 @@
     saveSettings();
   });
 
+  if (disableAutoplayToggle) {
+    disableAutoplayToggle.addEventListener("change", (e) => {
+      currentSettings.disableAutoplay = e.target.checked;
+      saveSettings();
+    });
+  }
+
+  btnVisCheckboxes.forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const key = cb.getAttribute("data-btn-key");
+      if (key) {
+        currentSettings.buttonVisibility[key] = cb.checked;
+        saveSettings();
+      }
+    });
+  });
+
   // ── Import / Export ───────────────────────────────────────────────────────
 
   const Backup = window.RYP.Backup;
 
   async function exportPlaylists() {
     const dict = getDict();
-    const res = await api.storage.local.get("savedPlaylists");
+    const res = await api.storage.local.get(["savedPlaylists", "ryp_settings"]);
     const playlists = res.savedPlaylists || [];
-    if (playlists.length === 0) {
+    const settings = res.ryp_settings || currentSettings;
+    if (playlists.length === 0 && !settings) {
       showPopupToast(dict.exportEmpty, true);
       return;
     }
-    Backup.triggerDownload(playlists);
+    Backup.triggerDownload(playlists, settings);
   }
 
   exportBtn.addEventListener("click", exportPlaylists);
+  const drawerExportBtn = document.getElementById("drawer-export-btn");
+  if (drawerExportBtn) {
+    drawerExportBtn.addEventListener("click", exportPlaylists);
+  }
 
-  importBtn.addEventListener("click", () => {
+  function openImportPage() {
     api.tabs.create({ url: api.runtime.getURL("popup/import.html") });
     window.close();
-  });
+  }
+
+  importBtn.addEventListener("click", openImportPage);
+  const drawerImportBtn = document.getElementById("drawer-import-btn");
+  if (drawerImportBtn) {
+    drawerImportBtn.addEventListener("click", openImportPage);
+  }
 
   // ── Tab Management & URL Queries ──────────────────────────────────────────
 

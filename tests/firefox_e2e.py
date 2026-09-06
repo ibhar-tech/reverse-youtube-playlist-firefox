@@ -345,6 +345,148 @@ def main():
               f"position {r['position']} of {r['total']}")
         check("reverse mode is armed on arrival", r["reverseOn"])
 
+        # ── 9. YouTube In-Page Panel Export & Import Controls ─────────────────
+        print("\nYouTube In-Page Panel Export & Import Controls")
+        settle(d, "#ryp-btn-playlists")
+        d.js("const btn=document.querySelector('#ryp-btn-playlists'); if(btn) btn.click();")
+        time.sleep(1.5)
+        r_panel = d.js("""
+            const panel = document.querySelector('#ryp-saved-panel');
+            return {
+                panelVisible: !!panel && !panel.classList.contains('ryp-hidden'),
+                exportBtn: !!document.querySelector('#ryp-export-btn'),
+                importBtn: !!document.querySelector('#ryp-import-btn'),
+                importInput: !!document.querySelector('#ryp-import-input')
+            };
+        """)
+        check("My Lists panel opens on YouTube", r_panel["panelVisible"])
+        check("Export button present in YouTube panel", r_panel["exportBtn"])
+        check("Import button present in YouTube panel", r_panel["importBtn"])
+        check("Import file input present in YouTube panel", r_panel["importInput"])
+        d.js("const btn=document.querySelector('#ryp-btn-playlists'); if(btn) btn.click();")
+        time.sleep(0.5)
+
+        # ── 10. UI Test Harness: Button Visibility, Autoplay & Backup ─────────
+        print("\nUI Test Harness (Toolbar Visibility, Autoplay & Backup)")
+        harness_path = os.path.join(REPO, "tests", "ui_test_harness.html")
+        d.go(f"file://{harness_path}")
+        settle(d, "#ryp-toolbar")
+        time.sleep(2)
+
+        # A. Button Visibility Control
+        r_vis = d.js("""
+            if (!window.RYP || !window.RYP.Toolbar) return { ok: false, why: "no Toolbar" };
+            window.RYP.Toolbar.setButtonVisibility({ reverse: false, shuffle: false, sort: true });
+            const rev = document.querySelector('#ryp-btn-reverse');
+            const shuf = document.querySelector('#ryp-btn-shuffle');
+            const sort = document.querySelector('#ryp-btn-sort');
+            return {
+                ok: true,
+                revHidden: rev ? rev.classList.contains('ryp-hidden') : false,
+                revDisplay: rev ? getComputedStyle(rev).display : null,
+                shufHidden: shuf ? shuf.classList.contains('ryp-hidden') : false,
+                shufDisplay: shuf ? getComputedStyle(shuf).display : null,
+                sortHidden: sort ? sort.classList.contains('ryp-hidden') : false,
+                sortDisplay: sort ? getComputedStyle(sort).display : null,
+            };
+        """)
+        check("button visibility toggles work", r_vis["ok"], r_vis.get("why", ""))
+        check("reverse button is hidden with ryp-hidden", r_vis.get("revHidden") and r_vis.get("revDisplay") == "none",
+              f"class={r_vis.get('revHidden')}, display={r_vis.get('revDisplay')}")
+        check("shuffle button is hidden with ryp-hidden", r_vis.get("shufHidden") and r_vis.get("shufDisplay") == "none",
+              f"class={r_vis.get('shufHidden')}, display={r_vis.get('shufDisplay')}")
+        check("sort button remains visible", not r_vis.get("sortHidden") and r_vis.get("sortDisplay") != "none",
+              f"display={r_vis.get('sortDisplay')}")
+
+        # Restore button visibility
+        d.js("window.RYP.Toolbar.setButtonVisibility({ reverse: true, shuffle: true, sort: true });")
+        time.sleep(0.5)
+        r_vis_restored = d.js("""
+            const rev = document.querySelector('#ryp-btn-reverse');
+            return rev ? !rev.classList.contains('ryp-hidden') && getComputedStyle(rev).display !== 'none' : false;
+        """)
+        check("buttons re-appear when visibility is restored", r_vis_restored)
+
+        # B. Autoplay Control Settings
+        r_ap = d.js("""
+            if (!window.RYP || !window.RYP.Playback) return { ok: false };
+            const isOff = window.RYP.Playback.isAutoplayDisabled();
+            return {
+                ok: true,
+                isOffDetected: typeof isOff === 'boolean',
+                hasCancelAutonav: typeof window.RYP.Playback.cancelYouTubeAutonav === 'function'
+            };
+        """)
+        check("autoplay detection helper available in page", r_ap["ok"] and r_ap["isOffDetected"])
+        check("autonav cancellation helper present", r_ap.get("hasCancelAutonav", False))
+
+        # C. Export & Import Round-trip with Settings
+        r_backup = d.js("""
+            if (!window.RYP || !window.RYP.Backup) return { ok: false, why: "no Backup" };
+            const Backup = window.RYP.Backup;
+
+            // Create a test playlist and custom settings
+            const testSnapshot = {
+                id: "e2e-imported-list",
+                name: "E2E Exported Mix",
+                tags: ["test", "e2e"],
+                sourceListId: "",
+                order: [1],
+                videos: [{ index: 1, videoId: "4EaYeZyzIB0", title: "Python intro", durationStr: "7:28" }],
+                savedAt: new Date().toISOString()
+            };
+            const testSettings = {
+                lang: "fr",
+                disableAutoplay: true,
+                compact: true,
+                buttonVisibility: { reverse: false, shuffle: true }
+            };
+
+            // Test parsing a full backup payload with playlists + settings
+            const payload = {
+                schema: "ryp-saved-playlists",
+                schemaVersion: 2,
+                exportedAt: new Date().toISOString(),
+                settings: testSettings,
+                playlists: [testSnapshot]
+            };
+            const jsonText = JSON.stringify(payload);
+            const parsed = Backup.parseBackup(jsonText);
+            const importArray = Backup.parseImport(jsonText);
+
+            // Test snapshot merge
+            const existing = [];
+            const { merged, added } = Backup.mergeSnapshots(existing, importArray);
+
+            // Test settings merge
+            const baseSettings = { lang: "en", disableAutoplay: false };
+            const mergedSettings = Backup.mergeSettings(baseSettings, importArray.settings);
+
+            return {
+                ok: true,
+                parsedPlaylistsCount: parsed.playlists.length,
+                parsedSettingsDisableAutoplay: parsed.settings?.disableAutoplay,
+                parsedSettingsLang: parsed.settings?.lang,
+                importArrayCount: importArray.length,
+                importArraySettingsAttached: !!importArray.settings,
+                mergeAdded: added,
+                mergedSnapshotName: merged[0]?.name,
+                mergedSettingsDisableAutoplay: mergedSettings.disableAutoplay,
+                mergedSettingsLang: mergedSettings.lang
+            };
+        """)
+        check("backup parse and import functional", r_backup["ok"], r_backup.get("why", ""))
+        check("export payload includes playlist and settings",
+              r_backup.get("parsedPlaylistsCount") == 1 and r_backup.get("parsedSettingsDisableAutoplay") is True)
+        check("parseImport attaches normalized settings to array",
+              r_backup.get("importArrayCount") == 1 and r_backup.get("importArraySettingsAttached") is True)
+        check("merged snapshots preserve playlist data",
+              r_backup.get("mergeAdded") == 1 and r_backup.get("mergedSnapshotName") == "E2E Exported Mix")
+        check("merged settings update disableAutoplay and lang",
+              r_backup.get("mergedSettingsDisableAutoplay") is True and r_backup.get("mergedSettingsLang") == "fr")
+
+
+
     finally:
         d.quit()
         proc.terminate()

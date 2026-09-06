@@ -13,9 +13,29 @@
   const { Playlist, Playback, Sidebar, Panel, Toolbar } = window.RYP;
   const TOOLBAR_ID = "ryp-toolbar";
   const ADD_VIDEO_BTN_ID = "ryp-add-video-btn";
+  const api = typeof browser !== "undefined" ? browser : chrome;
   let navigationEpoch = 0;
   let activeListId = null;
   let stateReadyListId = null;
+  let buttonVisibility = {};
+
+  function updateContentSettings(settings) {
+    buttonVisibility = settings?.buttonVisibility || {};
+    const btn = document.getElementById(ADD_VIDEO_BTN_ID);
+    if (btn) {
+      btn.classList.toggle("ryp-hidden", buttonVisibility.addVideo === false);
+    }
+  }
+
+  api.storage.local.get("ryp_settings").then((res) => {
+    updateContentSettings(res.ryp_settings);
+  });
+
+  api.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.ryp_settings) {
+      updateContentSettings(changes.ryp_settings.newValue);
+    }
+  });
 
   // ── Navigation handler ────────────────────────────────────────────────────
 
@@ -145,30 +165,32 @@
     if (!videoId) return;
 
     const existing = document.getElementById(ADD_VIDEO_BTN_ID);
-    if (existing && existing.isConnected) return;
+    if (existing && existing.isConnected) {
+      existing.classList.toggle("ryp-hidden", buttonVisibility.addVideo === false);
+      return;
+    }
     if (existing) existing.remove();
 
-    // Find YouTube video action button container
+    // Only containers inside the video's own metadata block. The playlist
+    // panel header has a #top-level-buttons-computed too, and an unscoped
+    // match parked the button up there, squeezing the playlist title.
+    // Zero-size matches are hidden legacy nodes (see Playlist.findOverviewHeaderContainer).
     const targets = [
       "ytd-watch-metadata #actions #top-level-buttons-computed",
-      "#top-level-buttons-computed",
       "ytd-watch-metadata #actions-inner #menu",
       "ytd-watch-metadata #actions-inner",
       "ytd-watch-metadata #actions",
-      "#actions #menu ytd-menu-renderer",
-      "#actions-inner #menu",
-      "#actions #top-level-buttons-computed",
-      "ytd-watch-metadata #owner #subscribe-button",
       "ytd-watch-metadata #owner",
-      "#owner",
     ];
 
     let container = null;
-    for (const sel of targets) {
-      const el = document.querySelector(sel);
-      if (el) {
-        container = el;
-        break;
+    outer: for (const sel of targets) {
+      for (const el of document.querySelectorAll(sel)) {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          container = el;
+          break outer;
+        }
       }
     }
 
@@ -189,6 +211,10 @@
     labelSpan.textContent = Panel.t("addToPlaylistTitle") || "Add to Playlist";
 
     btn.append(iconSpan, labelSpan);
+
+    if (buttonVisibility.addVideo === false) {
+      btn.classList.add("ryp-hidden");
+    }
 
     btn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -277,7 +303,6 @@
 
   // ── Message Listener ──────────────────────────────────────────────────────
 
-  const api = typeof browser !== "undefined" ? browser : chrome;
   api.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "SAVE_PLAYLIST") {
       if (Playlist.isPlaylistWatchPage()) {

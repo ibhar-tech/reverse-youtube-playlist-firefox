@@ -2,7 +2,7 @@
 
 > **Reverse, shuffle, drag-reorder, and save YouTube playlists — locally, privately, with zero logins.**
 
-[![Version](https://img.shields.io/badge/version-3.3.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
+[![Version](https://img.shields.io/badge/version-3.4.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
 [![Firefox](https://img.shields.io/badge/Firefox-≥140-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 [![Privacy: No data collected](https://img.shields.io/badge/Privacy-No%20data%20collected-brightgreen?style=flat-square)]()
@@ -89,6 +89,12 @@ icons/
 ---
 
 ## 📋 Changelog
+
+### v3.4.0 — 2026-09
+- ✨ **Disable autoplay** — a setting that stops each playlist video just before its end instead of letting YouTube (or the extension's own order) roll into the next one. The end of a Reverse/Shuffle order now holds as well.
+- ✨ **Button visibility** — hide any toolbar button you never use (Reverse, Shuffle, Sort, Reorder, Reset, Save, My Lists, Duration, Load All, Add to Playlist) from the popup's settings.
+- ✨ **Settings travel with backups** — export now includes your settings, and import restores them alongside your playlists.
+- 🐛 **Add to Playlist button** now always sits under the video, next to Like/Share; it used to land in the playlist panel header and squeeze the playlist title.
 
 ### v3.3.0 — 2026-08
 - ✨ **Smart Sorting Dropdown** — 1-click sorting presets: Title A→Z, Title Z→A, Duration (shortest/longest), Channel A→Z, Watched/Unwatched first.

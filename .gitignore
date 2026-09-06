@@ -1,6 +1,7 @@
 # Packaged build artifact (built from source; attach to GitHub Releases instead)
 reverse-playlist.zip
 *.zip
+web-ext-artifacts/
 
 # API credentials — never commit these
 .env
