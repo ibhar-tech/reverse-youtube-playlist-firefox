@@ -53,6 +53,19 @@ class Shooter(WebDriver):
         return False
 
     def shot(self):
+        # YouTube sometimes swaps its logo for a sponsored "yoodle" (seen:
+        # "Meet the car detailing community"). The plain logo is still in the
+        # DOM, in a hidden div beside the yoodle — put it back so the store
+        # listing does not carry someone else's promo.
+        try:
+            self.js("""const r = document.querySelector('ytd-topbar-logo-renderer');
+                if (!r) return false;
+                r.removeAttribute('show-yoodle');
+                r.querySelectorAll('ytd-yoodle-renderer').forEach(y => y.style.display = 'none');
+                r.querySelectorAll('#logo > div[hidden]').forEach(d => d.removeAttribute('hidden'));
+                return true;""")
+        except RuntimeError:
+            pass
         b64 = self._req("GET", f"/session/{self.session}/screenshot")
         return Image.open(io.BytesIO(base64.b64decode(b64)))
 
@@ -165,6 +178,7 @@ def main():
     time.sleep(2)
     d = Shooter(args.port, args.headed)
     popup_img = None
+    settings_img = None
     try:
         d.start({"extensions.webextensions.uuids": json.dumps({ADDON_ID: EXT_UUID})})
         d.install_addon(REPO)
@@ -269,6 +283,15 @@ def main():
             d.set_viewport(420, max(360, min(int(tall) + 8, HEIGHT - 80)))
             time.sleep(1)
             popup_img = d.shot()
+
+            # ── 8. The settings panel — where every 3.4.0 addition lives ─────
+            print("8. popup settings")
+            d.js("document.getElementById('settings-btn').click();")
+            time.sleep(1)
+            tall = d.js("return Math.ceil(document.body.getBoundingClientRect().height);")
+            d.set_viewport(420, max(360, min(int(tall) + 8, HEIGHT - 80)))
+            time.sleep(1)
+            settings_img = d.shot()
             d.set_viewport(WIDTH, HEIGHT)
         else:
             print("7. popup SKIPPED — moz-extension:// URL did not resolve")
@@ -276,17 +299,22 @@ def main():
         d.quit()
         proc.terminate()
 
-    if popup_img is not None:
+    def composite(img, name):
         # Composite where a real popup appears: anchored under the toolbar,
         # top right, with a hairline so it reads as a separate surface.
         canvas = backdrop.convert("RGB").resize((WIDTH, HEIGHT))
         shade = Image.new("RGB", canvas.size, (0, 0, 0))
         canvas = Image.blend(canvas, shade, 0.45)
-        p = popup_img.convert("RGB")
+        p = img.convert("RGB")
         x, y = WIDTH - p.width - 40, max(24, (HEIGHT - p.height) // 2)
         canvas.paste(Image.new("RGB", (p.width + 2, p.height + 2), (60, 60, 60)), (x - 1, y - 1))
         canvas.paste(p, (x, y))
-        save(canvas, args.out, "screenshot-7-popup.png")
+        save(canvas, args.out, name)
+
+    if popup_img is not None:
+        composite(popup_img, "screenshot-7-popup.png")
+    if settings_img is not None:
+        composite(settings_img, "screenshot-8-settings.png")
 
     print("\nDone. Review every file before uploading — these go on a public listing.")
     return 0
