@@ -46,11 +46,14 @@ make_jwt() { python3 "$JWT_HELPER"; }
 SCREENSHOTS=("$STORE_DIR"/screenshot-*.png)
 [[ ${#SCREENSHOTS[@]} -gt 0 ]] || fail "No screenshot-*.png files found in store/"
 
-# This endpoint only ever appends. Uploading a new set on top of an old one
-# leaves the listing showing both, so check first and say so.
+# The previews endpoint only ever appends, and it rejects GET (405) — so the
+# existing set has to be read from the add-on detail, whose `previews` array
+# lists every preview on the listing. Before this used the previews endpoint,
+# saw nothing, and three sets piled up on the live page.
 JWT=$(make_jwt)
-EXISTING=$(curl -sS "$AMO_API/addons/addon/$AMO_ADDON_ID/previews/" \
-  -H "Authorization: JWT $JWT" | jq -r '.results[]?.id // empty')
+DETAIL=$(curl -sS --fail "$AMO_API/addons/addon/$AMO_ADDON_ID/" \
+  -H "Authorization: JWT $JWT") || fail "Could not read the listing's current previews; not uploading blind."
+EXISTING=$(echo "$DETAIL" | jq -r '.previews[]?.id // empty')
 EXISTING_COUNT=$(echo "$EXISTING" | grep -c . || true)
 
 if [[ "$EXISTING_COUNT" -gt 0 ]]; then
