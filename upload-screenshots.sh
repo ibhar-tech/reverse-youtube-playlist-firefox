@@ -65,6 +65,7 @@ if [[ "$EXISTING_COUNT" -gt 0 ]]; then
         "$AMO_API/addons/addon/$AMO_ADDON_ID/previews/$ID/" \
         -H "Authorization: JWT $JWT"
       log "  deleted preview $ID"
+      sleep 5  # AMO answers 429 to a burst of writes
     done
   else
     fail "The listing already has $EXISTING_COUNT screenshot(s); uploading now
