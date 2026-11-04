@@ -311,6 +311,9 @@
         Toolbar.syncButtonStates();
       }
 
+      // Rows of a long playlist render over time; map any legacy position
+      // entries of the stored order to video ids as their rows appear.
+      Playback.migrateLegacyOrder(Playlist.getPlaylistId());
       Sidebar.applyVisualOrder();
       Sidebar.applyWatchedBadges();
       Toolbar.updateDurationStats();

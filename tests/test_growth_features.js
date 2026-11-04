@@ -4,7 +4,7 @@
  * manifest wiring for keyboard shortcuts and the welcome page.
  */
 import "./setup.js";
-import { test, describe, before, beforeEach } from "node:test";
+import { test, describe, before, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
@@ -12,13 +12,24 @@ const store = () => globalThis.browser.storage.local.data;
 
 describe("Growth features", async () => {
   let ratingShown = 0;
+  let originalToast;
 
   before(async () => {
     await import("../src/links.js");
     await import("../src/state.js");
     await import("../src/playlist.js");
     await import("../src/stats.js");
-    window.RYP.Panel = { showRatingToast: () => ratingShown++ };
+    // Stub one method only: the module objects are shared by every suite.
+    window.RYP.Panel = window.RYP.Panel || {};
+    originalToast = window.RYP.Panel.showRatingToast;
+    window.RYP.Panel.showRatingToast = () => ratingShown++;
+  });
+
+  after(async () => {
+    // The prompt is shown 1.5 s after it is triggered; let that timer hit
+    // the stub, not the real toast in the fake DOM.
+    await new Promise((r) => setTimeout(r, 1600));
+    window.RYP.Panel.showRatingToast = originalToast;
   });
 
   beforeEach(() => {

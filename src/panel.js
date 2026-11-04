@@ -620,9 +620,21 @@
       ? Playback.getState()
       : { reverseOn: false, customOrder: null };
     const originalOrder = items.map((it) => it.index);
+    // The live order holds video ids; a snapshot stores positions into its
+    // own `videos` list (see Backup.orderVideoIds), so map ids back to the
+    // index each video has in that list. Unrendered entries have no row to
+    // record and drop out; duplicates collapse to their first copy.
+    const indexByVideoId = new Map();
+    for (const it of items) if (!indexByVideoId.has(it.videoId)) indexByVideoId.set(it.videoId, it.index);
+    const known = new Set(originalOrder);
+    const fromLive = customOrder && customOrder.length > 0
+      ? [...new Set(customOrder
+          .map((k) => (typeof k === "string" ? indexByVideoId.get(k) : k))
+          .filter((n) => known.has(n)))]
+      : [];
     const order =
-      customOrder && customOrder.length > 0
-        ? [...customOrder]
+      fromLive.length > 0
+        ? fromLive
         : reverseOn
           ? originalOrder.reverse()
           : originalOrder;
@@ -1123,12 +1135,14 @@
         // custom order. Only snapshots with no real source (built via "Add to
         // List") play as a virtual playlist off our own sidebar.
         const isNative = pl.sourceListId && pl.sourceListId !== "custom" && !pl.sourceListId.startsWith("virtual:");
+        // No &index= for a real playlist: the snapshot's positions may be
+        // stale, and YouTube resolves the position from v + list itself.
         const suffix = isNative
-          ? `&list=${pl.sourceListId}&index=${firstIndex}`
+          ? `&list=${encodeURIComponent(pl.sourceListId)}`
           : Playlist.rypHash(pl.id, firstIndex);
 
         if (isNative) {
-          await Playback.applyCustomOrder(pl.sourceListId, pl.order);
+          await Playback.applyCustomOrder(pl.sourceListId, window.RYP.Backup.orderVideoIds(pl));
         }
         const url = `https://www.youtube.com/watch?v=${firstVideo.videoId}${suffix}`;
         window.open(url, "_self");

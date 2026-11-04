@@ -417,6 +417,28 @@
       return false;
     },
 
+    /**
+     * Navigate to a video of the current playlist by id. Clicks its sidebar
+     * row when rendered (in-app navigation). On a long playlist the row may
+     * not be rendered at all — YouTube only renders a window of it — so fall
+     * back to loading `watch?v=…&list=…`, from which YouTube resolves the
+     * position itself. Local playlists render every row, so they never need
+     * the fallback.
+     */
+    goToVideo(videoId) {
+      if (!videoId) return false;
+      const hit = this.readItems().find((it) => it.videoId === videoId);
+      if (hit && hit.anchor && typeof hit.anchor.click === "function") {
+        hit.anchor.click();
+        return true;
+      }
+      const list = new URLSearchParams(location.search).get("list");
+      if (!list || this.isVirtualPlaylist()) return false;
+      window.location.href =
+        `/watch?v=${encodeURIComponent(videoId)}&list=${encodeURIComponent(list)}`;
+      return true;
+    },
+
     getItemsContainer() {
       const real = document.querySelector(SEL.itemsContainer);
       const virtual = document.querySelector("#ryp-virtual-playlist-panel #items");

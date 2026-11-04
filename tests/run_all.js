@@ -13,3 +13,4 @@ import "./test_add_to_playlist.js";
 import "./test_autoplay_and_buttons.js";
 import "./test_review_fixes.js";
 import "./test_growth_features.js";
+import "./test_design_fixes.js";

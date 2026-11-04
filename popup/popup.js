@@ -1164,13 +1164,15 @@
         const isNative = pl.sourceListId && pl.sourceListId !== "custom" && !pl.sourceListId.startsWith("virtual:");
         // The virtual params ride in the hash: YouTube drops unknown query
         // params from watch URLs (mirrors Playlist.rypHash in src/playlist.js).
+        // Native: no &index= (positions may be stale; YouTube resolves the
+        // position from v + list), and the order is replayed as video ids.
         const suffix = isNative
-          ? `&list=${pl.sourceListId}&index=${firstIndex}`
+          ? `&list=${encodeURIComponent(pl.sourceListId)}`
           : `#ryp_list=${encodeURIComponent(pl.id)}&ryp_index=${firstIndex}`;
 
         if (isNative) {
           await api.storage.local.set({
-            [`customOrder:${pl.sourceListId}`]: pl.order,
+            [`customOrder:${pl.sourceListId}`]: Backup.orderVideoIds(pl),
             [`reverse:${pl.sourceListId}`]: false,
             [`shuffle:${pl.sourceListId}`]: false,
           });

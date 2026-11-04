@@ -346,6 +346,7 @@
         e.preventDefault();
         e.stopPropagation();
         closeSortDropdown();
+        await loadAllBefore(sortBtn);
         await opt.action();
         window.RYP.Stats?.bump("sort");
         Sidebar.applyVisualOrder();
@@ -508,6 +509,23 @@
       if (btn) btn.disabled = false;
       if (label && original !== undefined) label.textContent = original;
     }
+  }
+
+  /** True when YouTube has rendered fewer rows than the playlist holds. */
+  function isPartiallyLoaded() {
+    if (Playlist.isVirtualPlaylist()) return false; // our panel renders every row
+    const total = Playlist.getTotalItemCount();
+    const loaded = Playlist.readItems().length || Playlist.readOverviewItems().length;
+    return total > 0 && loaded < total;
+  }
+
+  /**
+   * Whole-list actions (reverse, shuffle, sort, save) read only the rendered
+   * rows. On a long playlist that silently dropped everything past YouTube's
+   * window (~200 rows) — so load the rest first, with progress on `btn`.
+   */
+  async function loadAllBefore(btn) {
+    if (isPartiallyLoaded()) await ensureAllItemsLoaded(btn);
   }
 
   /**
@@ -718,17 +736,18 @@
       await ensureAllItemsLoaded(playShuffleBtn);
       const items = Playlist.readOverviewItems();
       if (items.length === 0) return;
-      const indices = items.map((it) => it.index);
-      for (let i = indices.length - 1; i > 0; i--) {
+      // Video ids, not positions: overview rows carry no playlist index, so
+      // positions here were counted and drifted past any hidden row.
+      const ids = items.map((it) => it.videoId);
+      for (let i = ids.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [indices[i], indices[j]] = [indices[j], indices[i]];
+        [ids[i], ids[j]] = [ids[j], ids[i]];
       }
       await State.set(State.keys.reverse(listId), false);
       await State.set(State.keys.shuffle(listId), true);
-      await State.set(State.keys.customOrder(listId), indices);
+      await State.set(State.keys.customOrder(listId), ids);
       await window.RYP.Stats?.bump("shuffle");
-      const firstVideo = items.find((it) => it.index === indices[0]);
-      location.href = `https://www.youtube.com/watch?v=${firstVideo?.videoId || ""}&list=${listId}`;
+      location.href = `https://www.youtube.com/watch?v=${ids[0]}&list=${encodeURIComponent(listId)}`;
     });
 
     saveBtn.addEventListener("click", async () => {
@@ -815,6 +834,7 @@
       if (reverseOn) {
         await Playback.disableReverse(listId);
       } else {
+        await loadAllBefore(reverseBtn);
         await Playback.enableReverse(listId);
         window.RYP.Stats?.bump("reverse");
       }
@@ -831,6 +851,7 @@
       if (shuffleOn) {
         await Playback.disableShuffle(listId);
       } else {
+        await loadAllBefore(shuffleBtn);
         await Playback.enableShuffle(listId);
         window.RYP.Stats?.bump("shuffle");
       }
@@ -860,6 +881,7 @@
 
     saveBtn.addEventListener("click", async (e) => {
       e.preventDefault(); e.stopPropagation();
+      await loadAllBefore(saveBtn);
       openSaveFlow();
     });
 

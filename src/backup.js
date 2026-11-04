@@ -235,6 +235,21 @@
     return { merged, added, skipped };
   }
 
+  /**
+   * A snapshot's play order as video ids. Snapshots store positions that
+   * refer to their own `videos` list (a closed, self-consistent record), but
+   * a position in the *live* playlist goes stale as soon as the playlist is
+   * edited — so replaying converts to ids, which YouTube can't shift.
+   */
+  function orderVideoIds(snapshot) {
+    const byIndex = new Map(
+      (snapshot?.videos || []).map((v) => [Number(v.index), v.videoId])
+    );
+    return (snapshot?.order || [])
+      .map((i) => byIndex.get(Number(i)))
+      .filter((id) => typeof id === "string" && id);
+  }
+
   /** Trigger a download of the backup file in the caller's document. */
   function triggerDownload(playlists, settings = null) {
     const payload = {
@@ -273,6 +288,7 @@
     parseBackup,
     parseImport,
     mergeSnapshots,
+    orderVideoIds,
     triggerDownload,
   };
 })();

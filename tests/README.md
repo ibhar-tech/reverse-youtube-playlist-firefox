@@ -9,6 +9,15 @@ Suites that stub a `Playlist` method must restore it in an `after()` hook — th
 modules are shared across the whole run, and a leaked stub silently changes what
 later suites are testing.
 
+## Offline browser check — `npm run test:chromium`
+
+Loads the real extension into Chromium (Playwright) and serves a fake
+`youtube.com/watch` page through request routing, so the content scripts run
+as on YouTube without any network. The fake panel renders 4 of 6 rows and the
+rest on scroll. Checks id-keyed orders and legacy migration, next-button
+navigation, the URL fallback for unrendered rows, and Shuffle loading the
+whole playlist first. Needs `playwright` and its Chromium installed.
+
 ## End-to-end — `npm run test:e2e`
 
 Drives **real Firefox** against **real YouTube**, with the working tree installed

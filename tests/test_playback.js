@@ -41,11 +41,11 @@ describe("Playback Module — Smart Sorting & Playback Logic", async () => {
 
     // A -> Z
     const orderAZ = await Playback.sortByTitle(listId, true);
-    assert.deepEqual(orderAZ, [2, 3, 1]); // Apple (2), Monkey (3), Zebra (1)
+    assert.deepEqual(orderAZ, ["v2", "v3", "v1"]); // Apple (2), Monkey (3), Zebra (1)
 
     // Z -> A
     const orderZA = await Playback.sortByTitle(listId, false);
-    assert.deepEqual(orderZA, [1, 3, 2]); // Zebra (1), Monkey (3), Apple (2)
+    assert.deepEqual(orderZA, ["v1", "v3", "v2"]); // Zebra (1), Monkey (3), Apple (2)
   });
 
   test("sortByDuration sorts items by length shortest first and longest first", async () => {
@@ -61,11 +61,11 @@ describe("Playback Module — Smart Sorting & Playback Logic", async () => {
 
     // Shortest first
     const orderShort = await Playback.sortByDuration(listId, true);
-    assert.deepEqual(orderShort, [3, 1, 2]); // 60s (3), 300s (1), 900s (2)
+    assert.deepEqual(orderShort, ["v3", "v1", "v2"]); // 60s (3), 300s (1), 900s (2)
 
     // Longest first
     const orderLong = await Playback.sortByDuration(listId, false);
-    assert.deepEqual(orderLong, [2, 1, 3]); // 900s (2), 300s (1), 60s (3)
+    assert.deepEqual(orderLong, ["v2", "v1", "v3"]); // 900s (2), 300s (1), 60s (3)
   });
 
   test("sortByChannel sorts items by channel name", async () => {
@@ -80,7 +80,7 @@ describe("Playback Module — Smart Sorting & Playback Logic", async () => {
     Playlist.readItems = () => mockItems;
 
     const orderChannel = await Playback.sortByChannel(listId, true);
-    assert.deepEqual(orderChannel, [2, 3, 1]); // 3Blue1Brown (2), Kurzgesagt (3), Veritasium (1)
+    assert.deepEqual(orderChannel, ["v2", "v3", "v1"]); // 3Blue1Brown (2), Kurzgesagt (3), Veritasium (1)
   });
 
   test("sortByWatched prioritizes unwatched or watched items", async () => {
@@ -99,10 +99,10 @@ describe("Playback Module — Smart Sorting & Playback Logic", async () => {
 
     // Unwatched first: unwatched (1, 3) followed by watched (2)
     const orderUnwatched = await Playback.sortByWatched(listId, true);
-    assert.deepEqual(orderUnwatched, [1, 3, 2]);
+    assert.deepEqual(orderUnwatched, ["v1", "v3", "v2"]);
 
     // Watched first: watched (2) followed by unwatched (1, 3)
     const orderWatched = await Playback.sortByWatched(listId, false);
-    assert.deepEqual(orderWatched, [2, 1, 3]);
+    assert.deepEqual(orderWatched, ["v2", "v1", "v3"]);
   });
 });

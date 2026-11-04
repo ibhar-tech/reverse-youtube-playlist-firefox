@@ -97,6 +97,9 @@ icons/
 ## 📋 Changelog
 
 ### Unreleased
+- 🧱 **Orders are keyed by video id.** Custom, shuffle and sort orders used to store playlist positions, which pointed at the wrong videos as soon as the playlist owner added or removed one (Watch Later shifts on every add). Saved orders now survive edits; old ones are converted automatically as their rows appear, and snapshots replay by id.
+- 🧱 **Long playlists.** Shuffle, Sort, Reverse and Save load the whole playlist first (YouTube only renders ~200 rows), and a next video whose row isn't rendered is reached through its URL instead of silently falling back to YouTube's order.
+- 🧱 **Your click wins.** Clicking the video right after the current one used to be "corrected" back to the mode's order. Now only a real end-of-video auto-advance is redirected.
 - ✨ **Keyboard shortcuts** for Reverse, Shuffle, Add to list and Load all (manifest `commands`, rebindable). Keys were checked against Chrome's reserved list — Alt+Shift+R and Alt+Shift+A are taken by the browser.
 - ✨ **Welcome page** on first install, also reachable from the popup.
 - ✨ **Your stats** card in the popup with a Share button.
