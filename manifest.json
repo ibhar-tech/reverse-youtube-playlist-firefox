@@ -9,7 +9,9 @@
       "id": "reverse-playlist@benmoussa",
       "strict_min_version": "140.0",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": [
+          "none"
+        ]
       }
     }
   },
@@ -26,21 +28,61 @@
     },
     "default_popup": "popup/popup.html"
   },
-  "permissions": ["storage", "activeTab"],
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "background": {
+    "scripts": [
+      "src/background.js"
+    ]
+  },
+  "commands": {
+    "toggle-reverse": {
+      "suggested_key": {
+        "default": "Alt+Shift+O"
+      },
+      "description": "__MSG_cmdReverse__"
+    },
+    "toggle-shuffle": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "__MSG_cmdShuffle__"
+    },
+    "add-to-list": {
+      "suggested_key": {
+        "default": "Alt+Shift+K"
+      },
+      "description": "__MSG_cmdAddToList__"
+    },
+    "load-all": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "__MSG_cmdLoadAll__"
+    }
+  },
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/*"],
+      "matches": [
+        "*://*.youtube.com/*"
+      ],
       "js": [
         "src/backup.js",
+        "src/links.js",
         "src/state.js",
         "src/playlist.js",
+        "src/stats.js",
         "src/playback.js",
         "src/sidebar.js",
         "src/panel.js",
         "src/toolbar.js",
         "src/content.js"
       ],
-      "css": ["src/button.css"],
+      "css": [
+        "src/button.css"
+      ],
       "run_at": "document_idle"
     }
   ]

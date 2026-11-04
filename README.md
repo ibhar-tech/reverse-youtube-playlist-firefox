@@ -26,6 +26,9 @@
 | **# Tags** | Add tags to snapshots and filter saved lists by name or tag. |
 | **🔁 Loop** | Optional setting: when the active play order ends, start it over instead of stopping. |
 | **✓ Watched badges** | A badge appears on fully watched videos with optional auto-skipping. |
+| **⌨️ Shortcuts** | Alt+Shift+O Reverse · Alt+Shift+S Shuffle · Alt+Shift+K Add to list · Alt+Shift+L Load all. Rebind them on the browser's extension-shortcuts page. |
+| **📊 Your stats** | The popup shows hours watched in playlists, time saved by playback speed and videos finished, with a Share button that copies a ready-made message. Stored locally only. |
+| **👋 Welcome page** | Opens on first install: language, a 3-step guide, your shortcuts, and which buttons to show. Reopen it from the popup's "Guide & shortcuts". |
 
 ---
 
@@ -78,7 +81,10 @@ src/
   sidebar.js           Visual ordering, drag-and-drop, quick move buttons (RYP.Sidebar)
   panel.js             Slide-in saved-playlists panel & universal Add to List modal (RYP.Panel)
   toolbar.js           Button injection, sort dropdown, duration pill, overview bar (RYP.Toolbar)
-  content.js           Bootstrap: wires modules, MutationObserver, SPA nav events
+  content.js           Bootstrap: wires modules, MutationObserver, SPA nav events, shortcut commands
+  links.js             Store / review URLs for the browser in use (RYP.Links)
+  stats.js             Local usage stats + one-time rating prompt (RYP.Stats)
+  background.js        Forwards keyboard shortcuts to the tab; opens the welcome page on install
   button.css           Full design-system CSS (tokens, dropdowns, duration pills, modal)
 icons/
   icon-16.png
@@ -89,6 +95,15 @@ icons/
 ---
 
 ## 📋 Changelog
+
+### Unreleased
+- ✨ **Keyboard shortcuts** for Reverse, Shuffle, Add to list and Load all (manifest `commands`, rebindable). Keys were checked against Chrome's reserved list — Alt+Shift+R and Alt+Shift+A are taken by the browser.
+- ✨ **Welcome page** on first install, also reachable from the popup.
+- ✨ **Your stats** card in the popup with a Share button.
+- ✨ **One-time rating prompt** after five real uses; never shown again. The review link now opens the store of the browser you're in (it always pointed to AMO).
+- 🐛 **Watched badges** were hidden on a fresh install until a setting was saved, so the "Show watched badges" toggle looked like it did nothing.
+- 🐛 Backups of Watch Later / Liked videos snapshots were rejected on import; import dropped channels and re-importing your own backup duplicated lists.
+- 🐛 Reorder did nothing on local playlists; Reset left their custom order behind; Resume on a local playlist opened a broken URL; seeking back after an end-of-order stop let YouTube autoplay.
 
 ### v3.4.0 — 2026-09
 - ✨ **Disable autoplay** — a setting that stops each playlist video just before its end instead of letting YouTube (or the extension's own order) roll into the next one. The end of a Reverse/Shuffle order now holds as well.

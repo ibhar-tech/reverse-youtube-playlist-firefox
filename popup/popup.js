@@ -103,6 +103,16 @@
       resumePrompt: "Offer to resume playlists",
       videosWord: "videos",
       rateUs: "Enjoying it? Leave a review ★",
+      statsTitle: "Your stats",
+      statWatched: "watched in playlists",
+      statSaved: "saved by playback speed",
+      statFinished: "videos finished",
+      statOrders: "playlists reversed, shuffled or sorted",
+      shareStats: "Share",
+      shareCopied: "Copied! Paste it anywhere to share.",
+      shareFailed: "Could not copy — your browser blocked the clipboard.",
+      shareText: "I've watched {watched} of YouTube playlists with Playlist Tools ({finished} videos), and saved {saved} with playback speed. Reverse, shuffle & sort any playlist — free, no login: {link}",
+      guideShortcuts: "Guide & shortcuts",
       export: "Export",
       import: "Import",
       exportTitle: "Export saved playlists to a file",
@@ -185,6 +195,16 @@
       resumePrompt: "Proposer la reprise de lecture",
       videosWord: "vidéos",
       rateUs: "Vous aimez ? Laissez un avis ★",
+      statsTitle: "Vos statistiques",
+      statWatched: "regardées en playlists",
+      statSaved: "gagnées grâce à la vitesse",
+      statFinished: "vidéos terminées",
+      statOrders: "playlists inversées, mélangées ou triées",
+      shareStats: "Partager",
+      shareCopied: "Copié ! Collez-le où vous voulez pour partager.",
+      shareFailed: "Copie impossible — le navigateur a bloqué le presse-papiers.",
+      shareText: "J'ai regardé {watched} de playlists YouTube avec Playlist Tools ({finished} vidéos), et gagné {saved} grâce à la vitesse de lecture. Inversez, mélangez et triez n'importe quelle playlist — gratuit, sans compte : {link}",
+      guideShortcuts: "Guide et raccourcis",
       export: "Exporter",
       import: "Importer",
       exportTitle: "Exporter les playlists sauvegardées",
@@ -267,6 +287,16 @@
       resumePrompt: "اقتراح استئناف المشاهدة",
       videosWord: "فيديو",
       rateUs: "أعجبك الامتداد؟ اترك تقييمًا ★",
+      statsTitle: "إحصاءاتك",
+      statWatched: "مشاهدة في قوائم التشغيل",
+      statSaved: "وفّرتها بسرعة التشغيل",
+      statFinished: "فيديو مكتمل",
+      statOrders: "قائمة معكوسة أو مخلوطة أو مرتّبة",
+      shareStats: "مشاركة",
+      shareCopied: "تم النسخ! الصقه في أي مكان لمشاركته.",
+      shareFailed: "تعذّر النسخ — المتصفح منع الوصول إلى الحافظة.",
+      shareText: "شاهدت {watched} من قوائم تشغيل يوتيوب مع أدوات قائمة التشغيل ({finished} فيديو)، ووفّرت {saved} بفضل سرعة التشغيل. اعكس واخلط ورتّب أي قائمة تشغيل — مجانًا وبدون تسجيل: {link}",
+      guideShortcuts: "الدليل والاختصارات",
       export: "تصدير",
       import: "استيراد",
       exportTitle: "تصدير قوائم التشغيل المحفوظة إلى ملف",
@@ -803,6 +833,73 @@
     drawerImportBtn.addEventListener("click", openImportPage);
   }
 
+  // ── Stats card, share, store links ───────────────────────────────────────
+
+  const Links = window.RYP.Links;
+  const rateLink = document.getElementById("rate-link");
+  if (rateLink && Links) rateLink.href = Links.reviewUrl();
+
+  const guideBtn = document.getElementById("guide-btn");
+  if (guideBtn) {
+    guideBtn.addEventListener("click", () => {
+      api.tabs.create({ url: api.runtime.getURL("popup/welcome.html") });
+      window.close();
+    });
+  }
+
+  function formatSpan(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  let statsSnapshot = null;
+
+  function readStats(raw) {
+    const a = raw?.actions || {};
+    const content = Number(raw?.contentSeconds) || 0;
+    const real = Number(raw?.realSeconds) || 0;
+    return {
+      watched: formatSpan(content),
+      saved: formatSpan(Math.max(0, content - real)),
+      finished: Number(raw?.videosFinished) || 0,
+      orders: (Number(a.reverse) || 0) + (Number(a.shuffle) || 0) + (Number(a.sort) || 0),
+      empty: content < 60 && !raw?.videosFinished && Object.keys(a).length === 0,
+    };
+  }
+
+  async function renderStats() {
+    const card = document.getElementById("stats-card");
+    if (!card) return;
+    const res = await api.storage.local.get("ryp_stats");
+    statsSnapshot = readStats(res.ryp_stats);
+    card.style.display = statsSnapshot.empty ? "none" : "flex";
+    document.getElementById("stat-watched").textContent = statsSnapshot.watched;
+    document.getElementById("stat-saved").textContent = statsSnapshot.saved;
+    document.getElementById("stat-finished").textContent = String(statsSnapshot.finished);
+    document.getElementById("stat-orders").textContent = String(statsSnapshot.orders);
+  }
+
+  const shareBtn = document.getElementById("stats-share-btn");
+  if (shareBtn) {
+    shareBtn.addEventListener("click", async () => {
+      const dict = getDict();
+      if (!statsSnapshot) await renderStats();
+      const text = dict.shareText
+        .replace("{watched}", statsSnapshot.watched)
+        .replace("{finished}", String(statsSnapshot.finished))
+        .replace("{saved}", statsSnapshot.saved)
+        .replace("{link}", Links ? Links.storeUrl() : "");
+      try {
+        await navigator.clipboard.writeText(text);
+        showPopupToast(dict.shareCopied);
+      } catch (_) {
+        showPopupToast(dict.shareFailed, true);
+      }
+    });
+  }
+
   // ── Tab Management & URL Queries ──────────────────────────────────────────
 
   api.tabs.query({ active: true, currentWindow: true })
@@ -1149,4 +1246,5 @@
   await loadSettings();
   applySettingsUI();
   await renderPlaylists();
+  await renderStats();
 })();

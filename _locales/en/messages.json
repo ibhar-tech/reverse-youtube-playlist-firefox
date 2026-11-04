@@ -6,5 +6,21 @@
   "extensionDescription": {
     "message": "Reverse, shuffle, reorder, save, and export YouTube playlists. Includes watched badges, auto-skip, loop mode and compact UI.",
     "description": "The description of the extension"
+  },
+  "cmdReverse": {
+    "message": "Toggle Reverse on the current playlist",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdShuffle": {
+    "message": "Toggle Shuffle on the current playlist",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdAddToList": {
+    "message": "Add the current video to a local playlist",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdLoadAll": {
+    "message": "Load every video of the current playlist",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
   }
 }

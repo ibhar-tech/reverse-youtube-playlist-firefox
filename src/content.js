@@ -230,6 +230,38 @@
     }
   }
 
+  // ── Keyboard shortcuts (manifest `commands`, via background.js) ──────────
+
+  // Each shortcut clicks the matching toolbar button, so it runs exactly the
+  // code a mouse click does — and still works when the user has hidden that
+  // button from the toolbar.
+  const COMMAND_BUTTONS = {
+    "toggle-reverse": ["#ryp-btn-reverse", "#ryp-ov-reverse"],
+    "toggle-shuffle": ["#ryp-btn-shuffle", "#ryp-ov-shuffle"],
+    "load-all": [".ryp-load-all-pill"],
+  };
+
+  function runCommand(command) {
+    if (command === "add-to-list") {
+      if (Playlist.isWatchPage() && new URLSearchParams(location.search).get("v")) {
+        Panel.showAddToPlaylistModal(extractCurrentVideoInfo());
+      } else {
+        Panel.showToast(Panel.t("shortcutNeedsVideo"));
+      }
+      return;
+    }
+    const selectors = COMMAND_BUTTONS[command];
+    if (!selectors) return;
+    const btn = selectors.map((sel) => document.querySelector(sel)).find(Boolean);
+    if (btn && !btn.disabled) {
+      btn.click();
+    } else if (command === "load-all" && document.getElementById(TOOLBAR_ID)) {
+      Panel.showToast(Panel.t("shortcutAllLoaded"));
+    } else {
+      Panel.showToast(Panel.t("shortcutNeedsPlaylist"));
+    }
+  }
+
   // ── Mutation observer ─────────────────────────────────────────────────────
 
   const OBSERVER_THROTTLE_MS = 180;
@@ -315,6 +347,7 @@
           if (Panel.isPanelVisible()) {
             Panel.renderList();
           }
+          window.RYP.Stats?.bump("save");
           sendResponse({ success: true });
         }).catch(err => {
           sendResponse({ success: false, error: err.message });
@@ -328,6 +361,12 @@
     if (request.action === "GET_CURRENT_VIDEO_INFO") {
       const info = extractCurrentVideoInfo();
       sendResponse({ success: true, data: info });
+      return true;
+    }
+
+    if (request.action === "RUN_COMMAND") {
+      runCommand(request.command);
+      sendResponse({ success: true });
       return true;
     }
 

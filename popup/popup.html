@@ -136,6 +136,20 @@
         <button id="save-confirm-popup" class="save-confirm"></button>
       </div>
 
+      <!-- Your stats (hidden until there is something to show) -->
+      <section id="stats-card" class="stats-card" style="display: none;" aria-labelledby="stats-title">
+        <div class="stats-head">
+          <span id="stats-title" class="stats-title" data-i18n="statsTitle">Your stats</span>
+          <button id="stats-share-btn" class="stats-share-btn" type="button" data-i18n="shareStats">Share</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat"><span id="stat-watched" class="stat-value">0m</span><span class="stat-label" data-i18n="statWatched">watched in playlists</span></div>
+          <div class="stat"><span id="stat-saved" class="stat-value">0m</span><span class="stat-label" data-i18n="statSaved">saved by playback speed</span></div>
+          <div class="stat"><span id="stat-finished" class="stat-value">0</span><span class="stat-label" data-i18n="statFinished">videos finished</span></div>
+          <div class="stat"><span id="stat-orders" class="stat-value">0</span><span class="stat-label" data-i18n="statOrders">playlists reversed, shuffled or sorted</span></div>
+        </div>
+      </section>
+
       <!-- Saved snapshots section -->
       <div class="list-header">
         <span class="list-header-title">
@@ -159,6 +173,7 @@
         <button id="export-btn" class="footer-action-btn" title="Export saved playlists"></button>
         <button id="import-btn" class="footer-action-btn" title="Import saved playlists"></button>
         <button id="support-btn" class="footer-action-btn" title="Support this project">❤️</button>
+        <button id="guide-btn" class="footer-action-btn" type="button" data-i18n="guideShortcuts">Guide & shortcuts</button>
       </div>
       <a id="rate-link" class="rate-link" data-i18n="rateUs"
          href="https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/reviews/"
@@ -166,6 +181,7 @@
     </footer>
 
     <script src="../src/backup.js"></script>
+    <script src="../src/links.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

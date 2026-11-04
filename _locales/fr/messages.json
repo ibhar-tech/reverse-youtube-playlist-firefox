@@ -6,5 +6,21 @@
   "extensionDescription": {
     "message": "Inversez, mélangez, réorganisez et sauvegardez vos playlists YouTube. Badges, passage auto, lecture en boucle et mode compact.",
     "description": "La description de l'extension"
+  },
+  "cmdReverse": {
+    "message": "Activer/désactiver l'ordre inversé de la playlist",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdShuffle": {
+    "message": "Activer/désactiver la lecture aléatoire de la playlist",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdAddToList": {
+    "message": "Ajouter la vidéo actuelle à une playlist locale",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdLoadAll": {
+    "message": "Charger toutes les vidéos de la playlist",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
   }
 }

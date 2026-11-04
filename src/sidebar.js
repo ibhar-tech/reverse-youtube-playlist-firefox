@@ -354,6 +354,7 @@
     const listId = Playlist.getPlaylistId();
     if (listId && filtered.length > 0) {
       await Playback.applyCustomOrder(listId, filtered);
+      window.RYP.Stats?.bump("reorder");
       applyVisualOrder();
       window.RYP.Toolbar?.syncButtonStates();
       scrollToCurrentItem();
@@ -411,6 +412,7 @@
     const listId = Playlist.getPlaylistId();
     if (listId && newOrder.length > 0) {
       await Playback.applyCustomOrder(listId, newOrder);
+      window.RYP.Stats?.bump("reorder");
       applyVisualOrder();
       window.RYP.Toolbar?.syncButtonStates();
     }

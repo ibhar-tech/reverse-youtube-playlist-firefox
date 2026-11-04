@@ -347,6 +347,7 @@
         e.stopPropagation();
         closeSortDropdown();
         await opt.action();
+        window.RYP.Stats?.bump("sort");
         Sidebar.applyVisualOrder();
         Sidebar.scrollToCurrentItem();
         syncButtonStates();
@@ -545,6 +546,7 @@
             await Panel.saveCurrentOrder(name, null, tags, listId);
             if (Panel.isPanelVisible()) await Panel.renderList();
             Panel.showToast("✓ " + Panel.t("saveConfirm"));
+            window.RYP.Stats?.bump("save");
           }
         } catch (err) {
           Panel.showToast(err.message || "Could not save the snapshot");
@@ -592,6 +594,7 @@
         Sidebar.applyWatchedBadges();
         Sidebar.applyVisualOrder();
         Panel.showToast("✓ " + (dict.loadAll + ": Complete"));
+        window.RYP.Stats?.bump("loadAll");
       });
     }
 
@@ -701,6 +704,7 @@
       const lastVideo = items[items.length - 1].videoId;
       await State.set(State.keys.reverse(listId), true);
       await State.set(State.keys.shuffle(listId), false);
+      await window.RYP.Stats?.bump("reverse");
       // No &index=: overview links carry no playlist position, so ours is
       // positional and one unrendered row would make it wrong — and YouTube
       // silently resets to position 1 when the index doesn't match. Given
@@ -722,6 +726,7 @@
       await State.set(State.keys.reverse(listId), false);
       await State.set(State.keys.shuffle(listId), true);
       await State.set(State.keys.customOrder(listId), indices);
+      await window.RYP.Stats?.bump("shuffle");
       const firstVideo = items.find((it) => it.index === indices[0]);
       location.href = `https://www.youtube.com/watch?v=${firstVideo?.videoId || ""}&list=${listId}`;
     });
@@ -811,6 +816,7 @@
         await Playback.disableReverse(listId);
       } else {
         await Playback.enableReverse(listId);
+        window.RYP.Stats?.bump("reverse");
       }
       Sidebar.applyVisualOrder();
       Sidebar.scrollToCurrentItem();
@@ -826,6 +832,7 @@
         await Playback.disableShuffle(listId);
       } else {
         await Playback.enableShuffle(listId);
+        window.RYP.Stats?.bump("shuffle");
       }
       Sidebar.applyVisualOrder();
       Sidebar.scrollToCurrentItem();

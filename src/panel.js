@@ -72,6 +72,12 @@
       addBtn: "Add",
       addedToPlaylist: "✓ Added video to \"{playlist}\"",
       videoAlreadyInPlaylist: "Video is already in \"{playlist}\"",
+      ratingAsk: "Enjoying Playlist Tools? A quick rating helps others find it.",
+      rateNow: "Rate it ★",
+      noThanks: "No thanks",
+      shortcutNeedsPlaylist: "Open a YouTube playlist to use this shortcut.",
+      shortcutNeedsVideo: "Open a YouTube video to use this shortcut.",
+      shortcutAllLoaded: "Every video in this playlist is already loaded.",
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -120,6 +126,12 @@
       addBtn: "Ajouter",
       addedToPlaylist: "✓ Vidéo ajoutée à \"{playlist}\"",
       videoAlreadyInPlaylist: "La vidéo est déjà dans \"{playlist}\"",
+      ratingAsk: "Vous aimez Playlist Tools ? Une note rapide aide les autres à le trouver.",
+      rateNow: "Noter ★",
+      noThanks: "Non merci",
+      shortcutNeedsPlaylist: "Ouvrez une playlist YouTube pour utiliser ce raccourci.",
+      shortcutNeedsVideo: "Ouvrez une vidéo YouTube pour utiliser ce raccourci.",
+      shortcutAllLoaded: "Toutes les vidéos de cette playlist sont déjà chargées.",
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -168,6 +180,12 @@
       addBtn: "إضافة",
       addedToPlaylist: "✓ تمت إضافة الفيديو إلى \"{playlist}\"",
       videoAlreadyInPlaylist: "الفيديو موجود بالفعل في \"{playlist}\"",
+      ratingAsk: "هل أعجبتك أدوات قائمة التشغيل؟ تقييم سريع منك يساعد غيرك على إيجادها.",
+      rateNow: "قيّمها ★",
+      noThanks: "لا، شكرًا",
+      shortcutNeedsPlaylist: "افتح قائمة تشغيل على يوتيوب لاستخدام هذا الاختصار.",
+      shortcutNeedsVideo: "افتح فيديو على يوتيوب لاستخدام هذا الاختصار.",
+      shortcutAllLoaded: "جميع فيديوهات قائمة التشغيل هذه محمّلة بالفعل.",
     }
   };
 
@@ -182,7 +200,10 @@
     document.body.classList.toggle("ryp-compact", !!settings?.compact);
     
     // Toggle hide badges mode
-    document.body.classList.toggle("ryp-hide-badges", !settings?.showBadges);
+    // Only an explicit "off" hides them. Before the user has saved any
+    // setting this is undefined, and `!undefined` hid every badge while the
+    // popup showed the toggle as on — so switching it off changed nothing.
+    document.body.classList.toggle("ryp-hide-badges", settings?.showBadges === false);
     
     const panel = document.getElementById(PANEL_ID);
     if (!panel) return;
@@ -786,6 +807,7 @@
 
       await State.set(State.keys.savedPlaylists, updatedSnapshots);
       showToast(dict.addedToPlaylist.replace("{playlist}", target.name));
+      window.RYP.Stats?.bump("addVideo");
       if (panelVisible) renderList();
       close();
     };
@@ -860,6 +882,7 @@
         currentSaved.unshift(newSnapshot);
         await State.set(State.keys.savedPlaylists, currentSaved);
         showToast(dict.addedToPlaylist.replace("{playlist}", name));
+        window.RYP.Stats?.bump("addVideo");
         if (panelVisible) renderList();
         close();
       } catch (err) {
@@ -1219,6 +1242,43 @@
     toast.classList.add("ryp-toast-show");
   }
 
+  // ── Rating toast (asked once, ever — see Stats.maybeAskForRating) ───────
+
+  function showRatingToast() {
+    if (document.getElementById("ryp-rating-toast")) return;
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    const toast = el("div", { id: "ryp-rating-toast", role: "status" });
+    toast.dir = activeLang === "ar" ? "rtl" : "ltr";
+
+    const text = el("span", { className: "ryp-resume-text", textContent: dict.ratingAsk });
+    const rateBtn = el("button", { className: "ryp-resume-btn", textContent: dict.rateNow });
+    const laterBtn = el("button", {
+      className: "ryp-resume-close ryp-rating-later",
+      textContent: dict.noThanks,
+    });
+
+    const hide = () => {
+      toast.classList.remove("ryp-toast-show");
+      setTimeout(() => toast.remove(), 300);
+    };
+    const autoHide = setTimeout(hide, 20000);
+
+    rateBtn.addEventListener("click", () => {
+      clearTimeout(autoHide);
+      window.open(window.RYP.Links?.reviewUrl(), "_blank", "noopener");
+      hide();
+    });
+    laterBtn.addEventListener("click", () => {
+      clearTimeout(autoHide);
+      hide();
+    });
+
+    toast.append(text, rateBtn, laterBtn);
+    document.body.appendChild(toast);
+    void toast.offsetWidth;
+    toast.classList.add("ryp-toast-show");
+  }
+
   // ── Custom Modal ──────────────────────────────────────────────────────────
 
   function showSaveModal({ title, placeholder, tagsPlaceholder, defaultValue, defaultTags, confirmLabel, onConfirm }) {
@@ -1364,6 +1424,7 @@
     isPanelVisible: () => panelVisible,
     showToast,
     showResumeToast,
+    showRatingToast,
     t: (key) => (TRANSLATIONS[activeLang] || TRANSLATIONS.en)[key] || key,
     saveCurrentOrder,
     renderList,

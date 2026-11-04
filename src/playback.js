@@ -295,6 +295,7 @@
     if (!watched.includes(entry)) {
       watched.push(entry);
       await State.set(State.keys.watched(listId), watched);
+      window.RYP.Stats?.recordFinished();
     }
     if (Playlist.getPlaylistId() === listId) {
       cachedWatched = watched;

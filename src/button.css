@@ -958,7 +958,8 @@ html[dark] .ryp-search-input {
 
 /* ── Resume Toast ────────────────────────────────────────────────────────── */
 
-#ryp-resume-toast {
+#ryp-resume-toast,
+#ryp-rating-toast {
   position: fixed;
   bottom: 30px;
   left: 50%;
@@ -978,7 +979,8 @@ html[dark] .ryp-search-input {
   transition: all 0.25s ease;
 }
 
-#ryp-resume-toast.ryp-toast-show {
+#ryp-resume-toast.ryp-toast-show,
+#ryp-rating-toast.ryp-toast-show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
@@ -1000,6 +1002,16 @@ html[dark] .ryp-search-input {
   border: none;
   color: #94a3b8;
   cursor: pointer;
+}
+
+#ryp-rating-toast {
+  max-width: min(560px, calc(100vw - 32px));
+}
+
+.ryp-rating-later {
+  font-family: var(--ryp-font);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 /* ── Modal Dialogs ───────────────────────────────────────────────────────── */
