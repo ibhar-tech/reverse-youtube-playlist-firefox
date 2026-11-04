@@ -612,6 +612,7 @@
       title: it.title,
       thumbnail: it.thumbnail,
       durationStr: it.durationStr || "",
+      channel: it.channel || "",
     }));
 
     let saved = (await State.get(State.keys.savedPlaylists)) || [];
@@ -1197,13 +1198,15 @@
     resumeBtn.addEventListener("click", () => {
       clearTimeout(autoHide);
       const t = Math.max(0, Math.floor(prog.t || 0));
-      const idxParam = Number.isFinite(prog.index) && prog.index
-        ? `&index=${prog.index}`
-        : "";
-      window.open(
-        `https://www.youtube.com/watch?v=${prog.videoId}&list=${listId}${idxParam}&t=${t}s`,
-        "_self"
-      );
+      const hasIndex = Number.isFinite(prog.index) && prog.index;
+      // A local playlist's id is "virtual:<snapshot>" and lives in the hash;
+      // as `&list=` YouTube would get an id it has never heard of.
+      const url = listId.startsWith("virtual:")
+        ? `https://www.youtube.com/watch?v=${prog.videoId}&t=${t}s` +
+          Playlist.rypHash(listId.slice("virtual:".length), hasIndex ? prog.index : 1)
+        : `https://www.youtube.com/watch?v=${prog.videoId}&list=${encodeURIComponent(listId)}` +
+          `${hasIndex ? `&index=${prog.index}` : ""}&t=${t}s`;
+      window.open(url, "_self");
     });
     closeBtn.addEventListener("click", () => {
       clearTimeout(autoHide);

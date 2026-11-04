@@ -233,12 +233,9 @@
       visualStateApplied = true;
     } else {
       // Reset any CSS order overrides from a previous custom/shuffle mode.
-      const panel = document.querySelector(Playlist.SEL.panel);
-      if (panel) {
-        panel.querySelectorAll(Playlist.SEL.item).forEach((el) => {
-          el.style.order = "";
-        });
-      }
+      panelItems().forEach((el) => {
+        el.style.order = "";
+      });
       container.style.display = "";
       container.style.flexDirection = "";
 
@@ -326,9 +323,7 @@
   }
 
   function removeItemsDraggable() {
-    const panel = document.querySelector(Playlist.SEL.panel);
-    if (!panel) return;
-    panel.querySelectorAll(Playlist.SEL.item).forEach((el) => {
+    panelItems().forEach((el) => {
       el.removeAttribute("draggable");
       el.classList.remove("ryp-draggable", "ryp-drag-over", "ryp-dragging");
       el.removeEventListener("dragstart", onDragStart);
@@ -375,20 +370,19 @@
   function onDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    const panel = document.querySelector(Playlist.SEL.panel);
-    if (panel) {
-      panel
-        .querySelectorAll(Playlist.SEL.item)
-        .forEach((el) => el.classList.remove("ryp-drag-over"));
-    }
+    panelItems().forEach((el) => el.classList.remove("ryp-drag-over"));
     this.classList.add("ryp-drag-over");
     return false;
   }
 
   function indexFromElement(element) {
-    const href = element.querySelector(Playlist.SEL.itemLink)?.getAttribute("href");
-    const index = parseInt(new URL(href || "", location.origin).searchParams.get("index") || "", 10);
-    return Number.isFinite(index) ? index : null;
+    return Playlist.itemIndex(element);
+  }
+
+  /** Rows of whichever panel is active — YouTube's or our local-playlist one. */
+  function panelItems() {
+    const container = Playlist.getItemsContainer();
+    return container ? container.querySelectorAll(Playlist.SEL.item) : [];
   }
 
   async function onDrop(e) {
@@ -423,14 +417,9 @@
   }
 
   function onDragEnd() {
-    const panel = document.querySelector(Playlist.SEL.panel);
-    if (panel) {
-      panel
-        .querySelectorAll(Playlist.SEL.item)
-        .forEach((el) =>
-          el.classList.remove("ryp-dragging", "ryp-drag-over")
-        );
-    }
+    panelItems().forEach((el) =>
+      el.classList.remove("ryp-dragging", "ryp-drag-over")
+    );
     dragSrcElement = null;
   }
 

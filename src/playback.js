@@ -413,7 +413,18 @@
     window.RYP.Panel?.showResumeToast(prog, listId);
   }
 
+  // endHandled is otherwise cleared only by a navigation. After a stop (end
+  // of the order, or autoplay disabled) a user who seeks back to rewatch
+  // would find the near-end guard disarmed, and YouTube's autoplay-forward
+  // would run at the next ending.
+  function onSeeked(e) {
+    const v = e.target;
+    if (!endHandled || navigating || !v || !isFinite(v.duration)) return;
+    if (v.duration - v.currentTime > STOP_LEAD) endHandled = false;
+  }
+
   document.addEventListener("timeupdate", onTimeUpdate, true);
+  document.addEventListener("seeked", onSeeked, true);
   document.addEventListener("timeupdate", onProgressTick, true);
   document.addEventListener("ended", onEnded, true);
   document.addEventListener("playing", onPlaying, true);

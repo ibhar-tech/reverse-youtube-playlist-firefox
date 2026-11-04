@@ -108,6 +108,22 @@
     return `#ryp_list=${encodeURIComponent(snapshotId)}&ryp_index=${index}`;
   }
 
+  /**
+   * Playlist position of a sidebar row. Virtual (local playlist) rows carry it
+   * in the href's hash (see rypParams), YouTube rows in `&index=`. Every
+   * caller must read it the same way, or reorder/drag on a local playlist
+   * silently finds no index.
+   */
+  function itemIndex(item) {
+    const href = item?.querySelector?.(SEL.itemLink)?.getAttribute("href") || "";
+    const params = new URL(href, location.origin).searchParams;
+    const index = parseInt(
+      rypParams(href).get("ryp_index") || params.get("index") || item?.dataset?.index || "",
+      10
+    );
+    return Number.isFinite(index) ? index : null;
+  }
+
   /** Parse time strings ("03:45", "1:15:30", "45") to total seconds. */
   function parseTimeToSeconds(str) {
     if (!str || typeof str !== "string") return 0;
@@ -146,6 +162,7 @@
     parseTimeToSeconds,
     formatDuration,
     rypHash,
+    itemIndex,
 
     getPlaylistId() {
       const sp = new URLSearchParams(location.search);
@@ -246,12 +263,8 @@
         const href = anchor && anchor.getAttribute("href");
         if (!href) continue;
         const params = new URL(href, location.origin).searchParams;
-        // Virtual items carry their position in the href's hash (see rypParams).
-        const index = parseInt(
-          rypParams(href).get("ryp_index") || params.get("index") || item.dataset.index || "",
-          10
-        );
-        if (!Number.isFinite(index)) continue;
+        const index = itemIndex(item);
+        if (index === null) continue;
 
         const durationText = extractDurationText(item);
         const channelText = item.querySelector(SEL.byline)?.textContent?.trim() || "";
