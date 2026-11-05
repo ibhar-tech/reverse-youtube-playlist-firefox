@@ -958,6 +958,33 @@ html[dark] .ryp-search-input {
   border-radius: 6px;
 }
 
+/* The icons are bare <svg>s with a viewBox and no size. Unsized, the play
+   triangle grew to fill the pill and the trash icon collapsed to zero —
+   invisible, so lists could not be deleted from the panel. */
+.ryp-action-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: center;
+}
+
+.ryp-action-play svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  fill: currentColor;
+}
+
+.ryp-action-delete {
+  align-self: center;
+}
+
+.ryp-action-delete svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
 .ryp-action-delete:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;

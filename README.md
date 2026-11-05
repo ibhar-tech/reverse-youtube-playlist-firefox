@@ -21,6 +21,7 @@
 | **⏱️ Watch Time** | Live duration calculator showing total time, watched time, remaining time, and 1.25x/1.5x/2x speed estimates. |
 | **＋ Add to List** | Add the video you're watching to a local playlist — a list you build yourself, held entirely in local storage and played from the extension's own sidebar. Available under the player and from the popup. |
 | **🎵 My Lists** | Opens a slide-in panel to name and save a snapshot of the current order. Playing a snapshot restores its exact saved order — your lists are permanent. |
+| **📄 Export list** | Copy a playlist as text, or download it as .txt / .csv, in the order you're playing it. Works on playlists, playlist pages and saved lists. |
 | **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and browser profiles. |
 | **⏯️ Resume** | A one-click prompt jumps back to the video and timestamp where you left off in any playlist. |
 | **# Tags** | Add tags to snapshots and filter saved lists by name or tag. |
@@ -97,6 +98,8 @@ icons/
 ## 📋 Changelog
 
 ### v3.6.0 — 2026-11
+- ✨ **Export a playlist as text or CSV** — copy to the clipboard or download .txt / .csv, in the order shown (Reverse, Shuffle, Sort or custom), from the playlist toolbar, the playlist page, or any saved list in My Lists. The CSV opens correctly in Excel, Arabic included, and is protected against formula injection.
+- 🐛 **My Lists card icons** — the delete (trash) icon had no size and was invisible, and the Play triangle overflowed its button.
 - 🧱 **Orders are keyed by video id.** Custom, shuffle and sort orders used to store playlist positions, which pointed at the wrong videos as soon as the playlist owner added or removed one (Watch Later shifts on every add). Saved orders now survive edits; old ones are converted automatically as their rows appear, and snapshots replay by id.
 - 🧱 **Long playlists.** Shuffle, Sort, Reverse and Save load the whole playlist first (YouTube only renders ~200 rows), and a next video whose row isn't rendered is reached through its URL instead of silently falling back to YouTube's order.
 - 🧱 **Your click wins.** Clicking the video right after the current one used to be "corrected" back to the mode's order. Now only a real end-of-video auto-advance is redirected.
