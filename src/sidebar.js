@@ -151,6 +151,8 @@
       "#secondary",
       "#columns #secondary",
       "ytd-watch-flexy #secondary",
+      // Mobile site: no sidebar — the panel goes above the watch-next feed.
+      Playlist.SEL.mobile.watchNextResults,
     ];
 
     let host = null;
@@ -255,6 +257,7 @@
 
       const pos = orderPositions(customOrder);
       Playlist.readItems().forEach((item) => {
+        if (!item.element) return; // remembered mobile row, not rendered
         const p = pos.byVideoId.get(item.videoId) ?? pos.byIndex.get(item.index);
         item.element.style.order = p !== undefined ? p : 9999;
       });
@@ -277,7 +280,7 @@
   function scrollToCurrentItem() {
     const container = Playlist.getItemsContainer();
     if (!container) return;
-    const selected = container.querySelector(`${Playlist.SEL.item}[selected]`);
+    const selected = container.querySelector(Playlist.selectedRowSelector());
     if (!selected) return;
 
     let scroller = null;
@@ -402,7 +405,7 @@
   /** Rows of whichever panel is active — YouTube's or our local-playlist one. */
   function panelItems() {
     const container = Playlist.getItemsContainer();
-    return container ? container.querySelectorAll(Playlist.SEL.item) : [];
+    return container ? container.querySelectorAll(Playlist.rowSelector()) : [];
   }
 
   async function onDrop(e) {
@@ -450,6 +453,7 @@
     const watched = await Playback.getWatched(listId);
     if (Playlist.getPlaylistId() !== listId || Playlist.getItemsContainer() !== container) return;
     Playlist.readItems().forEach((item) => {
+      if (!item.element) return; // remembered mobile row, not rendered
       item.element.classList.toggle(
         "ryp-watched",
         watched.includes(item.videoId) || watched.includes(item.index)

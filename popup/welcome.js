@@ -25,6 +25,8 @@
       step2Body: "Reverse plays last to first, Shuffle keeps one random order, Sort goes by title, length, channel or watched.",
       step3Title: "Build your own lists",
       step3Body: "Click ＋ Add to Playlist under any video to collect it into a local playlist that lives only in your browser.",
+      step1BodyMobile: "On a phone, tap the playlist bar under the video: the toolbar sits at the top of the list.",
+      step3BodyMobile: "Open this add-on from the browser menu and tap Add Current Video to Playlist to collect it into a local playlist that lives only in your browser.",
       keysHeading: "Keyboard shortcuts",
       changeKeys: "Change shortcuts",
       keyUnset: "Not set",
@@ -48,6 +50,8 @@
       step2Body: "Inverser lit de la dernière à la première, Mélanger garde un ordre aléatoire, Trier classe par titre, durée, chaîne ou vu.",
       step3Title: "Créez vos propres listes",
       step3Body: "Cliquez sur ＋ Ajouter à la playlist sous une vidéo pour la ranger dans une playlist locale, gardée uniquement dans votre navigateur.",
+      step1BodyMobile: "Sur un téléphone, touchez la barre de la playlist sous la vidéo : la barre d'outils se trouve en haut de la liste.",
+      step3BodyMobile: "Ouvrez ce module depuis le menu du navigateur et touchez Ajouter la vidéo actuelle à une playlist pour la ranger dans une playlist locale, gardée uniquement dans votre navigateur.",
       keysHeading: "Raccourcis clavier",
       changeKeys: "Modifier les raccourcis",
       keyUnset: "Non défini",
@@ -71,6 +75,8 @@
       step2Body: "العكس يشغّل من الأخير إلى الأول، والخلط يحفظ ترتيبًا عشوائيًا واحدًا، والفرز حسب العنوان أو المدة أو القناة أو المشاهدة.",
       step3Title: "أنشئ قوائمك الخاصة",
       step3Body: "اضغط ＋ إضافة إلى قائمة التشغيل أسفل أي فيديو لجمعه في قائمة محلية محفوظة في متصفحك فقط.",
+      step1BodyMobile: "على الهاتف، اضغط على شريط قائمة التشغيل أسفل الفيديو: يظهر شريط الأدوات أعلى القائمة.",
+      step3BodyMobile: "افتح هذه الإضافة من قائمة المتصفح واضغط إضافة الفيديو الحالي إلى قائمة تشغيل لجمعه في قائمة محلية محفوظة في متصفحك فقط.",
       keysHeading: "اختصارات لوحة المفاتيح",
       changeKeys: "تغيير الاختصارات",
       keyUnset: "غير محدد",
@@ -100,10 +106,37 @@
     return TRANSLATIONS[lang] || TRANSLATIONS.en;
   }
 
+  // Firefox for Android: no `commands` API (so no shortcuts to list or
+  // change) and the mobile YouTube site, where the toolbar lives in the
+  // playlist sheet and there is no Reorder or under-video Add button.
+  // Feature-detect the API itself; ask the platform only for the wording.
+  const hasShortcuts = typeof api.commands?.getAll === "function";
+  let isAndroid = false;
+  try {
+    isAndroid = (await api.runtime.getPlatformInfo?.())?.os === "android";
+  } catch (_) {
+    // Unknown platform: keep the desktop wording.
+  }
+  if (!hasShortcuts) document.getElementById("keys-card")?.remove();
+  if (isAndroid) {
+    for (const key of ["step1Body", "step3Body"]) {
+      document.querySelector(`[data-i18n="${key}"]`)?.setAttribute("data-i18n", `${key}Mobile`);
+    }
+  }
+  // Toggles for buttons the mobile toolbar never shows would do nothing.
+  const shownButtonKeys = isAndroid
+    ? BUTTON_KEYS.filter((k) => k !== "reorder" && k !== "addVideo")
+    : BUTTON_KEYS;
+
   async function renderKeys() {
     const body = document.getElementById("keys-body");
-    if (!body || !api.commands?.getAll) return;
-    const commands = await api.commands.getAll();
+    if (!body || !hasShortcuts) return;
+    let commands;
+    try {
+      commands = await api.commands.getAll();
+    } catch (_) {
+      return; // present but not implemented: show nothing rather than throw
+    }
     body.replaceChildren();
     for (const cmd of commands) {
       if (!cmd.description) continue;
@@ -130,7 +163,7 @@
     const grid = document.getElementById("btn-grid");
     const vis = settings.buttonVisibility || {};
     grid.replaceChildren();
-    for (const key of BUTTON_KEYS) {
+    for (const key of shownButtonKeys) {
       const label = document.createElement("label");
       const box = document.createElement("input");
       box.type = "checkbox";
@@ -173,7 +206,7 @@
     });
   });
 
-  document.getElementById("change-keys").addEventListener("click", () => {
+  document.getElementById("change-keys")?.addEventListener("click", () => {
     if (api.commands?.openShortcutSettings) {
       api.commands.openShortcutSettings(); // Firefox 137+
       return;

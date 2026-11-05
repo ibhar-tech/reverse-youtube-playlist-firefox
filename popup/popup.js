@@ -2,6 +2,12 @@
   "use strict";
 
   const api = typeof browser !== "undefined" ? browser : chrome;
+
+  // Firefox for Android has no keyboard shortcuts (no `commands` API), so the
+  // guide button must not promise any. Before translateUI() reads the key.
+  if (!api.commands?.getAll) {
+    document.getElementById("guide-btn")?.setAttribute("data-i18n", "guideOnly");
+  }
   
   // DOM Elements
   const listContainer = document.getElementById("playlist-list");
@@ -114,6 +120,7 @@
       shareFailed: "Could not copy — your browser blocked the clipboard.",
       shareText: "I've watched {watched} of YouTube playlists with Playlist Tools ({finished} videos), and saved {saved} with playback speed. Reverse, shuffle & sort any playlist — free, no login: {link}",
       guideShortcuts: "Guide & shortcuts",
+      guideOnly: "Guide",
       export: "Export",
       import: "Import",
       exportTitle: "Export saved playlists to a file",
@@ -207,6 +214,7 @@
       shareFailed: "Copie impossible — le navigateur a bloqué le presse-papiers.",
       shareText: "J'ai regardé {watched} de playlists YouTube avec Playlist Tools ({finished} vidéos), et gagné {saved} grâce à la vitesse de lecture. Inversez, mélangez et triez n'importe quelle playlist — gratuit, sans compte : {link}",
       guideShortcuts: "Guide et raccourcis",
+      guideOnly: "Guide",
       export: "Exporter",
       import: "Importer",
       exportTitle: "Exporter les playlists sauvegardées",
@@ -300,6 +308,7 @@
       shareFailed: "تعذّر النسخ — المتصفح منع الوصول إلى الحافظة.",
       shareText: "شاهدت {watched} من قوائم تشغيل يوتيوب مع أدوات قائمة التشغيل ({finished} فيديو)، ووفّرت {saved} بفضل سرعة التشغيل. اعكس واخلط ورتّب أي قائمة تشغيل — مجانًا وبدون تسجيل: {link}",
       guideShortcuts: "الدليل والاختصارات",
+      guideOnly: "الدليل",
       export: "تصدير",
       import: "استيراد",
       exportTitle: "تصدير قوائم التشغيل المحفوظة إلى ملف",

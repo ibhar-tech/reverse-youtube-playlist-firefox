@@ -3,6 +3,14 @@
  * Test environment mock for browser extension & DOM
  */
 globalThis.window = globalThis;
+// Modules listen on window too (the mobile site's state-navigate* events);
+// Node's global object is not an EventTarget, so lend it a real one.
+if (typeof globalThis.addEventListener !== "function") {
+  const windowEvents = new EventTarget();
+  globalThis.addEventListener = windowEvents.addEventListener.bind(windowEvents);
+  globalThis.removeEventListener = windowEvents.removeEventListener.bind(windowEvents);
+  globalThis.dispatchEvent = windowEvents.dispatchEvent.bind(windowEvents);
+}
 globalThis.getComputedStyle = (el) => ({ overflowY: "auto", display: "block" });
 window.getComputedStyle = globalThis.getComputedStyle;
 

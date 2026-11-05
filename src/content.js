@@ -5,7 +5,8 @@
  * Supports /watch (with or without playlist) and /playlist overview pages.
  *
  * Load order (manifest.json):
- *   backup → state → playlist → playback → sidebar → panel → toolbar → content
+ *   backup → links → state → playlist → stats → playback → sidebar → panel →
+ *   toolbar → content
  */
 (() => {
   "use strict";
@@ -404,5 +405,13 @@
   });
 
   document.addEventListener("yt-navigate-finish", onNavigate);
+  if (Playlist.isMobile()) {
+    // m.youtube.com (Firefox for Android) never fires yt-navigate-finish; its
+    // in-app navigations end with state-navigateend on window, by which time
+    // location already holds the new URL (both seen live, 2026-11-05).
+    window.addEventListener("state-navigateend", onNavigate);
+    // Scopes the touch/narrow-screen CSS so desktop styling stays as it was.
+    document.documentElement.classList.add("ryp-mobile");
+  }
   onNavigate();
 })();

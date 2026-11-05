@@ -502,9 +502,35 @@
   function onControlClick(e) {
     if (!isActive() || !Playlist.isPlaylistWatchPage()) return;
     if (!e.target || typeof e.target.closest !== "function") return;
+    if (Playlist.isMobile()) {
+      const isNext = mobileStepDirection(e.target);
+      if (isNext !== null) handleManualStep(e, isNext);
+      return;
+    }
     const btn = e.target.closest(".ytp-next-button, .ytp-prev-button");
     if (!btn) return;
     handleManualStep(e, btn.classList.contains("ytp-next-button"));
+  }
+
+  /**
+   * The mobile player's previous and next buttons share one class and differ
+   * only in their localized aria-label, so tell them apart by position:
+   * previous renders before play/pause, next after it. null when the click
+   * was not on either, or the layout is not the one expected — YouTube then
+   * handles the click as usual.
+   */
+  function mobileStepDirection(target) {
+    const { prevNextButton, playPauseButton } = Playlist.SEL.mobile;
+    const btn = target.closest(prevNextButton);
+    if (!btn) return null;
+    // Nearest ancestor that also holds play/pause — the middle-controls row.
+    let play = null;
+    for (let node = btn.parentElement; node && !play; node = node.parentElement) {
+      play = node.querySelector(playPauseButton);
+    }
+    if (!play || typeof btn.compareDocumentPosition !== "function") return null;
+    // DOCUMENT_POSITION_FOLLOWING (4): play/pause comes after → this is "previous".
+    return (btn.compareDocumentPosition(play) & 4) === 0;
   }
 
   function onControlKey(e) {
@@ -574,6 +600,12 @@
   document.addEventListener("ended", onEnded, true);
   document.addEventListener("playing", onPlaying, true);
   document.addEventListener("yt-navigate-start", onNavigateStart, true);
+  // The mobile site never fires yt-navigate-*; it fires these on window
+  // instead (seen live on m.youtube.com, 2026-11-05). Without this an
+  // auto-advance there looks like a user pick and is never corrected.
+  window.addEventListener("state-navigatestart", () => {
+    if (Playlist.isMobile()) onNavigateStart();
+  }, true);
   document.addEventListener("click", onControlClick, true);
   document.addEventListener("click", onUserPick, true);
   document.addEventListener("keydown", onControlKey, true);
@@ -845,6 +877,7 @@
     /** Test hooks: what yt-navigate-start and a page click do. */
     _onNavigateStart: onNavigateStart,
     _onUserPick: onUserPick,
+    _onControlClick: onControlClick,
     _stepNext: () => stepTo(nextFromCurrent()),
 
     async getWatched(listId) {

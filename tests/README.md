@@ -18,6 +18,13 @@ rest on scroll. Checks id-keyed orders and legacy migration, next-button
 navigation, the URL fallback for unrendered rows, and Shuffle loading the
 whole playlist first. Needs `playwright` and its Chromium installed.
 
+It then does the same on a fake `m.youtube.com` (the site Firefox for Android
+gets), built from the mobile DOM as rendered live: ytm-* rows in a bottom sheet
+that drops them when closed, `state-navigate*` events on `window`, the URL
+index rewritten to N+1 on load, and a 3 s silent WAV so a real `<video>` can
+reach its end. `tests/test_android.js` covers the same paths as unit tests.
+Neither replaces a run on a real Android device (`web-ext run -t firefox-android`).
+
 ## End-to-end — `npm run test:e2e`
 
 Drives **real Firefox** against **real YouTube**, with the working tree installed

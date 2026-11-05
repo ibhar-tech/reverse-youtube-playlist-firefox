@@ -48,7 +48,149 @@
 
     // Standalone watch page video actions
     watchActionsMenu: "#actions #menu ytd-menu-renderer, #actions-inner #menu ytd-menu-renderer, #actions #top-level-buttons-computed, #top-level-buttons-computed",
+
+    // Mobile site (m.youtube.com) — what Firefox for Android is served by
+    // default; its "Desktop site" toggle gets www.youtube.com and every
+    // selector above. The mobile app is a different codebase (ytm-*
+    // elements), so nothing above matches there.
+    //
+    // VERIFIED = seen in m.youtube.com watch pages rendered in headless
+    // Chromium with a Firefox-for-Android user agent, 2026-11-05.
+    // BUNDLE = read from YouTube's shipped mobile JS (ytmweb c3_base),
+    // never seen rendered: the player was blocked from that network.
+    mobile: {
+      // VERIFIED. The playlist bottom sheet. Closing the sheet *removes* this
+      // element and every row — see the item cache in readMobileItems().
+      panel: "ytm-playlist-panel-renderer",
+      // VERIFIED. Rows are direct children of this lazy-list.
+      itemsContainer: "ytm-playlist-panel-renderer lazy-list",
+      // VERIFIED. One per playlist entry; the playing one has
+      // aria-selected="true" and the …V2Selected class.
+      item: "ytm-playlist-panel-video-renderer",
+      selected: "ytm-playlist-panel-video-renderer[aria-selected='true'], ytm-playlist-panel-video-renderer.ytmPlaylistPanelVideoRendererV2Selected",
+      // VERIFIED. Both the thumbnail and the text link carry
+      // /watch?v=…&list=…&index=N (1-based, like desktop).
+      itemLink: "a[href*='/watch']",
+      title: ".YtmCompactMediaItemHeadline",
+      // VERIFIED. First byline is the channel, the second views · age.
+      byline: ".YtmCompactMediaItemByline",
+      // VERIFIED. Sheet header row wrapper; our toolbar goes in as a new
+      // row under YouTube's header. Not the header element itself: that one
+      // is overflow:hidden and would clip the Sort menu.
+      header: "ytm-engagement-panel-section-list-renderer.engagement-panel-playlist .engagement-panel-section-list-header-wrapper",
+      // VERIFIED. "4 / 182" in the open sheet; "<title> • 4 / 182" in the
+      // collapsed bar, which stays in the page while the sheet is closed.
+      countText: ".playlist-engagement-panel-list-count, ytm-playlist-panel-entry-point .playlist-panel-subhead",
+      // VERIFIED. Host for our local-playlist panel (no #secondary here).
+      watchNextResults: "ytm-single-column-watch-next-results-renderer",
+      // BUNDLE. Previous and next share this class; which is which is told
+      // by their position around the play/pause button.
+      prevNextButton: ".player-middle-controls-prev-next-button",
+      playPauseButton: ".player-control-play-pause-icon",
+    },
   };
+
+  /**
+   * True on the mobile site. A document never changes host (www ↔ m is a full
+   * page load), so callers may branch on this once or on every call alike.
+   */
+  function isMobile() {
+    return location.hostname === "m.youtube.com";
+  }
+
+  // ── Mobile item cache ─────────────────────────────────────────────────────
+  //
+  // The mobile playlist sheet drops its rows from the DOM when the user
+  // closes it — the usual state while watching. The play-order engine still
+  // has to find the next video at the end of each one, so rows are
+  // remembered (per playlist, per page) whenever they are rendered, and
+  // served from here while they are not. Cached entries have no element or
+  // anchor: navigation falls back to the video's URL (see goToIndex).
+  let mobileCache = { listId: null, byIndex: new Map() };
+
+  function rememberMobileItems(listId, items) {
+    if (mobileCache.listId !== listId) mobileCache = { listId, byIndex: new Map() };
+    for (const it of items) {
+      mobileCache.byIndex.set(it.index, { ...it, anchor: null, element: null });
+    }
+  }
+
+  function cachedMobileItems(listId) {
+    if (mobileCache.listId !== listId) return [];
+    return [...mobileCache.byIndex.values()].sort((a, b) => a.index - b.index);
+  }
+
+  /** "N / M" → { current: N, total: M }, from the last fraction in the text. */
+  function parseFraction(text) {
+    const all = [...(text || "").matchAll(/(\d[\d,]*)\s*\/\s*(\d[\d,]*)/g)];
+    const m = all[all.length - 1];
+    if (!m) return null;
+    const current = parseInt(m[1].replace(/,/g, ""), 10);
+    const total = parseInt(m[2].replace(/,/g, ""), 10);
+    return Number.isFinite(current) && Number.isFinite(total) && total > 0 ? { current, total } : null;
+  }
+
+  function mobileCountFraction() {
+    for (const el of document.querySelectorAll(SEL.mobile.countText)) {
+      const f = parseFraction(el.textContent);
+      if (f) return f;
+    }
+    return null;
+  }
+
+  function readMobileItems(listId) {
+    const M = SEL.mobile;
+    const panel = document.querySelector(M.panel);
+    if (!panel) return cachedMobileItems(listId);
+    const out = [];
+    for (const row of panel.querySelectorAll(M.item)) {
+      const anchor = row.querySelector(M.itemLink);
+      const href = anchor && anchor.getAttribute("href");
+      if (!href) continue;
+      const params = new URL(href, location.origin).searchParams;
+      const index = parseInt(params.get("index") || "", 10);
+      if (!Number.isFinite(index)) continue;
+      const durationText = extractDurationText(row);
+      out.push({
+        index,
+        videoId: params.get("v") || "",
+        title: row.querySelector(M.title)?.textContent?.trim() || "",
+        channel: row.querySelector(M.byline)?.textContent?.trim() || "",
+        durationStr: durationText,
+        durationSeconds: parseTimeToSeconds(durationText),
+        thumbnail: row.querySelector("img")?.src || "",
+        anchor,
+        element: row,
+      });
+    }
+    out.sort((a, b) => a.index - b.index);
+    if (listId) rememberMobileItems(listId, out);
+    return out;
+  }
+
+  /**
+   * Playlist position of the playing video on the mobile site. The URL's
+   * index is no use on a fresh load — YouTube rewrites it to N+1 there, as on
+   * desktop (seen live: item 150 loads as &index=151) — so it is the last
+   * resort, after the selected row, the remembered rows, and the sheet's own
+   * "N / M" counter (present even with the sheet closed).
+   */
+  function mobileCurrentIndex(listId) {
+    const v = new URLSearchParams(location.search).get("v") || "";
+    const selected = document.querySelector(SEL.mobile.selected);
+    if (selected && v) {
+      const href = selected.querySelector(SEL.mobile.itemLink)?.getAttribute("href") || "";
+      const params = new URL(href || "/", location.origin).searchParams;
+      const idx = parseInt(params.get("index") || "", 10);
+      if (Number.isFinite(idx) && params.get("v") === v) return idx;
+    }
+    if (v) {
+      const hit = readMobileItems(listId).find((it) => it.videoId === v);
+      if (hit) return hit.index;
+    }
+    const fraction = mobileCountFraction();
+    return fraction ? fraction.current : null;
+  }
 
   function extractDurationText(item) {
     if (!item) return "";
@@ -163,6 +305,8 @@
     formatDuration,
     rypHash,
     itemIndex,
+    isMobile,
+    parseFraction,
 
     getPlaylistId() {
       const sp = new URLSearchParams(location.search);
@@ -204,6 +348,12 @@
     getTotalItemCount() {
       const listId = this.getPlaylistId();
       if (!listId) return 0;
+
+      if (isMobile() && this.isPlaylistWatchPage() && !this.isVirtualPlaylist()) {
+        const fraction = mobileCountFraction();
+        if (fraction) return fraction.total;
+        return this.readItems().length;
+      }
 
       // Check on watch page
       if (this.isPlaylistWatchPage()) {
@@ -251,6 +401,9 @@
 
     /** Returns all loaded watch-sidebar items sorted by index (ascending). */
     readItems() {
+      // Local playlists render our own panel on mobile too, so only YouTube's
+      // playlists take the mobile path.
+      if (isMobile() && !this.isVirtualPlaylist()) return readMobileItems(this.getPlaylistId());
       // YouTube's SPA can leave a stale real panel in the DOM, so on a virtual
       // playlist our own panel wins.
       const real = document.querySelector(SEL.panel);
@@ -387,6 +540,11 @@
       const rypIndex = parseInt(rypParams().get("ryp_index") || "", 10);
       if (Number.isFinite(rypIndex)) return rypIndex;
 
+      if (isMobile() && !this.isVirtualPlaylist()) {
+        const mobileIndex = mobileCurrentIndex(this.getPlaylistId());
+        if (mobileIndex !== null) return mobileIndex;
+      }
+
       const fromUrl = parseInt(sp.get("index") || "", 10);
       const vParam = sp.get("v") || "";
 
@@ -438,6 +596,9 @@
     /** In-app navigate to the playlist item with the given index. */
     goToIndex(targetIndex) {
       const hit = this.readItems().find((it) => it.index === targetIndex);
+      // A remembered mobile row (sheet closed) has no anchor to click, but its
+      // video id is known — load it by URL, as goToVideo does.
+      if (hit && !hit.anchor && hit.videoId && isMobile()) return this.goToVideo(hit.videoId);
       if (!hit || !hit.anchor) return false;
       if (typeof hit.anchor.click === "function") {
         hit.anchor.click();
@@ -472,8 +633,18 @@
       return true;
     },
 
+    /** Selector for the rows of whichever panel getItemsContainer() returns. */
+    rowSelector() {
+      return isMobile() && !this.isVirtualPlaylist() ? SEL.mobile.item : SEL.item;
+    },
+
+    /** Selector for the playing row of that panel. */
+    selectedRowSelector() {
+      return isMobile() && !this.isVirtualPlaylist() ? SEL.mobile.selected : `${SEL.item}[selected]`;
+    },
+
     getItemsContainer() {
-      const real = document.querySelector(SEL.itemsContainer);
+      const real = document.querySelector(isMobile() ? SEL.mobile.itemsContainer : SEL.itemsContainer);
       const virtual = document.querySelector("#ryp-virtual-playlist-panel #items");
       return this.isVirtualPlaylist() ? (virtual || real) : (real || virtual);
     },
@@ -481,6 +652,8 @@
     findHeaderContainer() {
       const virtualHeader = document.querySelector("#ryp-virtual-playlist-panel #header-contents");
       if (virtualHeader) return virtualHeader;
+      // Absent while the sheet is closed; the DOM pass re-injects on open.
+      if (isMobile()) return document.querySelector(SEL.mobile.header);
       for (const sel of SEL.headerCandidates) {
         const el = document.querySelector(sel);
         if (el) return el;

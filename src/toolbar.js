@@ -832,7 +832,17 @@
 
     const exportDropdown = createExportDropdown(dict, false);
 
-    toolbar.append(reverseBtn, shuffleBtn, sortDropdown, reorderBtn, resetBtn, saveBtn, exportDropdown, playlistsBtn, durationPill);
+    if (Playlist.isMobile()) {
+      // Reorder is drag-and-drop on HTML5 drag events, which touch screens
+      // never fire — left out rather than shipped broken. Kept out of the DOM
+      // (not merely hidden) so the per-button visibility setting cannot bring
+      // it back; it is still built so bindEvents() and syncButtonStates() run
+      // unchanged.
+      toolbar.classList.add("ryp-toolbar-mobile");
+      toolbar.append(reverseBtn, shuffleBtn, sortDropdown, resetBtn, saveBtn, exportDropdown, playlistsBtn, durationPill);
+    } else {
+      toolbar.append(reverseBtn, shuffleBtn, sortDropdown, reorderBtn, resetBtn, saveBtn, exportDropdown, playlistsBtn, durationPill);
+    }
     container.appendChild(toolbar);
 
     checkLazyLoadState(toolbar);
