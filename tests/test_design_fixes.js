@@ -184,6 +184,43 @@ describe("3.6 design fixes", async () => {
     assert.deepEqual(clicks, ["aaa"], "reverse order goes 2 → 1");
   });
 
+  test("3.5.0: YouTube bumping the URL index on the same video is not an advance", async () => {
+    const { Playback } = window.RYP;
+    rows = [item(1, "aaa", clicks), item(2, "bbb", clicks), item(3, "ccc", clicks)];
+    await Playback.enableReverse("PLx");
+    clicks.length = 0;
+    at("bbb", 2);
+    Playback.handleNavigation();
+    // Even with the end-of-video signal, the same video with index+1 in the
+    // address bar is YouTube's URL rewrite (refresh / new tab) — stay put.
+    const v = { duration: 100, currentTime: 99.5 };
+    document.querySelector = (sel) => (sel.includes("video") ? v : null);
+    Playback._onNavigateStart();
+    at("bbb", 3);
+    Playback.handleNavigation();
+    assert.deepEqual(clicks, [], "same video: no redirect");
+  });
+
+  test("3.5.0: the position comes from the selected row, not the rewritten URL", () => {
+    const { Playlist } = window.RYP;
+    const selectedRow = {
+      hasAttribute: (a) => a === "selected",
+      classList: { contains: () => false },
+      dataset: {},
+      querySelector: (sel) =>
+        sel.includes("wc-endpoint")
+          ? { getAttribute: () => "/watch?v=bbb&list=PLx&index=2" }
+          : null,
+    };
+    const panel = { querySelectorAll: () => [selectedRow] };
+    document.querySelector = (sel) => (sel === Playlist.SEL.panel ? panel : null);
+    location.search = "?v=bbb&list=PLx&index=3"; // YouTube's +1 rewrite
+    assert.equal(Playlist.currentIndex(), 2);
+    // A selected row for a different video is not trusted over the URL.
+    location.search = "?v=ccc&list=PLx&index=3";
+    assert.equal(Playlist.currentIndex(), 3);
+  });
+
   test("our own synthetic clicks don't count as the user", () => {
     const { Playback } = window.RYP;
     const row = { closest: () => ({}) };

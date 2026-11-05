@@ -1,6 +1,6 @@
 {
   "name": "reverse-youtube-playlist-order",
-  "version": "3.4.0",
+  "version": "3.6.0",
   "description": "Reverse, shuffle, sort, drag-reorder, and manage YouTube playlists locally and privately.",
   "type": "module",
   "scripts": {

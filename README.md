@@ -2,7 +2,7 @@
 
 > **Reverse, shuffle, drag-reorder, and save YouTube playlists — locally, privately, with zero logins.**
 
-[![Version](https://img.shields.io/badge/version-3.4.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
+[![Version](https://img.shields.io/badge/version-3.6.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
 [![Firefox](https://img.shields.io/badge/Firefox-≥140-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 [![Privacy: No data collected](https://img.shields.io/badge/Privacy-No%20data%20collected-brightgreen?style=flat-square)]()
@@ -96,7 +96,7 @@ icons/
 
 ## 📋 Changelog
 
-### Unreleased
+### v3.6.0 — 2026-11
 - 🧱 **Orders are keyed by video id.** Custom, shuffle and sort orders used to store playlist positions, which pointed at the wrong videos as soon as the playlist owner added or removed one (Watch Later shifts on every add). Saved orders now survive edits; old ones are converted automatically as their rows appear, and snapshots replay by id.
 - 🧱 **Long playlists.** Shuffle, Sort, Reverse and Save load the whole playlist first (YouTube only renders ~200 rows), and a next video whose row isn't rendered is reached through its URL instead of silently falling back to YouTube's order.
 - 🧱 **Your click wins.** Clicking the video right after the current one used to be "corrected" back to the mode's order. Now only a real end-of-video auto-advance is redirected.
@@ -107,6 +107,10 @@ icons/
 - 🐛 **Watched badges** were hidden on a fresh install until a setting was saved, so the "Show watched badges" toggle looked like it did nothing.
 - 🐛 Backups of Watch Later / Liked videos snapshots were rejected on import; import dropped channels and re-importing your own backup duplicated lists.
 - 🐛 Reorder did nothing on local playlists; Reset left their custom order behind; Resume on a local playlist opened a broken URL; seeking back after an end-of-order stop let YouTube autoplay.
+
+### v3.5.0 — 2026-09
+- 🐛 **Refreshing no longer jumps to the next video.** Reloading the page, or opening a playlist video in a new tab, skipped ahead in Reverse/Shuffle/custom orders: YouTube started rewriting the playlist position in the address bar on every load, which read as an auto-advance.
+- 🐛 **No more replaying the same video after a refresh** — positions now come from the playlist panel, not the address bar.
 
 ### v3.4.0 — 2026-09
 - ✨ **Disable autoplay** — a setting that stops each playlist video just before its end instead of letting YouTube (or the extension's own order) roll into the next one. The end of a Reverse/Shuffle order now holds as well.

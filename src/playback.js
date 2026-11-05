@@ -43,6 +43,7 @@
   let shuffleOn = false;
   let customOrder = null; // (videoId | legacy index)[] — play order, or null
   let lastIndex = null;
+  let lastVideoId = null;
   // Order entry and position of the previous video (custom orders only).
   let lastKey = null;
   let lastPos = null;
@@ -630,10 +631,12 @@
     handleNavigation() {
       if (!Playlist.isPlaylistWatchPage()) {
         lastIndex = null;
+        lastVideoId = null;
         navigating = false;
         return;
       }
       const idx = Playlist.currentIndex();
+      const videoId = currentVideoId() || "";
       endHandled = false;
       const autoAdvanced = arrivedByAutoAdvance;
       arrivedByAutoAdvance = false;
@@ -641,25 +644,39 @@
       maybeOfferResume(Playlist.getPlaylistId());
 
       // YouTube's own forward-advance slipped past the near-end trigger:
-      // redirect it to the mode's real next item. Only when the previous
-      // video really ended (see onNavigateStart) — a row the user clicked
-      // must play, even when it happens to be index+1. Never when autoplay
-      // is disabled.
+      // redirect it to the mode's real next item. Every condition matters:
+      //  - the previous video really ended (see onNavigateStart) — a row the
+      //    user clicked must play, even when it happens to be index+1;
+      //  - the video itself changed (3.5.0). YouTube rewrites the URL's
+      //    index param (+1) on every page load while v stays put, so a bare
+      //    index bump is a refresh or a new tab, not an auto-advance;
+      //  - the arriving row is found by videoId, for the same reason — the
+      //    index in the address bar is no longer a stable position.
+      // Never when autoplay is disabled.
+      const arriving =
+        videoId && videoId !== lastVideoId
+          ? Playlist.readItems().find((it) => it.videoId === videoId) || null
+          : null;
       if (
         isActive() &&
         !disableAutoplay &&
         !navigating &&
         autoAdvanced &&
         lastIndex !== null &&
-        idx === lastIndex + 1
+        lastVideoId !== null &&
+        arriving &&
+        arriving.index === lastIndex + 1
       ) {
         const next = hasOrder()
           ? (lastPos !== null ? nextTarget(lastKey, lastPos) : null)
           : nextTarget(lastIndex, null);
-        if (next !== null && stepTo(next)) return;
+        const alreadyThere =
+          next !== null && (next.key === arriving.videoId || next.key === arriving.index);
+        if (next !== null && !alreadyThere && stepTo(next)) return;
       }
       navigating = false;
       lastIndex = idx;
+      if (videoId) lastVideoId = videoId;
       lastPos = hasOrder() ? currentOrderPos() : null;
       if (lastPos !== null && lastPos < 0) lastPos = null;
       lastKey = lastPos !== null ? customOrder[lastPos] : null;

@@ -381,17 +381,50 @@
       };
     },
 
-    /** Current 1-based playlist index from URL param, or from the selected item. */
+    /** Current 1-based playlist index, or null when it cannot be resolved. */
     currentIndex() {
       const sp = new URLSearchParams(location.search);
-      const fromUrl = parseInt(
-        rypParams().get("ryp_index") || sp.get("index") || "",
-        10
-      );
-      if (Number.isFinite(fromUrl)) return fromUrl;
+      const rypIndex = parseInt(rypParams().get("ryp_index") || "", 10);
+      if (Number.isFinite(rypIndex)) return rypIndex;
+
+      const fromUrl = parseInt(sp.get("index") || "", 10);
+      const vParam = sp.get("v") || "";
+
+      // YouTube rewrites the watch URL's index param (+1) on every page
+      // load, so the address bar can disagree with the panel by one. The
+      // selected row's own href index is the stable position — trust it
+      // when it points at the same video the URL is playing.
       const real = document.querySelector(SEL.panel);
       const virtual = document.getElementById("ryp-virtual-playlist-panel");
       const panel = this.isVirtualPlaylist() ? (virtual || real) : (real || virtual);
+      if (panel && vParam) {
+        const items = Array.from(panel.querySelectorAll(SEL.item));
+        const selected = items.find(
+          (it) =>
+            it.hasAttribute("selected") ||
+            it.classList.contains("selected") ||
+            (it.querySelector("#index")?.textContent || "").includes("▶")
+        );
+        if (selected) {
+          const href =
+            selected.querySelector(SEL.itemLink)?.getAttribute("href") || "";
+          const url = href ? new URL(href, location.origin) : null;
+          const selectedIndex = parseInt(
+            rypParams(href).get("ryp_index") ||
+              url?.searchParams.get("index") ||
+              selected.dataset.index ||
+              "",
+            10
+          );
+          const selectedVideoId =
+            url?.searchParams.get("v") || selected.dataset.videoId || "";
+          if (Number.isFinite(selectedIndex) && selectedVideoId === vParam) {
+            return selectedIndex;
+          }
+        }
+      }
+
+      if (Number.isFinite(fromUrl)) return fromUrl;
       if (panel) {
         const items = Array.from(panel.querySelectorAll(SEL.item));
         const selectedPos = items.findIndex((it) =>
