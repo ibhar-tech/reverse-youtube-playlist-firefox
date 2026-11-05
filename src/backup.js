@@ -37,6 +37,7 @@
     "loadAll",
     "addVideo",
     "export",
+    "channelPlay",
   ];
 
   function freshId() {

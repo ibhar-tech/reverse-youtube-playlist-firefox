@@ -47,6 +47,7 @@
     loadAll: true,
     addVideo: true,
     export: true,
+    channelPlay: true,
   };
 
   /** Mirrors Panel.isLocalPlaylist (src/panel.js): no real playlist behind it. */
@@ -162,6 +163,7 @@
       btnVisLoadAll: "Load All",
       btnVisAddVideo: "Add to Playlist",
       btnVisExport: "Export list",
+      btnVisChannelPlay: "Channel: oldest first",
       backupSectionTitle: "Backup & Restore",
       exportBackup: "Export Playlists & Settings",
       importBackup: "Import Backup File",
@@ -256,6 +258,7 @@
       btnVisLoadAll: "Tout charger",
       btnVisAddVideo: "Ajouter à la playlist",
       btnVisExport: "Exporter la liste",
+      btnVisChannelPlay: "Chaîne : plus anciennes d'abord",
       backupSectionTitle: "Sauvegarde et Restauration",
       exportBackup: "Exporter playlists et paramètres",
       importBackup: "Importer un fichier de sauvegarde",
@@ -350,6 +353,7 @@
       btnVisLoadAll: "تحميل الكل",
       btnVisAddVideo: "إضافة إلى القائمة",
       btnVisExport: "تصدير القائمة",
+      btnVisChannelPlay: "القناة: الأقدم أولاً",
       backupSectionTitle: "النسخ الاحتياطي والاستعادة",
       exportBackup: "تصدير قوائم التشغيل والإعدادات",
       importBackup: "استيراد ملف النسخ الاحتياطي",
@@ -877,7 +881,9 @@
       watched: formatSpan(content),
       saved: formatSpan(Math.max(0, content - real)),
       finished: Number(raw?.videosFinished) || 0,
-      orders: (Number(a.reverse) || 0) + (Number(a.shuffle) || 0) + (Number(a.sort) || 0),
+      // A channel played oldest/newest first is a playlist put in order too.
+      orders: (Number(a.reverse) || 0) + (Number(a.shuffle) || 0) + (Number(a.sort) || 0) +
+        (Number(a.channel) || 0),
       empty: content < 60 && !raw?.videosFinished && Object.keys(a).length === 0,
     };
   }

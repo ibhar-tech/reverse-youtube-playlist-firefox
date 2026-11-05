@@ -16,7 +16,11 @@ Loads the real extension into Chromium (Playwright) and serves a fake
 as on YouTube without any network. The fake panel renders 4 of 6 rows and the
 rest on scroll. Checks id-keyed orders and legacy migration, next-button
 navigation, the URL fallback for unrendered rows, and Shuffle loading the
-whole playlist first. Needs `playwright` and its Chromium installed.
+whole playlist first. It also serves fake channel and uploads-playlist pages
+for "Play oldest/newest first": one bar per channel through SPA navigation,
+the oldest upload reached in reverse, no reuse of the stale channel id YouTube
+leaves in the page after SPA navigation, the UULF → UU fallback, and the
+`channelPlay` setting. Needs `playwright` and its Chromium installed.
 
 It then does the same on a fake `m.youtube.com` (the site Firefox for Android
 gets), built from the mobile DOM as rendered live: ytm-* rows in a bottom sheet

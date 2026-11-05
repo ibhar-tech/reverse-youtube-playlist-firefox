@@ -54,12 +54,87 @@ function overviewPage() {
     <ytd-playlist-video-list-renderer><div id="contents">${rows}</div></ytd-playlist-video-list-renderer>
   </ytd-browse></body></html>`;
 }
+
+// Fake channels. Ids are UC + 22 chars, as on YouTube. "noid" serves no
+// microformat (the button must hide); "shortsonly" has an empty videos-only
+// (UULF) playlist, so the play must fall back to all uploads (UU).
+const CHANNELS = {
+  fakechan: 'UCfakechan000000000000aa',
+  otherchan: 'UCotherchan00000000000bb',
+  shortsonly: 'UCshortsonly0000000000cc',
+  noid: null,
+};
+const CHANNEL_RE = /^\/@([a-z]+)(?:\/(?:videos|featured))?\/?$/;
+
+function channelPage(u) {
+  const name = u.pathname.match(CHANNEL_RE)[1];
+  const id = CHANNELS[name];
+  // The server-rendered microformat, exactly the tags YouTube ships — and,
+  // like YouTube, a fake SPA navigation (spaTo) leaves them untouched.
+  const micro = id ? `<link rel="canonical" href="https://www.youtube.com/channel/${id}">
+    <meta property="og:url" content="https://www.youtube.com/channel/${id}">
+    <meta itemprop="identifier" content="${id}">` : '';
+  return `<!doctype html><html><head>${micro}
+  <link rel="alternate" media="handheld" href="https://m.youtube.com${u.pathname}"></head><body>
+  <style>ytd-browse,#page-header,#tabs-container{display:block} #page-header{height:120px} #tabs-container{height:40px} #grid{height:1600px}</style>
+  <ytd-browse page-subtype="channels">
+    <div id="page-header"><h1 id="chan-name">${name}</h1></div>
+    <div id="tabs-container">Home Videos Shorts</div>
+    <div id="grid"></div>
+  </ytd-browse>
+  <script>
+    // Stand-in for YouTube's router: new URL, page re-rendered in place,
+    // channel browse hidden off channel pages, then yt-navigate-finish.
+    window.spaTo = (path) => {
+      history.pushState({}, '', path);
+      const m = path.match(${CHANNEL_RE});
+      const browse = document.querySelector('ytd-browse');
+      browse.hidden = !m;
+      if (m) document.getElementById('chan-name').textContent = m[1];
+      document.dispatchEvent(new CustomEvent('yt-navigate-finish'));
+    };
+  </script></body></html>`;
+}
+
+function playlistPage(u) {
+  const list = u.searchParams.get('list') || '';
+  const owner = Object.keys(CHANNELS).find((k) => CHANNELS[k] && list.endsWith(CHANNELS[k].slice(2)));
+  const empty = owner === 'shortsonly' && list.startsWith('UULF');
+  // Uploads playlists are newest first: row 1 is the newest (u6), row 6 the oldest (u1).
+  const n = empty ? 0 : TOTAL;
+  const row = (i) => `<ytd-playlist-video-renderer style="display:block;height:90px">
+      <a id="video-title" href="/watch?v=u${n + 1 - i}&list=${list}&index=${i}">Upload ${n + 1 - i}</a>
+      <span id="time-status">${i}:00</span></ytd-playlist-video-renderer>`;
+  const all = Array.from({ length: n }, (_, k) => row(k + 1));
+  return `<!doctype html><html><body><style>ytd-playlist-header-renderer,#action-buttons,ytd-playlist-video-list-renderer{display:block} #action-buttons{min-height:40px}</style>
+  <ytd-browse page-subtype="playlist">
+    <ytd-playlist-header-renderer><div class="metadata-stats">${n} videos</div><div id="action-buttons"></div></ytd-playlist-header-renderer>
+    <ytd-playlist-video-list-renderer><div id="contents">${all.slice(0, FIRST).join('')}</div></ytd-playlist-video-list-renderer>
+    <div style="height:1200px"></div>
+  </ytd-browse>
+  <script>
+    // Lazy rendering, like YouTube: the oldest uploads appear only on scroll.
+    let rest = ${JSON.stringify(all.slice(FIRST))};
+    window.addEventListener('scroll', () => {
+      if (!rest.length) return;
+      const batch = rest; rest = [];
+      setTimeout(() => document.getElementById('contents').insertAdjacentHTML('beforeend', batch.join('')), 150);
+    });
+  </script></body></html>`;
+}
+
 function page(url) {
   const u = new URL(url);
-  if (u.pathname === '/playlist') return overviewPage();
+  if (u.pathname === '/playlist') {
+    // Uploads playlists (UU…) belong to the channel fake; anything else is
+    // the export test's overview page.
+    return (u.searchParams.get('list') || '').startsWith('UU') ? playlistPage(u) : overviewPage();
+  }
+  if (CHANNEL_RE.test(u.pathname)) return channelPage(u);
   const cur = u.searchParams.get('v');
+  const list = u.searchParams.get('list') || 'PLfake';
   const row = (i) => `<ytd-playlist-panel-video-renderer ${'v' + i === cur ? 'selected' : ''}>
-      <a id="wc-endpoint" href="/watch?v=v${i}&list=PLfake&index=${i}"><span id="video-title">Video ${i}</span>
+      <a id="wc-endpoint" href="/watch?v=v${i}&list=${list}&index=${i}"><span id="video-title">Video ${i}</span>
       <span id="byline">Chan ${i}</span><span id="time-status">${i}:00</span></a></ytd-playlist-panel-video-renderer>`;
   let rows = ''; for (let i = 1; i <= FIRST; i++) rows += row(i);
   return `<!doctype html><html><body><style>ytd-playlist-panel-video-renderer{display:block;height:64px}</style>
@@ -307,7 +382,7 @@ function mobilePage() {
   await store({ 'reverse:PLmob': false, 'shuffle:PLmob': false, 'customOrder:PLmob': null });
   await m.goto('https://m.youtube.com/watch?v=v3&list=PLmob&index=3');
   await m.waitForSelector('#ryp-toolbar', { timeout: 8000 });
-  const bar = await m.evaluate(() => ({
+  const mobileBar = await m.evaluate(() => ({
     inSheetHeader: !!document.querySelector('.engagement-panel-section-list-header-wrapper > #ryp-toolbar'),
     reorder: !!document.getElementById('ryp-btn-reorder'),
     reverse: !!document.getElementById('ryp-btn-reverse'),
@@ -315,7 +390,7 @@ function mobilePage() {
     mobileClass: document.documentElement.classList.contains('ryp-mobile'),
     url: location.href,
   }));
-  check('mobile: compact toolbar in the playlist sheet, no Reorder', bar.inSheetHeader && bar.reverse && bar.shuffle && !bar.reorder && bar.mobileClass, JSON.stringify(bar));
+  check('mobile: compact toolbar in the playlist sheet, no Reorder', mobileBar.inSheetHeader && mobileBar.reverse && mobileBar.shuffle && !mobileBar.reorder && mobileBar.mobileClass, JSON.stringify(mobileBar));
 
   // Reverse from item 3 (URL says index=4) jumps to the last item, v6.
   await Promise.all([m.waitForURL(/v=v6/), m.click('#ryp-btn-reverse')]);
@@ -350,6 +425,90 @@ function mobilePage() {
   await m.waitForTimeout(500);
   const startedAt = new URL(m.url()).searchParams.get('v');
   check('mobile: Shuffle covers all 6 and starts at its first entry', mShuffled && [...mShuffled].sort().join() === 'v1,v2,v3,v4,v5,v6' && startedAt === mShuffled[0], `order: ${JSON.stringify(mShuffled)}, at ${startedAt}`);
+
+  // Channel page: one visible bar, with both buttons.
+  const FAKE_UULF = 'UULF' + CHANNELS.fakechan.slice(2);
+  const barState = () => p.evaluate(() => {
+    const bars = document.querySelectorAll('#ryp-channel-bar');
+    const r = bars[0]?.getBoundingClientRect();
+    return { count: bars.length, w: r ? r.width : 0, h: r ? r.height : 0, root: bars[0]?.dataset.root,
+      hidden: !!bars[0]?.classList.contains('ryp-hidden'),
+      labels: [...document.querySelectorAll('#ryp-channel-bar button')].map((b) => b.textContent.trim()) };
+  });
+  await store({ [`customOrder:${FAKE_UULF}`]: ['u3', 'u5'], ryp_stats: null });
+  await p.goto('https://www.youtube.com/@fakechan/videos');
+  await p.waitForSelector('#ryp-channel-bar', { timeout: 8000 });
+  let bar = await barState();
+  check('channel page shows one visible bar with both buttons', bar.count === 1 && bar.w > 0 && bar.h > 0 &&
+    JSON.stringify(bar.labels) === '["Play oldest first","Play newest first"]', JSON.stringify(bar));
+
+  // 6. Oldest first → uploads playlist (UULF) → loads every row → the oldest
+  //    upload, reversed, with the stale custom order gone.
+  await Promise.all([p.waitForURL(/\/watch\?v=u1&/, { timeout: 15000 }), p.click('#ryp-ch-oldest')]);
+  check('oldest first lands on the oldest upload of the videos-only playlist',
+    p.url() === `https://www.youtube.com/watch?v=u1&list=${FAKE_UULF}`, p.url());
+  check('…played in reverse, leftover custom order dropped',
+    (await read(`reverse:${FAKE_UULF}`)) === true && (await read(`customOrder:${FAKE_UULF}`)) === undefined);
+  const stats = await read('ryp_stats');
+  check('counted once as a channel play (not also as a reverse), rating not spent',
+    stats?.actions?.channel === 1 && !stats?.actions?.reverse && !(await read('ryp_rating')), JSON.stringify(stats?.actions));
+
+  // 7. Back returns to a plain playlist page: the marker was consumed.
+  await p.goBack();
+  await p.waitForTimeout(1500);
+  check('back lands on the playlist without restarting the play',
+    p.url() === `https://www.youtube.com/playlist?list=${FAKE_UULF}`, p.url());
+
+  // 8. Newest first → first row, normal order.
+  await p.goto('https://www.youtube.com/@fakechan');
+  await p.waitForSelector('#ryp-ch-newest');
+  await Promise.all([p.waitForURL(/\/watch\?v=u6&/, { timeout: 10000 }), p.click('#ryp-ch-newest')]);
+  check('newest first lands on the newest upload, not reversed',
+    p.url() === `https://www.youtube.com/watch?v=u6&list=${FAKE_UULF}` && (await read(`reverse:${FAKE_UULF}`)) === false, p.url());
+
+  // 9. SPA: channel → video → back, no duplicate bar; to another channel,
+  //    the bar follows it.
+  await p.goto('https://www.youtube.com/@fakechan/videos');
+  await p.waitForSelector('#ryp-channel-bar');
+  await p.evaluate(() => window.spaTo('/watch?v=zzz'));
+  await p.waitForTimeout(600);
+  const offChannel = (await barState()).count;
+  await p.evaluate(() => window.spaTo('/@fakechan/videos'));
+  await p.waitForTimeout(600);
+  bar = await barState();
+  check('channel → video → back: bar removed, then exactly one again', offChannel === 0 && bar.count === 1 && bar.w > 0,
+    `off channel: ${offChannel}, back: ${JSON.stringify(bar)}`);
+  await p.evaluate(() => window.spaTo('/@otherchan'));
+  await p.waitForTimeout(600);
+  bar = await barState();
+  check('SPA to another channel rebuilds the bar for it', bar.count === 1 && bar.root === '/@otherchan', JSON.stringify(bar));
+
+  // 10. …and since the page's microformat still names the first channel (as
+  //     on YouTube), the click reloads, then plays the *other* channel.
+  const OTHER_UULF = 'UULF' + CHANNELS.otherchan.slice(2);
+  await Promise.all([p.waitForURL(/\/watch\?v=u1&/, { timeout: 15000 }), p.click('#ryp-ch-oldest')]);
+  check('after SPA, the stale channel id is not used: plays the channel on screen',
+    p.url() === `https://www.youtube.com/watch?v=u1&list=${OTHER_UULF}`, p.url());
+
+  // 11. No channel id served → no button.
+  await p.goto('https://www.youtube.com/@noid');
+  await p.waitForTimeout(1200);
+  check('no channel id: no button', (await barState()).count === 0);
+
+  // 12. Hidden from settings.
+  await store({ ryp_settings: { lang: 'en', buttonVisibility: { channelPlay: false } } });
+  await p.goto('https://www.youtube.com/@fakechan');
+  await p.waitForSelector('#ryp-channel-bar', { state: 'attached' });
+  bar = await barState();
+  check('channelPlay off in settings hides the bar', bar.hidden && bar.w === 0, JSON.stringify(bar));
+  await store({ ryp_settings: { lang: 'en' } });
+
+  // 13. A channel with no long-form videos: UULF is empty → all uploads (UU).
+  await p.goto('https://www.youtube.com/@shortsonly');
+  await p.waitForSelector('#ryp-ch-oldest');
+  await Promise.all([p.waitForURL(/\/watch\?v=u1&/, { timeout: 30000 }), p.click('#ryp-ch-oldest')]);
+  check('empty videos-only playlist falls back to all uploads',
+    p.url() === `https://www.youtube.com/watch?v=u1&list=UU${CHANNELS.shortsonly.slice(2)}`, p.url());
 
   check('no page errors', errors.length === 0, errors.join(' | '));
   await ctx.close();

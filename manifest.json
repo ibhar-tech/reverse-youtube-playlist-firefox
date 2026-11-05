@@ -78,6 +78,7 @@
         "src/state.js",
         "src/playlist.js",
         "src/stats.js",
+        "src/channel.js",
         "src/playback.js",
         "src/sidebar.js",
         "src/panel.js",

@@ -35,6 +35,7 @@
     duration: ["#ryp-duration-pill", "#ryp-overview-duration-pill"],
     loadAll: [".ryp-load-all-pill"],
     export: ["#ryp-export-wrapper", "#ryp-ov-export-wrapper"],
+    channelPlay: ["#ryp-channel-bar"],
   };
 
   function applyButtonVisibility() {
@@ -102,6 +103,14 @@
       exportCopy: "Copy as text",
       exportTxt: "Download .txt",
       exportCsv: "Download .csv",
+      channelOldest: "Play oldest first",
+      channelNewest: "Play newest first",
+      channelOldestTitle: "Play every video of this channel, from the first upload to the latest",
+      channelNewestTitle: "Play every video of this channel, from the latest upload back to the first",
+      channelHint: "Videos only — no Shorts or live streams",
+      channelLoading: "Loading the whole channel to start from its oldest video…",
+      channelNoUploads: "This channel has no videos to play",
+      channelNoId: "Couldn't identify this channel — reload the page and try again",
     },
     fr: {
       reverse: "Inverser",
@@ -154,6 +163,14 @@
       exportCopy: "Copier en texte",
       exportTxt: "Télécharger en .txt",
       exportCsv: "Télécharger en .csv",
+      channelOldest: "Lire de la plus ancienne",
+      channelNewest: "Lire de la plus récente",
+      channelOldestTitle: "Lire toutes les vidéos de la chaîne, de la première mise en ligne à la dernière",
+      channelNewestTitle: "Lire toutes les vidéos de la chaîne, de la dernière mise en ligne à la première",
+      channelHint: "Vidéos uniquement — sans Shorts ni directs",
+      channelLoading: "Chargement de toute la chaîne pour commencer par la vidéo la plus ancienne…",
+      channelNoUploads: "Cette chaîne n'a aucune vidéo à lire",
+      channelNoId: "Chaîne non identifiée — rechargez la page et réessayez",
     },
     ar: {
       reverse: "عكس",
@@ -206,6 +223,14 @@
       exportCopy: "نسخ كنص",
       exportTxt: "تنزيل كملف نصي (TXT)",
       exportCsv: "تنزيل كملف CSV",
+      channelOldest: "تشغيل من الأقدم",
+      channelNewest: "تشغيل من الأحدث",
+      channelOldestTitle: "تشغيل كل فيديوهات هذه القناة، من أول فيديو نُشر إلى أحدثها",
+      channelNewestTitle: "تشغيل كل فيديوهات هذه القناة، من أحدث فيديو نُشر رجوعًا إلى أولها",
+      channelHint: "الفيديوهات فقط — بدون Shorts أو البث المباشر",
+      channelLoading: "جارٍ تحميل القناة كاملة للبدء من أقدم فيديو…",
+      channelNoUploads: "لا توجد فيديوهات في هذه القناة لتشغيلها",
+      channelNoId: "تعذّر التعرّف على هذه القناة — أعد تحميل الصفحة وحاول مرة أخرى",
     }
   };
 
@@ -215,6 +240,8 @@
     applyButtonVisibility();
     syncButtonStates();
     updateDurationStats();
+    // Rebuild in the new language now, not on the next DOM mutation.
+    if (document.getElementById("ryp-channel-bar")) injectChannelBar();
   }
 
   // Listen for settings changes from the popup
@@ -302,6 +329,10 @@
       { tag: "path", attrs: { d: "M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" } },
       { tag: "polyline", attrs: { points: "16 6 12 2 8 6" } },
       { tag: "line", attrs: { x1: "12", y1: "2", x2: "12", y2: "15" } }
+    ]),
+    play: () => svg("0 0 24 24", 2.2, [
+      // Filled, like a media ▶ — an outline triangle read as a "next" arrow.
+      { tag: "polygon", attrs: { points: "6 4 20 12 6 20 6 4", fill: "currentColor" } }
     ]),
   };
 
@@ -893,23 +924,8 @@
     checkLazyLoadState(toolbar);
     updateDurationStats();
 
-    playReverseBtn.addEventListener("click", async () => {
-      const listId = Playlist.getPlaylistId();
-      if (!listId) return;
-      await ensureAllItemsLoaded(playReverseBtn);
-      const items = Playlist.readOverviewItems();
-      if (items.length === 0) return;
-      const lastVideo = items[items.length - 1].videoId;
-      await State.set(State.keys.reverse(listId), true);
-      await State.set(State.keys.shuffle(listId), false);
-      // Counted without the rating prompt: this page is about to unload,
-      // and the one-time prompt would be spent without ever being seen.
-      await window.RYP.Stats?.bump("reverse", { quiet: true });
-      // No &index=: overview links carry no playlist position, so ours is
-      // positional and one unrendered row would make it wrong — and YouTube
-      // silently resets to position 1 when the index doesn't match. Given
-      // v + list it resolves the correct position itself.
-      location.href = `https://www.youtube.com/watch?v=${lastVideo}&list=${listId}`;
+    playReverseBtn.addEventListener("click", () => {
+      playFromOverview("reverse", playReverseBtn, { countAs: "reverse" });
     });
 
     playShuffleBtn.addEventListener("click", async () => {
@@ -940,6 +956,237 @@
 
     applyButtonVisibility();
     return true;
+  }
+
+  /**
+   * Leave the overview page for the watch page, playing the list either
+   * backwards from its last video ("reverse": Play Reverse, and a channel's
+   * "oldest first") or in YouTube's own order from its first ("forward": a
+   * channel's "newest first"). Reverse loads every row first, since the
+   * last video is only known once the whole list is rendered.
+   */
+  async function playFromOverview(direction, btn, { countAs = null } = {}) {
+    const listId = Playlist.getPlaylistId();
+    if (!listId) return false;
+    const reverse = direction === "reverse";
+    if (reverse) await ensureAllItemsLoaded(btn);
+    // Loading a big channel takes a minute or more; if the user went to
+    // another page meanwhile, these rows are no longer this list's.
+    if (Playlist.getPlaylistId() !== listId || !Playlist.isOverviewPlaylistPage()) return false;
+    const items = Playlist.readOverviewItems();
+    if (items.length === 0) return false;
+    const target = reverse ? items[items.length - 1] : items[0];
+    await State.set(State.keys.reverse(listId), reverse);
+    await State.set(State.keys.shuffle(listId), false);
+    // A stored order (an earlier sort or shuffle) outranks reverse in the
+    // playback engine, so a leftover one would silently replace the order
+    // asked for here. Playback.enableReverse drops it for the same reason.
+    await State.remove(State.keys.customOrder(listId));
+    // quiet — this page is about to unload (see Stats.bump).
+    if (countAs) await window.RYP.Stats?.bump(countAs, { quiet: true });
+    // No &index=: overview links carry no playlist position, so ours is
+    // positional and one unrendered row would make it wrong — and YouTube
+    // silently resets to position 1 when the index doesn't match. Given
+    // v + list it resolves the correct position itself.
+    location.href =
+      `https://www.youtube.com/watch?v=${encodeURIComponent(target.videoId)}&list=${encodeURIComponent(listId)}`;
+    return true;
+  }
+
+  // ── Channel pages: play the uploads oldest / newest first ────────────────
+
+  const CHANNEL_BAR_ID = "ryp-channel-bar";
+
+  // Where the bar goes: under the channel header (name, handle, Subscribe),
+  // above the tabs. `:not([hidden])` because YouTube keeps the browse
+  // element of pages left by SPA navigation in the DOM, hidden.
+  const CHANNEL_ANCHORS = [
+    ["ytd-browse[page-subtype='channels']:not([hidden]) #page-header", "afterend"],
+    // Pre-2024 header, still served to some accounts.
+    ["ytd-browse[page-subtype='channels']:not([hidden]) ytd-c4-tabbed-header-renderer #inner-header-container", "afterend"],
+    ["ytd-browse[page-subtype='channels']:not([hidden]) #tabs-container", "beforebegin"],
+  ];
+
+  function findChannelAnchor() {
+    for (const [sel, where] of CHANNEL_ANCHORS) {
+      for (const el of document.querySelectorAll(sel)) {
+        // Zero-size matches are hidden template nodes; see
+        // Playlist.findOverviewHeaderContainer.
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) return { el, where };
+      }
+    }
+    return null;
+  }
+
+  // Page sessionStorage can be blocked by site-data settings; the reload
+  // path is then unavailable, never fatal.
+  function tabStorage() {
+    try {
+      return window.sessionStorage || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function startChannelPlay(channelId, mode) {
+    const { Channel } = window.RYP;
+    const url = Channel.playlistUrl(Channel.uploadsPlaylistId(channelId, "videos"), mode);
+    if (!url) return false;
+    await window.RYP.Stats?.bump("channel", { quiet: true });
+    location.href = url;
+    return true;
+  }
+
+  function onChannelPlayClick(mode, root) {
+    const { Channel } = window.RYP;
+    const resolved = Channel.resolveChannelId();
+    if (resolved?.fresh) return startChannelPlay(resolved.id, mode);
+    // Reached by SPA navigation: the id in the document may be another
+    // channel's. A reload makes YouTube serve this channel's own, and the
+    // pending marker resumes the play once it has.
+    if (resolved && Channel.savePending(tabStorage(), mode, root)) {
+      location.reload();
+      return true;
+    }
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    Panel.showToast(dict.channelNoId);
+    return false;
+  }
+
+  function makeChannelBar(root, dict) {
+    const bar = document.createElement("div");
+    bar.id = CHANNEL_BAR_ID;
+    bar.className = "ryp-overview-bar ryp-channel-bar";
+    bar.dataset.root = root;
+    bar.dataset.lang = activeLang;
+    bar.dir = activeLang === "ar" ? "rtl" : "ltr";
+
+    const oldest = makeButton("ryp-ch-oldest", "play", dict.channelOldest, dict.channelOldestTitle);
+    oldest.classList.add("ryp-btn-primary");
+    const newest = makeButton("ryp-ch-newest", "play", dict.channelNewest, dict.channelNewestTitle);
+    const hint = document.createElement("span");
+    hint.className = "ryp-channel-hint";
+    hint.textContent = dict.channelHint;
+
+    for (const [btn, mode] of [[oldest, "oldest"], [newest, "newest"]]) {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onChannelPlayClick(mode, root);
+      });
+    }
+    bar.append(oldest, newest, hint);
+    return bar;
+  }
+
+  /**
+   * Idempotent, called on every navigation and settled DOM pass: removes the
+   * bar off channel pages, rebuilds it when the SPA moved to another channel
+   * (YouTube reuses the header element, so a stale bar would otherwise stay
+   * attached to the new channel), and hides it when the page offers no
+   * channel id at all.
+   */
+  function injectChannelBar() {
+    const { Channel } = window.RYP;
+    const existing = document.getElementById(CHANNEL_BAR_ID);
+    const root = Channel?.channelRoot(location.pathname);
+    if (!root) {
+      existing?.remove();
+      return false;
+    }
+
+    const resolved = Channel.resolveChannelId();
+    const pending = Channel.takePending(tabStorage(), root);
+    if (pending) {
+      if (resolved?.fresh) {
+        startChannelPlay(resolved.id, pending);
+        return true;
+      }
+      Panel.showToast((TRANSLATIONS[activeLang] || TRANSLATIONS.en).channelNoId);
+    }
+    if (!resolved || (pending && !resolved.fresh)) {
+      existing?.remove();
+      return false;
+    }
+
+    if (
+      existing &&
+      existing.dataset.root === root &&
+      existing.dataset.lang === activeLang &&
+      existing.closest("ytd-browse[page-subtype='channels']:not([hidden])")
+    ) {
+      return true;
+    }
+    existing?.remove();
+
+    const anchor = findChannelAnchor();
+    if (!anchor) return false;
+    const bar = makeChannelBar(root, TRANSLATIONS[activeLang] || TRANSLATIONS.en);
+    anchor.el.insertAdjacentElement(anchor.where, bar);
+    applyButtonVisibility();
+    return true;
+  }
+
+  let channelPlayRunning = false;
+
+  async function waitForOverviewItems(timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    let items = Playlist.readOverviewItems();
+    while (items.length === 0 && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 300));
+      items = Playlist.readOverviewItems();
+    }
+    return items;
+  }
+
+  /**
+   * Second half of a channel play: the uploads playlist opened with
+   * #ryp_play=oldest|newest. Runs whether or not the overview buttons are
+   * shown — the user asked for this on the channel page.
+   */
+  async function runPendingChannelPlay() {
+    const { Channel } = window.RYP;
+    if (!Channel || channelPlayRunning || !Playlist.isOverviewPlaylistPage()) return false;
+    const mode = Channel.readPlayMarker();
+    if (!mode) return false;
+    // Back from the watch page reloads this URL; it must not restart the play.
+    const navType = performance.getEntriesByType?.("navigation")?.[0]?.type;
+    channelPlayRunning = true;
+    // Consume the marker first, for the same reason.
+    const clean = location.pathname + location.search + Channel.stripPlayMarker();
+    try {
+      history.replaceState(history.state, "", clean);
+    } catch {
+      try { history.replaceState(null, "", clean); } catch (_) {}
+    }
+    if (navType === "back_forward") {
+      channelPlayRunning = false;
+      return false;
+    }
+
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    try {
+      const listId = Playlist.getPlaylistId();
+      const items = await waitForOverviewItems(15000);
+      if (items.length === 0) {
+        // A channel with only Shorts or streams has no videos-only playlist.
+        const fallback = Channel.fallbackListId(listId);
+        if (fallback) {
+          location.replace(Channel.playlistUrl(fallback, mode));
+          return true;
+        }
+        Panel.showToast(dict.channelNoUploads);
+        return false;
+      }
+      if (mode === "oldest") {
+        Panel.showToast(dict.channelLoading);
+        return await playFromOverview("reverse", document.getElementById("ryp-ov-reverse"));
+      }
+      return await playFromOverview("forward", null);
+    } finally {
+      channelPlayRunning = false;
+    }
   }
 
   // ── State sync ────────────────────────────────────────────────────────────
@@ -1101,6 +1348,9 @@
   window.RYP.Toolbar = {
     injectToolbar,
     injectOverviewToolbar,
+    injectChannelBar,
+    runPendingChannelPlay,
+    playFromOverview,
     syncButtonStates,
     updateDurationStats,
     applyButtonVisibility,

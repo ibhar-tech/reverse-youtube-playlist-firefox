@@ -5,8 +5,8 @@
  * Supports /watch (with or without playlist) and /playlist overview pages.
  *
  * Load order (manifest.json):
- *   backup → links → state → playlist → stats → playback → sidebar → panel →
- *   toolbar → content
+ *   backup → links → export → state → playlist → stats → channel →
+ *   playback → sidebar → panel → toolbar → content
  */
 (() => {
   "use strict";
@@ -46,6 +46,10 @@
     // Ensure panel drawer & modal system is ready on all pages
     Panel.injectPanel();
 
+    // Channel pages get the "Play oldest first" bar; every other page has
+    // the bar removed here, so channel → video → back never stacks two.
+    Toolbar.injectChannelBar();
+
     // 1. Overview playlist page (/playlist?list=...)
     if (Playlist.isOverviewPlaylistPage()) {
       stateReadyListId = null;
@@ -54,6 +58,8 @@
       Panel.togglePanel(false);
       activeListId = null;
       Toolbar.injectOverviewToolbar();
+      // Arrived from a channel's "Play oldest/newest first".
+      Toolbar.runPendingChannelPlay();
       return;
     }
 
@@ -306,6 +312,10 @@
   }
 
   async function runDomPass() {
+    // The channel header renders after yt-navigate-finish, and is re-rendered
+    // in place when the SPA moves to another channel.
+    Toolbar.injectChannelBar();
+
     if (Playlist.isOverviewPlaylistPage()) {
       Toolbar.injectOverviewToolbar();
       return;

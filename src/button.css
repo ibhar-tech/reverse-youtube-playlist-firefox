@@ -572,6 +572,31 @@ ytd-playlist-panel-renderer #items.ryp-reorder-mode,
   z-index: 50;
 }
 
+/* Channel pages: same bar, under the channel header and above the tabs.
+   The header's own content is inset; match it so the bar lines up. */
+.ryp-channel-bar {
+  margin: 4px 0 12px;
+  font-family: var(--ryp-font);
+}
+
+/* The one action users came for, so it carries the accent like an ON button. */
+.ryp-btn.ryp-btn-primary {
+  color: #ffffff;
+  background: var(--ryp-accent-grad);
+  border-color: transparent;
+  box-shadow: 0 4px 15px var(--ryp-accent-glow);
+}
+
+.ryp-btn.ryp-btn-primary:hover {
+  background: var(--ryp-accent-grad);
+  box-shadow: 0 8px 20px var(--ryp-accent-glow);
+}
+
+.ryp-channel-hint {
+  font-size: 12px;
+  color: var(--ryp-sub);
+}
+
 /* ── Video Player Action Bar Button ─────────────────────────────────────── */
 
 .ryp-action-bar-btn {
