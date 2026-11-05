@@ -19,6 +19,11 @@
   // no source playlist — that is expressed as an empty sourceListId, not as a
   // short id, so the length floor stays put.
   const ID_RE = /^[A-Za-z0-9_-]{5,64}$/;
+  // Playlist ids share the charset but not the floor: YouTube's built-in
+  // lists are two letters — WL (Watch Later), LL (Liked videos), LM (Liked
+  // music). With the video-id floor, a backup of a Watch Later snapshot was
+  // rejected on import as "no valid playlists".
+  const LIST_ID_RE = /^[A-Za-z0-9_-]{2,64}$/;
 
   const BUTTON_KEYS = [
     "reverse",
@@ -31,6 +36,8 @@
     "duration",
     "loadAll",
     "addVideo",
+    "export",
+    "channelPlay",
   ];
 
   function freshId() {
@@ -101,7 +108,7 @@
     return Boolean(
       p && typeof p === "object" &&
       typeof p.name === "string" && p.name.trim() &&
-      typeof p.sourceListId === "string" && (p.sourceListId === "" || ID_RE.test(p.sourceListId)) &&
+      typeof p.sourceListId === "string" && (p.sourceListId === "" || LIST_ID_RE.test(p.sourceListId)) &&
       order.length > 0 &&
       order.every((index) => Number.isInteger(index) && index > 0) &&
       new Set(order).size === order.length &&
@@ -129,6 +136,12 @@
           title: typeof v.title === "string" ? v.title.slice(0, 300) : "",
           thumbnail: typeof v.thumbnail === "string" ? v.thumbnail.slice(0, 500) : "",
           durationStr: typeof v.durationStr === "string" ? v.durationStr.slice(0, 20) : "",
+          // Dropping this lost every local video's byline on import, and made
+          // re-importing your own backup add duplicates: the stored copy still
+          // had `channel`, so the content fingerprints never matched.
+          ...(typeof v.channel === "string" && v.channel
+            ? { channel: v.channel.slice(0, 200) }
+            : {}),
         })),
       savedAt: typeof p.savedAt === "string" ? p.savedAt : new Date().toISOString(),
     };
@@ -196,7 +209,12 @@
       tags: normalizeTags(p.tags),
       sourceListId: p.sourceListId,
       order: p.order,
-      videos: p.videos,
+      // Canonical shape: stored and imported copies may differ in key order
+      // or in which optional fields are present.
+      videos: (p.videos || []).map((v) => [
+        Number(v.index), v.videoId, v.title || "", v.thumbnail || "",
+        v.durationStr || "", v.channel || "",
+      ]),
       savedAt: p.savedAt,
     });
     const fingerprints = new Set(merged.map(fingerprint));
@@ -217,6 +235,21 @@
       added++;
     }
     return { merged, added, skipped };
+  }
+
+  /**
+   * A snapshot's play order as video ids. Snapshots store positions that
+   * refer to their own `videos` list (a closed, self-consistent record), but
+   * a position in the *live* playlist goes stale as soon as the playlist is
+   * edited — so replaying converts to ids, which YouTube can't shift.
+   */
+  function orderVideoIds(snapshot) {
+    const byIndex = new Map(
+      (snapshot?.videos || []).map((v) => [Number(v.index), v.videoId])
+    );
+    return (snapshot?.order || [])
+      .map((i) => byIndex.get(Number(i)))
+      .filter((id) => typeof id === "string" && id);
   }
 
   /** Trigger a download of the backup file in the caller's document. */
@@ -257,6 +290,7 @@
     parseBackup,
     parseImport,
     mergeSnapshots,
+    orderVideoIds,
     triggerDownload,
   };
 })();

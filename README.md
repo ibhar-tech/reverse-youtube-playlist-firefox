@@ -2,8 +2,8 @@
 
 > **Reverse, shuffle, drag-reorder, and save YouTube playlists — locally, privately, with zero logins.**
 
-[![Version](https://img.shields.io/badge/version-3.4.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
-[![Firefox](https://img.shields.io/badge/Firefox-≥140-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
+[![Version](https://img.shields.io/badge/version-3.6.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
+[![Firefox](https://img.shields.io/badge/Firefox-≥140%20·%20Android%20≥142-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 [![Privacy: No data collected](https://img.shields.io/badge/Privacy-No%20data%20collected-brightgreen?style=flat-square)]()
 
@@ -21,11 +21,16 @@
 | **⏱️ Watch Time** | Live duration calculator showing total time, watched time, remaining time, and 1.25x/1.5x/2x speed estimates. |
 | **＋ Add to List** | Add the video you're watching to a local playlist — a list you build yourself, held entirely in local storage and played from the extension's own sidebar. Available under the player and from the popup. |
 | **🎵 My Lists** | Opens a slide-in panel to name and save a snapshot of the current order. Playing a snapshot restores its exact saved order — your lists are permanent. |
+| **📺 Channel oldest first** | On any channel page: ▶ Play oldest first / ▶ Play newest first, through the channel's uploads playlist (videos only, no Shorts). |
+| **📄 Export list** | Copy a playlist as text, or download it as .txt / .csv, in the order you're playing it. Works on playlists, playlist pages and saved lists. |
 | **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and browser profiles. |
 | **⏯️ Resume** | A one-click prompt jumps back to the video and timestamp where you left off in any playlist. |
 | **# Tags** | Add tags to snapshots and filter saved lists by name or tag. |
 | **🔁 Loop** | Optional setting: when the active play order ends, start it over instead of stopping. |
 | **✓ Watched badges** | A badge appears on fully watched videos with optional auto-skipping. |
+| **⌨️ Shortcuts** | Alt+Shift+O Reverse · Alt+Shift+S Shuffle · Alt+Shift+K Add to list · Alt+Shift+L Load all. Rebind them on the browser's extension-shortcuts page. |
+| **📊 Your stats** | The popup shows hours watched in playlists, time saved by playback speed and videos finished, with a Share button that copies a ready-made message. Stored locally only. |
+| **👋 Welcome page** | Opens on first install: language, a 3-step guide, your shortcuts, and which buttons to show. Reopen it from the popup's "Guide & shortcuts". |
 
 ---
 
@@ -78,7 +83,10 @@ src/
   sidebar.js           Visual ordering, drag-and-drop, quick move buttons (RYP.Sidebar)
   panel.js             Slide-in saved-playlists panel & universal Add to List modal (RYP.Panel)
   toolbar.js           Button injection, sort dropdown, duration pill, overview bar (RYP.Toolbar)
-  content.js           Bootstrap: wires modules, MutationObserver, SPA nav events
+  content.js           Bootstrap: wires modules, MutationObserver, SPA nav events, shortcut commands
+  links.js             Store / review URLs for the browser in use (RYP.Links)
+  stats.js             Local usage stats + one-time rating prompt (RYP.Stats)
+  background.js        Forwards keyboard shortcuts to the tab; opens the welcome page on install
   button.css           Full design-system CSS (tokens, dropdowns, duration pills, modal)
 icons/
   icon-16.png
@@ -89,6 +97,26 @@ icons/
 ---
 
 ## 📋 Changelog
+
+### v3.6.0 — 2026-11
+- ✨ **Play a channel oldest first** (or newest first) — a bar on every channel page plays all of the channel's videos from its first upload, using the channel's own uploads playlist (videos only: no Shorts or live streams). No API, no account. Checked on live YouTube against the channel's "Oldest" sort. Desktop only.
+- 📱 **Firefox for Android** — Reverse, Shuffle, Sort, Save, My Lists, Export and the duration pill work on mobile YouTube (m.youtube.com), from a compact toolbar in the playlist sheet; playback keeps following the order with the sheet closed. Drag-to-reorder and keyboard shortcuts don't exist on a phone, so they are left out there.
+- ✨ **Export a playlist as text or CSV** — copy to the clipboard or download .txt / .csv, in the order shown (Reverse, Shuffle, Sort or custom), from the playlist toolbar, the playlist page, or any saved list in My Lists. The CSV opens correctly in Excel, Arabic included, and is protected against formula injection.
+- 🐛 **My Lists card icons** — the delete (trash) icon had no size and was invisible, and the Play triangle overflowed its button.
+- 🧱 **Orders are keyed by video id.** Custom, shuffle and sort orders used to store playlist positions, which pointed at the wrong videos as soon as the playlist owner added or removed one (Watch Later shifts on every add). Saved orders now survive edits; old ones are converted automatically as their rows appear, and snapshots replay by id.
+- 🧱 **Long playlists.** Shuffle, Sort, Reverse and Save load the whole playlist first (YouTube only renders ~200 rows), and a next video whose row isn't rendered is reached through its URL instead of silently falling back to YouTube's order.
+- 🧱 **Your click wins.** Clicking the video right after the current one used to be "corrected" back to the mode's order. Now only a real end-of-video auto-advance is redirected.
+- ✨ **Keyboard shortcuts** for Reverse, Shuffle, Add to list and Load all (manifest `commands`, rebindable). Keys were checked against Chrome's reserved list — Alt+Shift+R and Alt+Shift+A are taken by the browser.
+- ✨ **Welcome page** on first install, also reachable from the popup.
+- ✨ **Your stats** card in the popup with a Share button.
+- ✨ **One-time rating prompt** after five real uses; never shown again. The review link now opens the store of the browser you're in (it always pointed to AMO).
+- 🐛 **Watched badges** were hidden on a fresh install until a setting was saved, so the "Show watched badges" toggle looked like it did nothing.
+- 🐛 Backups of Watch Later / Liked videos snapshots were rejected on import; import dropped channels and re-importing your own backup duplicated lists.
+- 🐛 Reorder did nothing on local playlists; Reset left their custom order behind; Resume on a local playlist opened a broken URL; seeking back after an end-of-order stop let YouTube autoplay.
+
+### v3.5.0 — 2026-09
+- 🐛 **Refreshing no longer jumps to the next video.** Reloading the page, or opening a playlist video in a new tab, skipped ahead in Reverse/Shuffle/custom orders: YouTube started rewriting the playlist position in the address bar on every load, which read as an auto-advance.
+- 🐛 **No more replaying the same video after a refresh** — positions now come from the playlist panel, not the address bar.
 
 ### v3.4.0 — 2026-09
 - ✨ **Disable autoplay** — a setting that stops each playlist video just before its end instead of letting YouTube (or the extension's own order) roll into the next one. The end of a Reverse/Shuffle order now holds as well.

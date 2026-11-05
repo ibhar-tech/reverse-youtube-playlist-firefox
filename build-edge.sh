@@ -23,7 +23,7 @@ cp -r "$SCRIPT_DIR/_locales" "$BUILD_DIR/_locales"
 # Copy docs if needed by popup? No, docs are not needed in extension bundle.
 
 # Process manifest (remove browser_specific_settings)
-jq 'del(.browser_specific_settings)' "$SCRIPT_DIR/manifest.json" > "$BUILD_DIR/manifest.json"
+jq 'del(.browser_specific_settings) | .background = {service_worker: "src/background.js"}' "$SCRIPT_DIR/manifest.json" > "$BUILD_DIR/manifest.json"
 
 # Create zip
 cd "$BUILD_DIR"

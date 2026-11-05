@@ -9,6 +9,26 @@ Suites that stub a `Playlist` method must restore it in an `after()` hook — th
 modules are shared across the whole run, and a leaked stub silently changes what
 later suites are testing.
 
+## Offline browser check — `npm run test:chromium`
+
+Loads the real extension into Chromium (Playwright) and serves a fake
+`youtube.com/watch` page through request routing, so the content scripts run
+as on YouTube without any network. The fake panel renders 4 of 6 rows and the
+rest on scroll. Checks id-keyed orders and legacy migration, next-button
+navigation, the URL fallback for unrendered rows, and Shuffle loading the
+whole playlist first. It also serves fake channel and uploads-playlist pages
+for "Play oldest/newest first": one bar per channel through SPA navigation,
+the oldest upload reached in reverse, no reuse of the stale channel id YouTube
+leaves in the page after SPA navigation, the UULF → UU fallback, and the
+`channelPlay` setting. Needs `playwright` and its Chromium installed.
+
+It then does the same on a fake `m.youtube.com` (the site Firefox for Android
+gets), built from the mobile DOM as rendered live: ytm-* rows in a bottom sheet
+that drops them when closed, `state-navigate*` events on `window`, the URL
+index rewritten to N+1 on load, and a 3 s silent WAV so a real `<video>` can
+reach its end. `tests/test_android.js` covers the same paths as unit tests.
+Neither replaces a run on a real Android device (`web-ext run -t firefox-android`).
+
 ## End-to-end — `npm run test:e2e`
 
 Drives **real Firefox** against **real YouTube**, with the working tree installed

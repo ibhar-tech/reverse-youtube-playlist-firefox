@@ -3,13 +3,30 @@
  * Unit tests for Lazy Loading count detection and scroll resolver
  */
 import "./setup.js";
-import { test, describe, before } from "node:test";
+import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 
 describe("Lazy Loading Resolver — Unit Tests", async () => {
+  // The modules are shared by every suite in the run (playback.js even holds
+  // the same Playlist object), so the stubs below must not outlive this one.
+  let originals;
+  let originalQuerySelector;
+
   before(async () => {
     await import("../src/state.js");
     await import("../src/playlist.js");
+    const { Playlist } = window.RYP;
+    originals = {
+      readItems: Playlist.readItems,
+      getTotalItemCount: Playlist.getTotalItemCount,
+      getItemsContainer: Playlist.getItemsContainer,
+    };
+    originalQuerySelector = document.querySelector;
+  });
+
+  after(() => {
+    Object.assign(window.RYP.Playlist, originals);
+    document.querySelector = originalQuerySelector;
   });
 
   test("getTotalItemCount extracts video count from various YouTube header patterns", () => {

@@ -2,7 +2,7 @@
  * YouTube Playlist Tools — toolbar.js
  *
  * Injects and manages the playlist toolbar on watch pages and overview pages:
- *   [Reverse] [Shuffle] [Sort ▾] [Reorder] [Reset] [Save] [My Lists]
+ *   [Reverse] [Shuffle] [Sort ▾] [Reorder] [Reset] [Save] [Export ▾] [My Lists]
  *   [⚡ Load All] [⏱️ Duration Pill]
  *
  * Each button reflects live state (active / inactive) from Playback and
@@ -25,13 +25,17 @@
   const BUTTON_SELECTORS = {
     reverse: ["#ryp-btn-reverse", "#ryp-ov-reverse"],
     shuffle: ["#ryp-btn-shuffle", "#ryp-ov-shuffle"],
-    sort: [".ryp-dropdown-wrapper"],
+    // By id, not .ryp-dropdown-wrapper: Export is a dropdown too, and hiding
+    // Sort must not take it along.
+    sort: ["#ryp-sort-wrapper"],
     reorder: ["#ryp-btn-reorder"],
     reset: ["#ryp-btn-reset"],
     save: ["#ryp-btn-save", "#ryp-ov-save"],
     myLists: ["#ryp-btn-playlists"],
     duration: ["#ryp-duration-pill", "#ryp-overview-duration-pill"],
     loadAll: [".ryp-load-all-pill"],
+    export: ["#ryp-export-wrapper", "#ryp-ov-export-wrapper"],
+    channelPlay: ["#ryp-channel-bar"],
   };
 
   function applyButtonVisibility() {
@@ -93,6 +97,20 @@
       playReverse: "Play Reverse",
       playShuffle: "Play Shuffle",
       saveOverviewSnapshot: "Save Snapshot",
+      export: "Export",
+      exportTitle: "Export this list as text or CSV, in the order shown",
+      exportMenuHint: "All videos, in the order shown",
+      exportCopy: "Copy as text",
+      exportTxt: "Download .txt",
+      exportCsv: "Download .csv",
+      channelOldest: "Play oldest first",
+      channelNewest: "Play newest first",
+      channelOldestTitle: "Play every video of this channel, from the first upload to the latest",
+      channelNewestTitle: "Play every video of this channel, from the latest upload back to the first",
+      channelHint: "Videos only — no Shorts or live streams",
+      channelLoading: "Loading the whole channel to start from its oldest video…",
+      channelNoUploads: "This channel has no videos to play",
+      channelNoId: "Couldn't identify this channel — reload the page and try again",
     },
     fr: {
       reverse: "Inverser",
@@ -139,6 +157,20 @@
       playReverse: "Lire à l'envers",
       playShuffle: "Lire en aléatoire",
       saveOverviewSnapshot: "Enregistrer",
+      export: "Exporter",
+      exportTitle: "Exporter cette liste en texte ou en CSV, dans l'ordre affiché",
+      exportMenuHint: "Toutes les vidéos, dans l'ordre affiché",
+      exportCopy: "Copier en texte",
+      exportTxt: "Télécharger en .txt",
+      exportCsv: "Télécharger en .csv",
+      channelOldest: "Lire de la plus ancienne",
+      channelNewest: "Lire de la plus récente",
+      channelOldestTitle: "Lire toutes les vidéos de la chaîne, de la première mise en ligne à la dernière",
+      channelNewestTitle: "Lire toutes les vidéos de la chaîne, de la dernière mise en ligne à la première",
+      channelHint: "Vidéos uniquement — sans Shorts ni directs",
+      channelLoading: "Chargement de toute la chaîne pour commencer par la vidéo la plus ancienne…",
+      channelNoUploads: "Cette chaîne n'a aucune vidéo à lire",
+      channelNoId: "Chaîne non identifiée — rechargez la page et réessayez",
     },
     ar: {
       reverse: "عكس",
@@ -185,6 +217,20 @@
       playReverse: "تشغيل بالعكس",
       playShuffle: "تشغيل عشوائي",
       saveOverviewSnapshot: "حفظ كلقطة",
+      export: "تصدير",
+      exportTitle: "تصدير هذه القائمة كنص أو كملف CSV بالترتيب المعروض",
+      exportMenuHint: "كل الفيديوهات بالترتيب المعروض",
+      exportCopy: "نسخ كنص",
+      exportTxt: "تنزيل كملف نصي (TXT)",
+      exportCsv: "تنزيل كملف CSV",
+      channelOldest: "تشغيل من الأقدم",
+      channelNewest: "تشغيل من الأحدث",
+      channelOldestTitle: "تشغيل كل فيديوهات هذه القناة، من أول فيديو نُشر إلى أحدثها",
+      channelNewestTitle: "تشغيل كل فيديوهات هذه القناة، من أحدث فيديو نُشر رجوعًا إلى أولها",
+      channelHint: "الفيديوهات فقط — بدون Shorts أو البث المباشر",
+      channelLoading: "جارٍ تحميل القناة كاملة للبدء من أقدم فيديو…",
+      channelNoUploads: "لا توجد فيديوهات في هذه القناة لتشغيلها",
+      channelNoId: "تعذّر التعرّف على هذه القناة — أعد تحميل الصفحة وحاول مرة أخرى",
     }
   };
 
@@ -194,6 +240,8 @@
     applyButtonVisibility();
     syncButtonStates();
     updateDurationStats();
+    // Rebuild in the new language now, not on the next DOM mutation.
+    if (document.getElementById("ryp-channel-bar")) injectChannelBar();
   }
 
   // Listen for settings changes from the popup
@@ -276,6 +324,16 @@
     lightning: () => svg("0 0 24 24", 2, [
       { tag: "polygon", attrs: { points: "13 2 3 14 12 14 11 22 21 10 12 10 13 2" } }
     ]),
+    // Arrow out of a tray — "send this list somewhere".
+    export: () => svg("0 0 24 24", 2.2, [
+      { tag: "path", attrs: { d: "M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" } },
+      { tag: "polyline", attrs: { points: "16 6 12 2 8 6" } },
+      { tag: "line", attrs: { x1: "12", y1: "2", x2: "12", y2: "15" } }
+    ]),
+    play: () => svg("0 0 24 24", 2.2, [
+      // Filled, like a media ▶ — an outline triangle read as a "next" arrow.
+      { tag: "polygon", attrs: { points: "6 4 20 12 6 20 6 4", fill: "currentColor" } }
+    ]),
   };
 
   // ── Button factory ────────────────────────────────────────────────────────
@@ -314,9 +372,12 @@
 
   function createSortDropdown(dict) {
     const wrapper = document.createElement("div");
+    wrapper.id = "ryp-sort-wrapper";
     wrapper.className = "ryp-dropdown-wrapper";
 
     const sortBtn = makeButton("ryp-btn-sort", "sort", dict.sort, dict.sortTitle);
+    sortBtn.setAttribute("aria-haspopup", "menu");
+    sortBtn.setAttribute("aria-expanded", "false");
     const chevron = document.createElement("span");
     chevron.className = "ryp-chevron";
     chevron.textContent = " ▾";
@@ -346,7 +407,11 @@
         e.preventDefault();
         e.stopPropagation();
         closeSortDropdown();
+        const listId = Playlist.getPlaylistId();
+        await loadAllBefore(sortBtn);
+        if (Playlist.getPlaylistId() !== listId) return; // see Reverse
         await opt.action();
+        window.RYP.Stats?.bump("sort");
         Sidebar.applyVisualOrder();
         Sidebar.scrollToCurrentItem();
         syncButtonStates();
@@ -357,7 +422,7 @@
     sortBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      toggleSortDropdown();
+      toggleMenu(menu, undefined, e.detail === 0);
     });
 
     wrapper.append(sortBtn, menu);
@@ -366,12 +431,29 @@
 
   // State lives on the menu element, not in a variable: the toolbar is
   // re-injected on every SPA navigation, which would desync a module flag.
-  function toggleSortDropdown(forceState) {
-    const menu = document.getElementById("ryp-sort-menu");
+  function toggleMenu(menu, forceState, focusFirst = false) {
     if (!menu) return;
     const open = forceState !== undefined ? forceState : !menu.classList.contains("ryp-menu-show");
+    // Sort and Export sit side by side; two open menus would overlap.
+    if (open) closeMenus(menu);
     menu.classList.toggle("ryp-menu-show", open);
-    if (open) keepDropdownOnScreen(menu);
+    menu.parentElement?.querySelector(".ryp-btn")?.setAttribute("aria-expanded", String(open));
+    if (!open) return;
+    keepDropdownOnScreen(menu);
+    // Enter/Space on the button arrive as a click with detail 0. Put focus
+    // in the menu then, or a keyboard user has to tab past the toolbar to
+    // reach the items they just opened.
+    if (focusFirst) menu.querySelector(".ryp-dropdown-item")?.focus();
+  }
+
+  function toggleSortDropdown(forceState) {
+    toggleMenu(document.getElementById("ryp-sort-menu"), forceState);
+  }
+
+  function closeMenus(except = null) {
+    document.querySelectorAll(".ryp-dropdown-menu.ryp-menu-show").forEach((menu) => {
+      if (menu !== except) toggleMenu(menu, false);
+    });
   }
 
   // The menu hangs off the Sort button, which lands anywhere along a toolbar
@@ -395,8 +477,125 @@
   }
 
   document.addEventListener("click", (e) => {
-    if (!e.target.closest?.(".ryp-dropdown-wrapper")) closeSortDropdown();
+    const wrapper = e.target.closest?.(".ryp-dropdown-wrapper");
+    closeMenus(wrapper ? wrapper.querySelector(".ryp-dropdown-menu") : null);
   });
+
+  // Escape closes the open menu and hands focus back to its button, so a
+  // keyboard user is not left on an item that just disappeared.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const open = document.querySelector?.(".ryp-dropdown-menu.ryp-menu-show");
+    if (!open) return;
+    const hadFocus = open.contains(document.activeElement);
+    closeMenus();
+    if (hadFocus) open.parentElement?.querySelector(".ryp-btn")?.focus();
+  });
+
+  // ── Export Dropdown Menu ──────────────────────────────────────────────────
+
+  const EXPORT_LABELS = { copy: "exportCopy", txt: "exportTxt", csv: "exportCsv" };
+
+  /**
+   * Export ▾ — copy or download the list in the order the user sees.
+   * Icon-only, so the toolbar does not grow by another labelled pill. The
+   * label span stays, empty, because ensureAllItemsLoaded writes its
+   * "Loading 120/300..." progress there while a long playlist loads.
+   */
+  function createExportDropdown(dict, overview) {
+    const prefix = overview ? "ryp-ov-" : "ryp-";
+    const wrapper = document.createElement("div");
+    wrapper.id = `${prefix}export-wrapper`;
+    wrapper.className = "ryp-dropdown-wrapper ryp-export-wrapper";
+
+    const btn = makeButton(overview ? "ryp-ov-export" : "ryp-btn-export", "export", "", dict.exportTitle);
+    btn.classList.add("ryp-icon-only");
+    btn.removeAttribute("aria-pressed"); // a menu button, not a toggle
+    btn.setAttribute("aria-label", dict.export);
+    btn.setAttribute("aria-haspopup", "menu");
+    btn.setAttribute("aria-expanded", "false");
+    const chevron = document.createElement("span");
+    chevron.className = "ryp-chevron";
+    chevron.textContent = "▾";
+    btn.appendChild(chevron);
+
+    const menu = document.createElement("div");
+    menu.id = `${prefix}export-menu`;
+    menu.className = "ryp-dropdown-menu ryp-export-menu";
+    menu.setAttribute("role", "menu");
+
+    const hint = document.createElement("div");
+    hint.className = "ryp-dropdown-hint";
+    hint.textContent = dict.exportMenuHint;
+    menu.appendChild(hint);
+
+    for (const kind of Object.keys(EXPORT_LABELS)) {
+      const item = document.createElement("button");
+      item.className = "ryp-dropdown-item";
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.dataset.exportKind = kind;
+      item.textContent = dict[EXPORT_LABELS[kind]];
+      item.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeMenus();
+        await exportCurrentList(kind, btn);
+      });
+      menu.appendChild(item);
+    }
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleMenu(menu, undefined, e.detail === 0);
+    });
+
+    wrapper.append(btn, menu);
+    return wrapper;
+  }
+
+  /** Best-effort playlist name, for the text heading and the file name. */
+  function currentPlaylistTitle() {
+    const selectors = Playlist.isVirtualPlaylist()
+      ? ["#ryp-virtual-playlist-panel .ryp-virtual-title"]
+      : [
+          "ytd-playlist-panel-renderer #header-description .title",
+          "ytd-playlist-panel-renderer .title",
+          "ytd-playlist-header-renderer .yt-dynamic-sizing-formatted-string",
+          "yt-page-header-view-model h1",
+        ];
+    for (const sel of selectors) {
+      const text = document.querySelector(sel)?.textContent?.replace(/\s+/g, " ").trim();
+      if (text) return text;
+    }
+    // On /playlist the tab title is the playlist's ("(3) Name - YouTube");
+    // on a watch page it is the video's, so it is no use there.
+    if (Playlist.isOverviewPlaylistPage()) {
+      const fromTab = (document.title || "").replace(/^\(\d+\)\s*/, "").replace(/\s+-\s+YouTube$/, "").trim();
+      if (fromTab) return fromTab;
+    }
+    return Playlist.getPlaylistId() || "";
+  }
+
+  async function exportCurrentList(kind, btn) {
+    if (btn?.disabled) return;
+    const onWatchPage = Playlist.isPlaylistWatchPage();
+    // Every row first, or a long playlist exports only YouTube's rendered
+    // window. The overview bar always runs the loader, like its other
+    // buttons: without a count in its header a partial table looks complete.
+    if (onWatchPage) await loadAllBefore(btn);
+    else await ensureAllItemsLoaded(btn);
+
+    // The watch sidebar may be reversed, shuffled, sorted or hand-ordered;
+    // export what it shows. The overview page has no active mode — and
+    // Playback may still hold the last watch page's state — so its order is
+    // YouTube's.
+    const items = onWatchPage
+      ? window.RYP.Export.orderItems(Playlist.readItems(), Sidebar.visibleOrderKeys())
+      : Playlist.readOverviewItems();
+    await Panel.exportVideos(kind, items, currentPlaylistTitle());
+  }
 
   // ── Duration Stats Pill ───────────────────────────────────────────────────
 
@@ -509,6 +708,23 @@
     }
   }
 
+  /** True when YouTube has rendered fewer rows than the playlist holds. */
+  function isPartiallyLoaded() {
+    if (Playlist.isVirtualPlaylist()) return false; // our panel renders every row
+    const total = Playlist.getTotalItemCount();
+    const loaded = Playlist.readItems().length || Playlist.readOverviewItems().length;
+    return total > 0 && loaded < total;
+  }
+
+  /**
+   * Whole-list actions (reverse, shuffle, sort, save) read only the rendered
+   * rows. On a long playlist that silently dropped everything past YouTube's
+   * window (~200 rows) — so load the rest first, with progress on `btn`.
+   */
+  async function loadAllBefore(btn) {
+    if (isPartiallyLoaded()) await ensureAllItemsLoaded(btn);
+  }
+
   /**
    * Name → (update existing | save new) → snapshot. Shared by the watch
    * toolbar and the overview toolbar; Panel.saveCurrentOrder reads whichever
@@ -545,6 +761,7 @@
             await Panel.saveCurrentOrder(name, null, tags, listId);
             if (Panel.isPanelVisible()) await Panel.renderList();
             Panel.showToast("✓ " + Panel.t("saveConfirm"));
+            window.RYP.Stats?.bump("save");
           }
         } catch (err) {
           Panel.showToast(err.message || "Could not save the snapshot");
@@ -592,6 +809,7 @@
         Sidebar.applyWatchedBadges();
         Sidebar.applyVisualOrder();
         Panel.showToast("✓ " + (dict.loadAll + ": Complete"));
+        window.RYP.Stats?.bump("loadAll");
       });
     }
 
@@ -643,7 +861,19 @@
     durationPill.id = "ryp-duration-pill";
     durationPill.className = "ryp-duration-pill";
 
-    toolbar.append(reverseBtn, shuffleBtn, sortDropdown, reorderBtn, resetBtn, saveBtn, playlistsBtn, durationPill);
+    const exportDropdown = createExportDropdown(dict, false);
+
+    if (Playlist.isMobile()) {
+      // Reorder is drag-and-drop on HTML5 drag events, which touch screens
+      // never fire — left out rather than shipped broken. Kept out of the DOM
+      // (not merely hidden) so the per-button visibility setting cannot bring
+      // it back; it is still built so bindEvents() and syncButtonStates() run
+      // unchanged.
+      toolbar.classList.add("ryp-toolbar-mobile");
+      toolbar.append(reverseBtn, shuffleBtn, sortDropdown, resetBtn, saveBtn, exportDropdown, playlistsBtn, durationPill);
+    } else {
+      toolbar.append(reverseBtn, shuffleBtn, sortDropdown, reorderBtn, resetBtn, saveBtn, exportDropdown, playlistsBtn, durationPill);
+    }
     container.appendChild(toolbar);
 
     checkLazyLoadState(toolbar);
@@ -686,26 +916,16 @@
     durationPill.id = "ryp-overview-duration-pill";
     durationPill.className = "ryp-duration-pill";
 
-    toolbar.append(playReverseBtn, playShuffleBtn, saveBtn, durationPill);
+    const exportDropdown = createExportDropdown(dict, true);
+
+    toolbar.append(playReverseBtn, playShuffleBtn, saveBtn, exportDropdown, durationPill);
     container.prepend(toolbar);
 
     checkLazyLoadState(toolbar);
     updateDurationStats();
 
-    playReverseBtn.addEventListener("click", async () => {
-      const listId = Playlist.getPlaylistId();
-      if (!listId) return;
-      await ensureAllItemsLoaded(playReverseBtn);
-      const items = Playlist.readOverviewItems();
-      if (items.length === 0) return;
-      const lastVideo = items[items.length - 1].videoId;
-      await State.set(State.keys.reverse(listId), true);
-      await State.set(State.keys.shuffle(listId), false);
-      // No &index=: overview links carry no playlist position, so ours is
-      // positional and one unrendered row would make it wrong — and YouTube
-      // silently resets to position 1 when the index doesn't match. Given
-      // v + list it resolves the correct position itself.
-      location.href = `https://www.youtube.com/watch?v=${lastVideo}&list=${listId}`;
+    playReverseBtn.addEventListener("click", () => {
+      playFromOverview("reverse", playReverseBtn, { countAs: "reverse" });
     });
 
     playShuffleBtn.addEventListener("click", async () => {
@@ -714,16 +934,18 @@
       await ensureAllItemsLoaded(playShuffleBtn);
       const items = Playlist.readOverviewItems();
       if (items.length === 0) return;
-      const indices = items.map((it) => it.index);
-      for (let i = indices.length - 1; i > 0; i--) {
+      // Video ids, not positions: overview rows carry no playlist index, so
+      // positions here were counted and drifted past any hidden row.
+      const ids = items.map((it) => it.videoId);
+      for (let i = ids.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [indices[i], indices[j]] = [indices[j], indices[i]];
+        [ids[i], ids[j]] = [ids[j], ids[i]];
       }
       await State.set(State.keys.reverse(listId), false);
       await State.set(State.keys.shuffle(listId), true);
-      await State.set(State.keys.customOrder(listId), indices);
-      const firstVideo = items.find((it) => it.index === indices[0]);
-      location.href = `https://www.youtube.com/watch?v=${firstVideo?.videoId || ""}&list=${listId}`;
+      await State.set(State.keys.customOrder(listId), ids);
+      await window.RYP.Stats?.bump("shuffle", { quiet: true }); // see Play Reverse
+      location.href = `https://www.youtube.com/watch?v=${ids[0]}&list=${encodeURIComponent(listId)}`;
     });
 
     saveBtn.addEventListener("click", async () => {
@@ -734,6 +956,239 @@
 
     applyButtonVisibility();
     return true;
+  }
+
+  /**
+   * Leave the overview page for the watch page, playing the list either
+   * backwards from its last video ("reverse": Play Reverse, and a channel's
+   * "oldest first") or in YouTube's own order from its first ("forward": a
+   * channel's "newest first"). Reverse loads every row first, since the
+   * last video is only known once the whole list is rendered.
+   */
+  async function playFromOverview(direction, btn, { countAs = null } = {}) {
+    const listId = Playlist.getPlaylistId();
+    if (!listId) return false;
+    const reverse = direction === "reverse";
+    if (reverse) await ensureAllItemsLoaded(btn);
+    // Loading a big channel takes a minute or more; if the user went to
+    // another page meanwhile, these rows are no longer this list's.
+    if (Playlist.getPlaylistId() !== listId || !Playlist.isOverviewPlaylistPage()) return false;
+    const items = Playlist.readOverviewItems();
+    if (items.length === 0) return false;
+    const target = reverse ? items[items.length - 1] : items[0];
+    await State.set(State.keys.reverse(listId), reverse);
+    await State.set(State.keys.shuffle(listId), false);
+    // A stored order (an earlier sort or shuffle) outranks reverse in the
+    // playback engine, so a leftover one would silently replace the order
+    // asked for here. Playback.enableReverse drops it for the same reason.
+    await State.remove(State.keys.customOrder(listId));
+    // quiet — this page is about to unload (see Stats.bump).
+    if (countAs) await window.RYP.Stats?.bump(countAs, { quiet: true });
+    // No &index=: overview links carry no playlist position, so ours is
+    // positional and one unrendered row would make it wrong — and YouTube
+    // silently resets to position 1 when the index doesn't match. Given
+    // v + list it resolves the correct position itself.
+    location.href =
+      `https://www.youtube.com/watch?v=${encodeURIComponent(target.videoId)}&list=${encodeURIComponent(listId)}`;
+    return true;
+  }
+
+  // ── Channel pages: play the uploads oldest / newest first ────────────────
+
+  const CHANNEL_BAR_ID = "ryp-channel-bar";
+
+  // Where the bar goes: under the channel header (name, handle, Subscribe),
+  // above the tabs. `:not([hidden])` because YouTube keeps the browse
+  // element of pages left by SPA navigation in the DOM, hidden.
+  const CHANNEL_ANCHORS = [
+    ["ytd-browse[page-subtype='channels']:not([hidden]) #page-header", "afterend"],
+    // Pre-2024 header, still served to some accounts.
+    ["ytd-browse[page-subtype='channels']:not([hidden]) ytd-c4-tabbed-header-renderer #inner-header-container", "afterend"],
+    ["ytd-browse[page-subtype='channels']:not([hidden]) #tabs-container", "beforebegin"],
+  ];
+
+  function findChannelAnchor() {
+    for (const [sel, where] of CHANNEL_ANCHORS) {
+      for (const el of document.querySelectorAll(sel)) {
+        // Zero-size matches are hidden template nodes; see
+        // Playlist.findOverviewHeaderContainer.
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) return { el, where };
+      }
+    }
+    return null;
+  }
+
+  // Page sessionStorage can be blocked by site-data settings; the reload
+  // path is then unavailable, never fatal.
+  function tabStorage() {
+    try {
+      return window.sessionStorage || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function startChannelPlay(channelId, mode) {
+    const { Channel } = window.RYP;
+    const url = Channel.playlistUrl(Channel.uploadsPlaylistId(channelId, "videos"), mode);
+    if (!url) return false;
+    await window.RYP.Stats?.bump("channel", { quiet: true });
+    location.href = url;
+    return true;
+  }
+
+  function onChannelPlayClick(mode, root) {
+    const { Channel } = window.RYP;
+    const resolved = Channel.resolveChannelId();
+    if (resolved?.fresh) return startChannelPlay(resolved.id, mode);
+    // Reached by SPA navigation: the id in the document may be another
+    // channel's. A reload makes YouTube serve this channel's own, and the
+    // pending marker resumes the play once it has.
+    if (resolved && Channel.savePending(tabStorage(), mode, root)) {
+      location.reload();
+      return true;
+    }
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    Panel.showToast(dict.channelNoId);
+    return false;
+  }
+
+  function makeChannelBar(root, dict) {
+    const bar = document.createElement("div");
+    bar.id = CHANNEL_BAR_ID;
+    bar.className = "ryp-overview-bar ryp-channel-bar";
+    bar.dataset.root = root;
+    bar.dataset.lang = activeLang;
+    bar.dir = activeLang === "ar" ? "rtl" : "ltr";
+
+    const oldest = makeButton("ryp-ch-oldest", "play", dict.channelOldest, dict.channelOldestTitle);
+    oldest.classList.add("ryp-btn-primary");
+    const newest = makeButton("ryp-ch-newest", "play", dict.channelNewest, dict.channelNewestTitle);
+    const hint = document.createElement("span");
+    hint.className = "ryp-channel-hint";
+    hint.textContent = dict.channelHint;
+
+    for (const [btn, mode] of [[oldest, "oldest"], [newest, "newest"]]) {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onChannelPlayClick(mode, root);
+      });
+    }
+    bar.append(oldest, newest, hint);
+    return bar;
+  }
+
+  /**
+   * Idempotent, called on every navigation and settled DOM pass: removes the
+   * bar off channel pages, rebuilds it when the SPA moved to another channel
+   * (YouTube reuses the header element, so a stale bar would otherwise stay
+   * attached to the new channel), and hides it when the page offers no
+   * channel id at all.
+   */
+  function injectChannelBar() {
+    const { Channel } = window.RYP;
+    const existing = document.getElementById(CHANNEL_BAR_ID);
+    const root = Channel?.channelRoot(location.pathname);
+    // Not on mobile YouTube: the flow ends on the /playlist page's Play
+    // Reverse, and the mobile site has no overview toolbar to run it.
+    if (!root || Playlist.isMobile()) {
+      existing?.remove();
+      return false;
+    }
+
+    const resolved = Channel.resolveChannelId();
+    const pending = Channel.takePending(tabStorage(), root);
+    if (pending) {
+      if (resolved?.fresh) {
+        startChannelPlay(resolved.id, pending);
+        return true;
+      }
+      Panel.showToast((TRANSLATIONS[activeLang] || TRANSLATIONS.en).channelNoId);
+    }
+    if (!resolved || (pending && !resolved.fresh)) {
+      existing?.remove();
+      return false;
+    }
+
+    if (
+      existing &&
+      existing.dataset.root === root &&
+      existing.dataset.lang === activeLang &&
+      existing.closest("ytd-browse[page-subtype='channels']:not([hidden])")
+    ) {
+      return true;
+    }
+    existing?.remove();
+
+    const anchor = findChannelAnchor();
+    if (!anchor) return false;
+    const bar = makeChannelBar(root, TRANSLATIONS[activeLang] || TRANSLATIONS.en);
+    anchor.el.insertAdjacentElement(anchor.where, bar);
+    applyButtonVisibility();
+    return true;
+  }
+
+  let channelPlayRunning = false;
+
+  async function waitForOverviewItems(timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    let items = Playlist.readOverviewItems();
+    while (items.length === 0 && Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 300));
+      items = Playlist.readOverviewItems();
+    }
+    return items;
+  }
+
+  /**
+   * Second half of a channel play: the uploads playlist opened with
+   * #ryp_play=oldest|newest. Runs whether or not the overview buttons are
+   * shown — the user asked for this on the channel page.
+   */
+  async function runPendingChannelPlay() {
+    const { Channel } = window.RYP;
+    if (!Channel || channelPlayRunning || !Playlist.isOverviewPlaylistPage()) return false;
+    const mode = Channel.readPlayMarker();
+    if (!mode) return false;
+    // Back from the watch page reloads this URL; it must not restart the play.
+    const navType = performance.getEntriesByType?.("navigation")?.[0]?.type;
+    channelPlayRunning = true;
+    // Consume the marker first, for the same reason.
+    const clean = location.pathname + location.search + Channel.stripPlayMarker();
+    try {
+      history.replaceState(history.state, "", clean);
+    } catch {
+      try { history.replaceState(null, "", clean); } catch (_) {}
+    }
+    if (navType === "back_forward") {
+      channelPlayRunning = false;
+      return false;
+    }
+
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    try {
+      const listId = Playlist.getPlaylistId();
+      const items = await waitForOverviewItems(15000);
+      if (items.length === 0) {
+        // A channel with only Shorts or streams has no videos-only playlist.
+        const fallback = Channel.fallbackListId(listId);
+        if (fallback) {
+          location.replace(Channel.playlistUrl(fallback, mode));
+          return true;
+        }
+        Panel.showToast(dict.channelNoUploads);
+        return false;
+      }
+      if (mode === "oldest") {
+        Panel.showToast(dict.channelLoading);
+        return await playFromOverview("reverse", document.getElementById("ryp-ov-reverse"));
+      }
+      return await playFromOverview("forward", null);
+    } finally {
+      channelPlayRunning = false;
+    }
   }
 
   // ── State sync ────────────────────────────────────────────────────────────
@@ -791,6 +1246,21 @@
       if (labelEl) labelEl.textContent = dict.save;
     }
 
+    // Language switches reach here without a re-injection. The label span is
+    // left alone: it is empty except while it shows load progress.
+    for (const id of ["ryp-btn-export", "ryp-ov-export"]) {
+      const exportBtn = document.getElementById(id);
+      if (!exportBtn) continue;
+      exportBtn.title = dict.exportTitle;
+      exportBtn.setAttribute("aria-label", dict.export);
+      const menu = exportBtn.parentElement?.querySelector(".ryp-export-menu");
+      const hint = menu?.querySelector(".ryp-dropdown-hint");
+      if (hint) hint.textContent = dict.exportMenuHint;
+      menu?.querySelectorAll(".ryp-dropdown-item").forEach((item) => {
+        item.textContent = dict[EXPORT_LABELS[item.dataset.exportKind]];
+      });
+    }
+
     setActive(
       document.getElementById("ryp-btn-playlists"),
       panelOn,
@@ -810,7 +1280,13 @@
       if (reverseOn) {
         await Playback.disableReverse(listId);
       } else {
+        await loadAllBefore(reverseBtn);
+        // Loading takes seconds; if the user moved to another playlist
+        // meanwhile, acting now would write this list's state from that
+        // list's rows.
+        if (Playlist.getPlaylistId() !== listId) return;
         await Playback.enableReverse(listId);
+        window.RYP.Stats?.bump("reverse");
       }
       Sidebar.applyVisualOrder();
       Sidebar.scrollToCurrentItem();
@@ -825,7 +1301,10 @@
       if (shuffleOn) {
         await Playback.disableShuffle(listId);
       } else {
+        await loadAllBefore(shuffleBtn);
+        if (Playlist.getPlaylistId() !== listId) return; // see Reverse above
         await Playback.enableShuffle(listId);
+        window.RYP.Stats?.bump("shuffle");
       }
       Sidebar.applyVisualOrder();
       Sidebar.scrollToCurrentItem();
@@ -853,6 +1332,9 @@
 
     saveBtn.addEventListener("click", async (e) => {
       e.preventDefault(); e.stopPropagation();
+      const listId = Playlist.getPlaylistId();
+      await loadAllBefore(saveBtn);
+      if (Playlist.getPlaylistId() !== listId) return; // see Reverse
       openSaveFlow();
     });
 
@@ -868,6 +1350,9 @@
   window.RYP.Toolbar = {
     injectToolbar,
     injectOverviewToolbar,
+    injectChannelBar,
+    runPendingChannelPlay,
+    playFromOverview,
     syncButtonStates,
     updateDurationStats,
     applyButtonVisibility,

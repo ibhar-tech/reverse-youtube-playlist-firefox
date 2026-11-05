@@ -22,7 +22,7 @@ cp -r "$SCRIPT_DIR/icons" "$BUILD_DIR/icons"
 cp -r "$SCRIPT_DIR/_locales" "$BUILD_DIR/_locales"
 
 # Process manifest (remove browser_specific_settings for Chrome)
-jq 'del(.browser_specific_settings)' "$SCRIPT_DIR/manifest.json" > "$BUILD_DIR/manifest.json"
+jq 'del(.browser_specific_settings) | .background = {service_worker: "src/background.js"}' "$SCRIPT_DIR/manifest.json" > "$BUILD_DIR/manifest.json"
 
 # Create zip
 cd "$BUILD_DIR"

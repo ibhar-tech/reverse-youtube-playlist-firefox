@@ -4,7 +4,23 @@
     "description": "اسم الإضافة"
   },
   "extensionDescription": {
-    "message": "عكس، خلط، إعادات ترتيب، حفظ وتصدير قوائم تشغيل يوتيوب. تتضمن شارات المشاهدة، التخطي التلقائي، وضع التكرار وواجهة مدمجة.",
+    "message": "اعكس قائمة تشغيل يوتيوب أو اخلطها أو رتّبها، واعرف مدتها الكاملة، واحفظ قوائمك محليًا — مجانًا وبدون تسجيل.",
     "description": "وصف الإضافة"
+  },
+  "cmdReverse": {
+    "message": "تشغيل/إيقاف عكس قائمة التشغيل الحالية",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdShuffle": {
+    "message": "تشغيل/إيقاف الخلط العشوائي لقائمة التشغيل الحالية",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdAddToList": {
+    "message": "إضافة الفيديو الحالي إلى قائمة تشغيل محلية",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
+  },
+  "cmdLoadAll": {
+    "message": "تحميل جميع فيديوهات قائمة التشغيل الحالية",
+    "description": "Keyboard shortcut name (browser shortcuts page)"
   }
 }

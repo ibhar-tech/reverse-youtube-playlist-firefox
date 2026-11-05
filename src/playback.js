@@ -41,8 +41,13 @@
 
   let reverseOn = false;
   let shuffleOn = false;
-  let customOrder = null; // number[] — play-order of playlist indices, or null
+  let customOrder = null; // (videoId | legacy index)[] — play order, or null
   let lastIndex = null;
+  let lastVideoId = null;
+  let loadedListId = null;
+  // Order entry and position of the previous video (custom orders only).
+  let lastKey = null;
+  let lastPos = null;
   let navigating = false;
   let endHandled = false;
   
@@ -118,8 +123,32 @@
     if (v && typeof v.pause === "function") v.pause();
     cancelYouTubeAutonav();
   }
+  // YouTube's playlist auto-advance only ever happens at the end of a video,
+  // and never right after the user clicked a video. Without these two checks
+  // handleNavigation() could not tell YouTube moving to index+1 from the user
+  // clicking the row at index+1, and "corrected" the user's own choice.
+  const AUTO_ADVANCE_WINDOW_S = 3;
+  const USER_PICK_MS = 1500;
+  let lastUserPick = -Infinity;
+  let arrivedByAutoAdvance = false;
+
+  function onUserPick(e) {
+    if (!e.isTrusted) return; // our own anchor.click() is not the user
+    const t = e.target;
+    if (t && typeof t.closest === "function" && t.closest(`${Playlist.SEL.item}, a[href*="/watch"]`)) {
+      lastUserPick = performance.now();
+    }
+  }
+
   function onNavigateStart() {
-    stopArrival = performance.now() - stoppedAt < 500;
+    const now = performance.now();
+    stopArrival = now - stoppedAt < 500;
+    const v = document.querySelector("#movie_player video, video");
+    const atEnd = !!v && (
+      v.ended === true ||
+      (isFinite(v.duration) && v.duration > 0 && v.duration - v.currentTime < AUTO_ADVANCE_WINDOW_S)
+    );
+    arrivedByAutoAdvance = atEnd && now - lastUserPick > USER_PICK_MS;
   }
   function onPlaying(e) {
     if (!stopArrival) return;
@@ -128,15 +157,60 @@
   }
 
   function isActive() {
-    return reverseOn || shuffleOn || (customOrder !== null && customOrder.length > 0) || Playlist.isVirtualPlaylist();
+    return reverseOn || shuffleOn || hasOrder() || Playlist.isVirtualPlaylist();
   }
 
-  function getRawNextIndex(idx) {
-    if (customOrder && customOrder.length > 0) {
-      const pos = customOrder.indexOf(idx);
-      if (pos === -1 || pos + 1 >= customOrder.length) return null;
-      return customOrder[pos + 1];
+  function hasOrder() {
+    return customOrder !== null && customOrder.length > 0;
+  }
+
+  // ── Order keys ────────────────────────────────────────────────────────────
+  //
+  // A custom/shuffle/sort order is a list of *video ids*. Before 3.6 it held
+  // playlist positions, which pointed at the wrong videos as soon as the
+  // playlist owner added or removed one (Watch Later shifts on every add).
+  // Legacy numeric entries still work — they match by position until
+  // migrateLegacyOrder() can map them to ids.
+
+  const keyOfItem = (it) => it.videoId || it.index;
+
+  function currentVideoId() {
+    return new URLSearchParams(location.search).get("v");
+  }
+
+  function keyMatches(key, videoId, index) {
+    return typeof key === "string" ? key === videoId : key === index;
+  }
+
+  // Position of the playing video in customOrder. `orderPos` remembers where
+  // we last stepped to, so a video listed twice resolves to the right copy.
+  let orderPos = null;
+
+  function currentOrderPos() {
+    if (!hasOrder()) return -1;
+    const vid = currentVideoId();
+    const idx = Playlist.currentIndex();
+    if (
+      orderPos !== null &&
+      orderPos < customOrder.length &&
+      keyMatches(customOrder[orderPos], vid, idx)
+    ) {
+      return orderPos;
     }
+    return customOrder.findIndex((k) => keyMatches(k, vid, idx));
+  }
+
+  /** The active mode's key for the playing video, or null if it has none. */
+  function currentKey() {
+    if (hasOrder()) {
+      const pos = currentOrderPos();
+      return pos >= 0 ? customOrder[pos] : null;
+    }
+    return Playlist.currentIndex();
+  }
+
+  /** Index-based next for reverse mode and plain local playlists. */
+  function getRawNextIndex(idx) {
     if (reverseOn) {
       if (Playlist.isVirtualPlaylist()) {
         const items = Playlist.readItems();
@@ -158,11 +232,6 @@
 
   /** Inverse of getRawNextIndex — the item played before idx in the order. */
   function getRawPrevIndex(idx) {
-    if (customOrder && customOrder.length > 0) {
-      const pos = customOrder.indexOf(idx);
-      if (pos <= 0) return null;
-      return customOrder[pos - 1];
-    }
     if (reverseOn) {
       const items = Playlist.readItems();
       if (Playlist.isVirtualPlaylist()) {
@@ -182,7 +251,6 @@
 
   /** First index of the active order — used when loop mode wraps around. */
   function firstIndexInMode() {
-    if (customOrder && customOrder.length > 0) return customOrder[0];
     const items = Playlist.readItems();
     if (reverseOn) {
       return items.length ? items[items.length - 1].index : null;
@@ -193,45 +261,96 @@
     return null;
   }
 
-  /** Returns the index to navigate to after currentIdx, or null to stop. */
-  function nextIndexInMode(currentIdx) {
+  function watchedTest() {
     const items = Playlist.readItems();
     const videoIdByIndex = new Map(items.map((it) => [it.index, it.videoId]));
-    const isWatched = (idx) => {
-      const vid = videoIdByIndex.get(idx);
-      return (
-        cachedWatched.includes(idx) || (!!vid && cachedWatched.includes(vid))
-      );
+    return (key) => {
+      if (typeof key === "string") return cachedWatched.includes(key);
+      const vid = videoIdByIndex.get(key);
+      return cachedWatched.includes(key) || (!!vid && cachedWatched.includes(vid));
     };
+  }
+
+  /**
+   * What plays after `fromKey` (at `fromPos` in a custom order), as
+   * { key, pos } — or null at the end. `pos` is null outside custom orders.
+   */
+  function nextTarget(fromKey, fromPos = null) {
+    const isWatched = watchedTest();
+
+    if (hasOrder()) {
+      const start = fromPos ?? customOrder.indexOf(fromKey);
+      if (start < 0) return null;
+      const step = (p) => {
+        if (p + 1 < customOrder.length) return p + 1;
+        return loopEnabled ? 0 : null;
+      };
+      let pos = step(start);
+      // Bounded so loop mode can't spin forever when all are watched.
+      let hops = 0;
+      while (autoSkipEnabled && pos !== null && isWatched(customOrder[pos]) && hops < customOrder.length) {
+        pos = step(pos);
+        hops++;
+      }
+      if (pos === null || pos === start) return null;
+      if (autoSkipEnabled && isWatched(customOrder[pos])) return null;
+      return { key: customOrder[pos], pos };
+    }
+
     const advance = (idx) => {
       let t = getRawNextIndex(idx);
       if (t === null && loopEnabled) t = firstIndexInMode();
       return t === idx ? null : t;
     };
-
-    let target = advance(currentIdx);
-    if (!autoSkipEnabled) return target;
-
-    // Skip watched items; bounded so loop mode can't spin forever when
-    // everything in the order has already been watched.
-    const maxHops = (customOrder ? customOrder.length : items.length) + 1;
-    let hops = 0;
-    while (target !== null && isWatched(target) && hops < maxHops) {
-      target = advance(target);
-      hops++;
+    let target = advance(fromKey);
+    if (autoSkipEnabled) {
+      const maxHops = Playlist.readItems().length + 1;
+      let hops = 0;
+      while (target !== null && isWatched(target) && hops < maxHops) {
+        target = advance(target);
+        hops++;
+      }
+      if (target !== null && isWatched(target)) return null;
     }
-    if (target !== null && isWatched(target)) return null;
-    return target === currentIdx ? null : target;
+    return target === null || target === fromKey ? null : { key: target, pos: null };
   }
 
-  function stepTo(targetIndex) {
-    if (navigating || targetIndex === null) return false;
+  /** Key that plays after `fromKey` in the active mode, or null to stop. */
+  function nextIndexInMode(fromKey) {
+    if (fromKey === null || fromKey === undefined) return null;
+    let fromPos = null;
+    if (hasOrder()) {
+      fromPos = fromKey === currentKey() ? currentOrderPos() : customOrder.indexOf(fromKey);
+      if (fromPos < 0) return null;
+    }
+    return nextTarget(fromKey, fromPos)?.key ?? null;
+  }
+
+  function stepTo(target) {
+    if (navigating || target === null || target === undefined) return false;
+    const { key, pos } = typeof target === "object" ? target : { key: target, pos: null };
     navigating = true;
-    const ok = Playlist.goToIndex(targetIndex);
-    // If the target item is not loaded the click never happened — release
+    const ok = typeof key === "string" ? Playlist.goToVideo(key) : Playlist.goToIndex(key);
+    // If the target could not be reached the click never happened — release
     // the latch or every later navigation would be silently swallowed.
     if (!ok) navigating = false;
+    else if (pos !== null) orderPos = pos;
     return ok;
+  }
+
+  /**
+   * Start a freshly built order from its first entry. No `navigating` latch,
+   * unlike stepTo(): if that entry is already playing, no navigation follows
+   * to release it.
+   */
+  function jumpToStart(order) {
+    if (!order.length) return;
+    orderPos = 0;
+    if (typeof order[0] === "string") {
+      if (order[0] !== currentVideoId()) Playlist.goToVideo(order[0]);
+    } else {
+      Playlist.goToIndex(order[0]);
+    }
   }
 
   // ── Event listeners ───────────────────────────────────────────────────────
@@ -246,9 +365,13 @@
     const left = v.duration - v.currentTime;
     if (left > STOP_LEAD) return;
     if (!isActive() && !disableAutoplay) return;
+    // A video that is not in the order (e.g. added to Watch Later after the
+    // shuffle) has no "next" in it. Stopping there halted playback for no
+    // reason: let YouTube advance, and the order picks up again from the
+    // first video that is in it.
+    if (!disableAutoplay && hasOrder() && currentOrderPos() < 0) return;
 
-    const finishedIndex = Playlist.currentIndex();
-    const next = disableAutoplay ? null : nextIndexInMode(finishedIndex);
+    const next = disableAutoplay ? null : nextFromCurrent();
     // Navigating can wait for the last second; pausing cannot (see STOP_LEAD).
     if (next !== null && left > END_LEAD) return;
 
@@ -256,7 +379,8 @@
     // We leave before `ended` can fire, so the video must be marked watched
     // here or modes would never record watch progress.
     const listId = Playlist.getPlaylistId();
-    if (listId && finishedIndex !== null) markAsWatched(listId, finishedIndex);
+    const finished = currentVideoId() || Playlist.currentIndex();
+    if (listId && finished !== null) markAsWatched(listId, finished);
 
     if (next !== null) {
       stepTo(next);
@@ -272,12 +396,12 @@
     if (!Playlist.isPlaylistWatchPage() || adPlaying()) return;
     // Always mark as watched, regardless of mode.
     const listId = Playlist.getPlaylistId();
-    const finishedIndex = Playlist.currentIndex();
-    if (listId && finishedIndex !== null) markAsWatched(listId, finishedIndex);
+    const finished = currentVideoId() || Playlist.currentIndex();
+    if (listId && finished !== null) markAsWatched(listId, finished);
 
     if ((!isActive() && !disableAutoplay) || navigating || endHandled) return;
     endHandled = true;
-    const next = disableAutoplay ? null : nextIndexInMode(finishedIndex);
+    const next = disableAutoplay ? null : nextFromCurrent();
     if (next !== null) {
       stepTo(next);
     } else {
@@ -285,16 +409,30 @@
     }
   }
 
-  async function markAsWatched(listId, index) {
+  /** Next target from the playing video, or null at the end / off-order. */
+  function nextFromCurrent() {
+    const key = currentKey();
+    if (key === null) return null;
+    return nextTarget(key, hasOrder() ? currentOrderPos() : null);
+  }
+
+  async function markAsWatched(listId, indexOrVideoId) {
     // Prefer the stable videoId; fall back to the index if the sidebar item
     // for this index is not loaded (badges still work via the index check).
-    const item = Playlist.readItems().find((it) => it.index === index);
-    const entry = item?.videoId || index;
-    if (!cachedWatched.includes(entry)) cachedWatched = [...cachedWatched, entry];
+    const item = typeof indexOrVideoId === "number"
+      ? Playlist.readItems().find((it) => it.index === indexOrVideoId)
+      : null;
+    const entry = typeof indexOrVideoId === "string" ? indexOrVideoId : (item?.videoId || indexOrVideoId);
+    // Decided synchronously: the near-end trigger and `ended` can both mark
+    // the same video before either storage write lands, and each would see
+    // it as new and count it twice in the stats.
+    const isNew = !cachedWatched.includes(entry);
+    if (isNew) cachedWatched = [...cachedWatched, entry];
     const watched = (await State.get(State.keys.watched(listId))) || [];
     if (!watched.includes(entry)) {
       watched.push(entry);
       await State.set(State.keys.watched(listId), watched);
+      if (isNew) window.RYP.Stats?.recordFinished();
     }
     if (Playlist.getPlaylistId() === listId) {
       cachedWatched = watched;
@@ -326,13 +464,13 @@
 
   // ── Player next/prev control interception ────────────────────────────────
   function handleManualStep(e, isNext) {
-    const idx = Playlist.currentIndex();
-    if (idx === null) return; // can't resolve position — let YouTube handle it
+    const key = currentKey();
+    if (key === null) return; // can't resolve position — let YouTube handle it
     e.preventDefault();
     e.stopPropagation();
 
     if (isNext) {
-      const next = nextIndexInMode(idx);
+      const next = nextFromCurrent();
       if (next !== null) {
         stepTo(next);
       } else {
@@ -349,7 +487,14 @@
       v.currentTime = 0;
       return;
     }
-    const prev = getRawPrevIndex(idx);
+    let prev = null;
+    if (hasOrder()) {
+      const pos = currentOrderPos();
+      if (pos > 0) prev = { key: customOrder[pos - 1], pos: pos - 1 };
+    } else {
+      const idx = getRawPrevIndex(key);
+      if (idx !== null) prev = idx;
+    }
     if (prev !== null) stepTo(prev);
     else if (v) v.currentTime = 0; // start of the order — just restart
   }
@@ -357,9 +502,35 @@
   function onControlClick(e) {
     if (!isActive() || !Playlist.isPlaylistWatchPage()) return;
     if (!e.target || typeof e.target.closest !== "function") return;
+    if (Playlist.isMobile()) {
+      const isNext = mobileStepDirection(e.target);
+      if (isNext !== null) handleManualStep(e, isNext);
+      return;
+    }
     const btn = e.target.closest(".ytp-next-button, .ytp-prev-button");
     if (!btn) return;
     handleManualStep(e, btn.classList.contains("ytp-next-button"));
+  }
+
+  /**
+   * The mobile player's previous and next buttons share one class and differ
+   * only in their localized aria-label, so tell them apart by position:
+   * previous renders before play/pause, next after it. null when the click
+   * was not on either, or the layout is not the one expected — YouTube then
+   * handles the click as usual.
+   */
+  function mobileStepDirection(target) {
+    const { prevNextButton, playPauseButton } = Playlist.SEL.mobile;
+    const btn = target.closest(prevNextButton);
+    if (!btn) return null;
+    // Nearest ancestor that also holds play/pause — the middle-controls row.
+    let play = null;
+    for (let node = btn.parentElement; node && !play; node = node.parentElement) {
+      play = node.querySelector(playPauseButton);
+    }
+    if (!play || typeof btn.compareDocumentPosition !== "function") return null;
+    // DOCUMENT_POSITION_FOLLOWING (4): play/pause comes after → this is "previous".
+    return (btn.compareDocumentPosition(play) & 4) === 0;
   }
 
   function onControlKey(e) {
@@ -413,12 +584,30 @@
     window.RYP.Panel?.showResumeToast(prog, listId);
   }
 
+  // endHandled is otherwise cleared only by a navigation. After a stop (end
+  // of the order, or autoplay disabled) a user who seeks back to rewatch
+  // would find the near-end guard disarmed, and YouTube's autoplay-forward
+  // would run at the next ending.
+  function onSeeked(e) {
+    const v = e.target;
+    if (!endHandled || navigating || !v || !isFinite(v.duration)) return;
+    if (v.duration - v.currentTime > STOP_LEAD) endHandled = false;
+  }
+
   document.addEventListener("timeupdate", onTimeUpdate, true);
+  document.addEventListener("seeked", onSeeked, true);
   document.addEventListener("timeupdate", onProgressTick, true);
   document.addEventListener("ended", onEnded, true);
   document.addEventListener("playing", onPlaying, true);
   document.addEventListener("yt-navigate-start", onNavigateStart, true);
+  // The mobile site never fires yt-navigate-*; it fires these on window
+  // instead (seen live on m.youtube.com, 2026-11-05). Without this an
+  // auto-advance there looks like a user pick and is never corrected.
+  window.addEventListener("state-navigatestart", () => {
+    if (Playlist.isMobile()) onNavigateStart();
+  }, true);
   document.addEventListener("click", onControlClick, true);
+  document.addEventListener("click", onUserPick, true);
   document.addEventListener("keydown", onControlKey, true);
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -447,38 +636,102 @@
 
       reverseOn = !!savedReverse;
       shuffleOn = !!savedShuffle && savedOrder != null;
-      customOrder = savedOrder || null;
+      customOrder = Array.isArray(savedOrder) && savedOrder.length ? savedOrder : null;
+      // onNavigate calls this on *every* navigation, including from one video
+      // of the playlist to the next. Clearing the position state there lost
+      // the duplicate-video hint (a video listed twice looped back to its
+      // first copy) and the previous position, so the fallback redirect
+      // never fired in shuffle/sort/custom orders. Only a different playlist
+      // starts from scratch.
+      if (listId !== loadedListId) {
+        orderPos = null;
+        lastKey = null;
+        lastPos = null;
+        loadedListId = listId;
+      }
       cachedWatched = loadedWatched;
+      await this.migrateLegacyOrder(listId);
+      return true;
+    },
+
+    /**
+     * Turn legacy position entries of the stored order into video ids, for
+     * whichever of them are rendered right now. Called on load and again on
+     * DOM passes, as long playlists render more rows.
+     */
+    async migrateLegacyOrder(listId) {
+      if (!hasOrder() || !customOrder.some((k) => typeof k === "number")) return false;
+      if (Playlist.getPlaylistId() !== listId) return false;
+      const byIndex = new Map(
+        Playlist.readItems().filter((it) => it.videoId).map((it) => [it.index, it.videoId])
+      );
+      let changed = false;
+      const next = customOrder.map((k) => {
+        if (typeof k === "number" && byIndex.has(k)) {
+          changed = true;
+          return byIndex.get(k);
+        }
+        return k;
+      });
+      if (!changed) return false;
+      customOrder = next;
+      await State.set(State.keys.customOrder(listId), next);
       return true;
     },
 
     handleNavigation() {
       if (!Playlist.isPlaylistWatchPage()) {
         lastIndex = null;
+        lastVideoId = null;
         navigating = false;
         return;
       }
       const idx = Playlist.currentIndex();
+      const videoId = currentVideoId() || "";
       endHandled = false;
+      const autoAdvanced = arrivedByAutoAdvance;
+      arrivedByAutoAdvance = false;
 
       maybeOfferResume(Playlist.getPlaylistId());
 
       // YouTube's own forward-advance slipped past the near-end trigger:
-      // redirect it to the mode's real next item. Not when autoplay is
-      // disabled — this branch cannot tell an auto-advance from the user
-      // clicking the next row, and a clicked video must play.
+      // redirect it to the mode's real next item. Every condition matters:
+      //  - the previous video really ended (see onNavigateStart) — a row the
+      //    user clicked must play, even when it happens to be index+1;
+      //  - the video itself changed (3.5.0). YouTube rewrites the URL's
+      //    index param (+1) on every page load while v stays put, so a bare
+      //    index bump is a refresh or a new tab, not an auto-advance;
+      //  - the arriving row is found by videoId, for the same reason — the
+      //    index in the address bar is no longer a stable position.
+      // Never when autoplay is disabled.
+      const arriving =
+        videoId && videoId !== lastVideoId
+          ? Playlist.readItems().find((it) => it.videoId === videoId) || null
+          : null;
       if (
         isActive() &&
         !disableAutoplay &&
         !navigating &&
+        autoAdvanced &&
         lastIndex !== null &&
-        idx === lastIndex + 1
+        lastVideoId !== null &&
+        arriving &&
+        arriving.index === lastIndex + 1
       ) {
-        const next = nextIndexInMode(lastIndex);
-        if (next !== null && stepTo(next)) return;
+        const next = hasOrder()
+          ? (lastPos !== null ? nextTarget(lastKey, lastPos) : null)
+          : nextTarget(lastIndex, null);
+        const alreadyThere =
+          next !== null && (next.key === arriving.videoId || next.key === arriving.index);
+        if (next !== null && !alreadyThere && stepTo(next)) return;
       }
       navigating = false;
       lastIndex = idx;
+      if (videoId) lastVideoId = videoId;
+      lastPos = hasOrder() ? currentOrderPos() : null;
+      if (lastPos !== null && lastPos < 0) lastPos = null;
+      lastKey = lastPos !== null ? customOrder[lastPos] : null;
+      if (lastPos !== null) orderPos = lastPos;
     },
 
     async enableReverse(listId) {
@@ -507,18 +760,19 @@
       reverseOn = false;
       shuffleOn = true;
 
-      const indices = items.map((it) => it.index);
-      for (let i = indices.length - 1; i > 0; i--) {
+      const keys = items.map(keyOfItem);
+      for (let i = keys.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [indices[i], indices[j]] = [indices[j], indices[i]];
+        [keys[i], keys[j]] = [keys[j], keys[i]];
       }
-      customOrder = indices;
+      customOrder = keys;
+      orderPos = null;
 
       await State.set(State.keys.reverse(listId), false);
       await State.set(State.keys.shuffle(listId), true);
       await State.set(State.keys.customOrder(listId), customOrder);
 
-      Playlist.goToIndex(customOrder[0]);
+      jumpToStart(customOrder);
     },
 
     async disableShuffle(listId) {
@@ -536,9 +790,9 @@
         const diff = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
         return ascending ? diff : -diff;
       });
-      const order = sorted.map((it) => it.index);
+      const order = sorted.map(keyOfItem);
       await this.applyCustomOrder(listId, order);
-      Playlist.goToIndex(order[0]);
+      jumpToStart(order);
       return order;
     },
 
@@ -550,9 +804,9 @@
         const diff = (a.durationSeconds || 0) - (b.durationSeconds || 0);
         return shortestFirst ? diff : -diff;
       });
-      const order = sorted.map((it) => it.index);
+      const order = sorted.map(keyOfItem);
       await this.applyCustomOrder(listId, order);
-      Playlist.goToIndex(order[0]);
+      jumpToStart(order);
       return order;
     },
 
@@ -564,9 +818,9 @@
         const diff = (a.channel || "").localeCompare(b.channel || "");
         return ascending ? diff : -diff;
       });
-      const order = sorted.map((it) => it.index);
+      const order = sorted.map(keyOfItem);
       await this.applyCustomOrder(listId, order);
-      Playlist.goToIndex(order[0]);
+      jumpToStart(order);
       return order;
     },
 
@@ -580,9 +834,9 @@
         const bW = isWatched(b) ? 1 : 0;
         return unwatchedFirst ? aW - bW : bW - aW;
       });
-      const order = sorted.map((it) => it.index);
+      const order = sorted.map(keyOfItem);
       await this.applyCustomOrder(listId, order);
-      Playlist.goToIndex(order[0]);
+      jumpToStart(order);
       return order;
     },
 
@@ -591,6 +845,7 @@
       reverseOn = false;
       shuffleOn = false;
       customOrder = order;
+      orderPos = null;
       await State.set(State.keys.reverse(listId), false);
       await State.set(State.keys.shuffle(listId), false);
       await State.set(State.keys.customOrder(listId), order);
@@ -615,6 +870,15 @@
     getState() {
       return { reverseOn, shuffleOn, customOrder };
     },
+
+    /** Order key for a sidebar item: its video id (or index if it has none). */
+    keyOfItem,
+
+    /** Test hooks: what yt-navigate-start and a page click do. */
+    _onNavigateStart: onNavigateStart,
+    _onUserPick: onUserPick,
+    _onControlClick: onControlClick,
+    _stepNext: () => stepTo(nextFromCurrent()),
 
     async getWatched(listId) {
       return (await State.get(State.keys.watched(listId))) || [];

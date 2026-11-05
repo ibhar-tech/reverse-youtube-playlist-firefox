@@ -91,8 +91,22 @@ describe("Autoplay Control & Button Visibility (Intensive Suite)", async () => {
       assert.equal(navTarget, null, "must not redirect when autoplay is disabled");
       assert.equal(videoPaused, false, "must not pause a video the user navigated to");
 
-      // Autoplay enabled: YouTube's forward-advance is redirected to the reverse order.
+      // Autoplay enabled, but the previous video was mid-way: that is the
+      // user clicking the next row, and it must play — not be "corrected".
       Playback.updateSettings({ disableAutoplay: false });
+      const video = { duration: 600, currentTime: 120, pause() { videoPaused = true; } };
+      document.querySelector = (sel) => (sel.includes("video") ? video : null);
+      Playback._onNavigateStart();
+      location.search = "?v=vid3&list=PLtestList&index=3";
+      Playback.handleNavigation();
+      assert.equal(navTarget, null, "a mid-video click on index+1 is the user's choice");
+
+      // The previous video reached its end: YouTube's own forward-advance
+      // slipped through, and is redirected to the reverse order.
+      location.search = "?v=vid2&list=PLtestList&index=2";
+      Playback.handleNavigation();
+      video.currentTime = 599.2;
+      Playback._onNavigateStart();
       location.search = "?v=vid3&list=PLtestList&index=3";
       Playback.handleNavigation();
       assert.equal(navTarget, 1, "must redirect to the reverse target when autoplay is enabled");
@@ -108,7 +122,9 @@ describe("Autoplay Control & Button Visibility (Intensive Suite)", async () => {
         "#ryp-ov-reverse": { classList: new Set() },
         "#ryp-btn-shuffle": { classList: new Set() },
         "#ryp-ov-shuffle": { classList: new Set() },
-        ".ryp-dropdown-wrapper": { classList: new Set() },
+        "#ryp-sort-wrapper": { classList: new Set() },
+        "#ryp-export-wrapper": { classList: new Set() },
+        "#ryp-ov-export-wrapper": { classList: new Set() },
         "#ryp-btn-reorder": { classList: new Set() },
         "#ryp-btn-reset": { classList: new Set() },
         "#ryp-btn-save": { classList: new Set() },
@@ -150,7 +166,8 @@ describe("Autoplay Control & Button Visibility (Intensive Suite)", async () => {
       assert.equal(mockElements["#ryp-overview-duration-pill"].classList.has("ryp-hidden"), true);
 
       // Other buttons default to visible
-      assert.equal(mockElements[".ryp-dropdown-wrapper"].classList.has("ryp-hidden"), false);
+      assert.equal(mockElements["#ryp-sort-wrapper"].classList.has("ryp-hidden"), false);
+      assert.equal(mockElements["#ryp-export-wrapper"].classList.has("ryp-hidden"), false);
       assert.equal(mockElements["#ryp-btn-reorder"].classList.has("ryp-hidden"), false);
       assert.equal(mockElements["#ryp-btn-save"].classList.has("ryp-hidden"), false);
       assert.equal(mockElements["#ryp-btn-playlists"].classList.has("ryp-hidden"), false);
@@ -168,6 +185,15 @@ describe("Autoplay Control & Button Visibility (Intensive Suite)", async () => {
       assert.equal(mockElements["#ryp-ov-reverse"].classList.has("ryp-hidden"), false);
       assert.equal(mockElements["#ryp-duration-pill"].classList.has("ryp-hidden"), false);
       assert.equal(mockElements["#ryp-btn-shuffle"].classList.has("ryp-hidden"), true);
+
+      // Sort and Export are both dropdowns: hiding one must not hide the other.
+      Toolbar.setButtonVisibility({ sort: false });
+      assert.equal(mockElements["#ryp-sort-wrapper"].classList.has("ryp-hidden"), true);
+      assert.equal(mockElements["#ryp-export-wrapper"].classList.has("ryp-hidden"), false);
+      Toolbar.setButtonVisibility({ export: false });
+      assert.equal(mockElements["#ryp-sort-wrapper"].classList.has("ryp-hidden"), false);
+      assert.equal(mockElements["#ryp-export-wrapper"].classList.has("ryp-hidden"), true);
+      assert.equal(mockElements["#ryp-ov-export-wrapper"].classList.has("ryp-hidden"), true);
     });
 
     test("missing keys in buttonVisibility default to true (visible)", () => {

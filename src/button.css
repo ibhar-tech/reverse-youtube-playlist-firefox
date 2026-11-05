@@ -216,6 +216,38 @@ html[dark], [dark] {
   transform: translateX(-2px);
 }
 
+.ryp-dropdown-item:focus-visible {
+  background: var(--ryp-btn-hover-bg);
+  color: var(--ryp-accent-start);
+}
+
+/* Non-interactive caption at the top of a menu (Export: "in the order shown"). */
+.ryp-dropdown-hint {
+  padding: 4px 12px 6px;
+  font-family: var(--ryp-font);
+  font-size: 11px;
+  color: var(--ryp-sub);
+  border-bottom: 1px solid var(--ryp-border);
+  margin-bottom: 2px;
+}
+
+/* ── Export (icon-only menu button) ──────────────────────────────────────── */
+
+/* Icon + chevron only, so adding Export does not widen the toolbar by a
+   whole labelled pill. The empty label still shows load progress. */
+.ryp-btn.ryp-icon-only {
+  gap: 3px;
+  padding: 6px 9px;
+}
+
+.ryp-icon-only .ryp-label:empty {
+  display: none;
+}
+
+.ryp-icon-only .ryp-chevron {
+  margin-left: 0;
+}
+
 /* ── Duration Stats Pill & Tooltip ───────────────────────────────────────── */
 
 .ryp-duration-pill {
@@ -538,6 +570,31 @@ ytd-playlist-panel-renderer #items.ryp-reorder-mode,
   box-shadow: var(--ryp-shadow);
   align-items: center;
   z-index: 50;
+}
+
+/* Channel pages: same bar, under the channel header and above the tabs.
+   The header's own content is inset; match it so the bar lines up. */
+.ryp-channel-bar {
+  margin: 4px 0 12px;
+  font-family: var(--ryp-font);
+}
+
+/* The one action users came for, so it carries the accent like an ON button. */
+.ryp-btn.ryp-btn-primary {
+  color: #ffffff;
+  background: var(--ryp-accent-grad);
+  border-color: transparent;
+  box-shadow: 0 4px 15px var(--ryp-accent-glow);
+}
+
+.ryp-btn.ryp-btn-primary:hover {
+  background: var(--ryp-accent-grad);
+  box-shadow: 0 8px 20px var(--ryp-accent-glow);
+}
+
+.ryp-channel-hint {
+  font-size: 12px;
+  color: var(--ryp-sub);
 }
 
 /* ── Video Player Action Bar Button ─────────────────────────────────────── */
@@ -926,9 +983,124 @@ html[dark] .ryp-search-input {
   border-radius: 6px;
 }
 
+/* The icons are bare <svg>s with a viewBox and no size. Unsized, the play
+   triangle grew to fill the pill and the trash icon collapsed to zero —
+   invisible, so lists could not be deleted from the panel. */
+.ryp-action-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: center;
+}
+
+.ryp-action-play svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  fill: currentColor;
+}
+
+.ryp-action-delete {
+  align-self: center;
+}
+
+.ryp-action-delete svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
 .ryp-action-delete:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
+}
+
+/* ── Card list export (text / CSV) ───────────────────────────────────────── */
+
+/* Wraps so the export choices can open as a full-width row under the card. */
+.ryp-saved-card {
+  flex-wrap: wrap;
+}
+
+/* With wrapping on, a long name would push the buttons onto their own line
+   instead of shrinking; keep the info column the one that gives way. */
+.ryp-saved-info {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ryp-action-export {
+  align-self: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  color: var(--ryp-sub);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.ryp-action-export svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.ryp-action-export:hover,
+.ryp-action-export[aria-expanded="true"] {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--ryp-accent-start);
+}
+
+.ryp-card-export-row {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ryp-border);
+}
+
+/* `hidden` loses to the display above without this. */
+.ryp-card-export-row[hidden] {
+  display: none;
+}
+
+.ryp-card-export-choice {
+  padding: 5px 10px;
+  font-family: var(--ryp-font);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ryp-btn-text);
+  background: var(--ryp-btn-bg);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-pill);
+  cursor: pointer;
+}
+
+.ryp-card-export-choice:hover,
+.ryp-card-export-choice:focus-visible {
+  color: var(--ryp-accent-start);
+  border-color: var(--ryp-accent-start);
+}
+
+/* Copy fallback: wide enough to read a line of the list. */
+.ryp-export-modal-content {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.ryp-export-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ryp-sub);
+}
+
+.ryp-export-textarea {
+  min-height: 180px;
+  resize: vertical;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
 }
 
 /* ── Toast Notifications ─────────────────────────────────────────────────── */
@@ -958,7 +1130,8 @@ html[dark] .ryp-search-input {
 
 /* ── Resume Toast ────────────────────────────────────────────────────────── */
 
-#ryp-resume-toast {
+#ryp-resume-toast,
+#ryp-rating-toast {
   position: fixed;
   bottom: 30px;
   left: 50%;
@@ -978,7 +1151,8 @@ html[dark] .ryp-search-input {
   transition: all 0.25s ease;
 }
 
-#ryp-resume-toast.ryp-toast-show {
+#ryp-resume-toast.ryp-toast-show,
+#ryp-rating-toast.ryp-toast-show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
@@ -1000,6 +1174,16 @@ html[dark] .ryp-search-input {
   border: none;
   color: #94a3b8;
   cursor: pointer;
+}
+
+#ryp-rating-toast {
+  max-width: min(560px, calc(100vw - 32px));
+}
+
+.ryp-rating-later {
+  font-family: var(--ryp-font);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 /* ── Modal Dialogs ───────────────────────────────────────────────────────── */
@@ -1165,4 +1349,62 @@ html[dark] .ryp-modal-btn-cancel {
 .ryp-kind-badge.ryp-kind-local {
   background: var(--ryp-accent-grad);
   color: #ffffff;
+}
+
+/* ── Mobile site (m.youtube.com, Firefox for Android) ────────────────────────
+   Every rule is scoped to html.ryp-mobile, which content.js sets only on the
+   mobile host, so the desktop layout is untouched. */
+
+/* The toolbar is a row of its own under the playlist sheet's header. The
+   sheet paints its own background (light or dark), so ours stays clear. */
+html.ryp-mobile #ryp-toolbar {
+  padding: 8px 12px;
+  gap: 8px;
+  background: transparent;
+}
+
+/* Finger-sized targets: ~36px tall instead of the desktop 28px. */
+html.ryp-mobile #ryp-toolbar .ryp-btn {
+  padding: 8px 12px;
+  font-size: 13px;
+  min-height: 36px;
+}
+
+/* No hover on a touch screen: :hover sticks after a tap, and the lift
+   animation then leaves buttons visibly offset. */
+html.ryp-mobile .ryp-btn:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* The saved-lists drawer is 360px on desktop — on a ~400px phone that leaves
+   a useless sliver of page beside it. Take the full width instead. */
+html.ryp-mobile #ryp-saved-panel {
+  width: 100vw;
+  max-width: 100vw;
+  top: 48px;
+  max-height: calc(100vh - 56px);
+  border-radius: 16px 16px 0 0;
+}
+
+html.ryp-mobile .ryp-modal-content {
+  width: min(320px, calc(100vw - 32px));
+  box-sizing: border-box;
+}
+
+/* YouTube's mobile theme is not exposed as html[dark] the way desktop's is;
+   it follows the device theme by default, so follow that too. */
+@media (prefers-color-scheme: dark) {
+  html.ryp-mobile {
+    --ryp-bg:            rgba(15, 15, 15, 0.94);
+    --ryp-bg-solid:      #0f0f0f;
+    --ryp-card-bg:       rgba(255, 255, 255, 0.04);
+    --ryp-card-hover:    rgba(255, 255, 255, 0.08);
+    --ryp-border:        rgba(255, 255, 255, 0.08);
+    --ryp-text:          #f3f4f6;
+    --ryp-sub:           #9ca3af;
+    --ryp-btn-text:      #f3f4f6;
+    --ryp-btn-bg:        rgba(255, 255, 255, 0.08);
+    --ryp-btn-hover-bg:  rgba(255, 255, 255, 0.14);
+  }
 }

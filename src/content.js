@@ -5,7 +5,8 @@
  * Supports /watch (with or without playlist) and /playlist overview pages.
  *
  * Load order (manifest.json):
- *   backup → state → playlist → playback → sidebar → panel → toolbar → content
+ *   backup → links → export → state → playlist → stats → channel →
+ *   playback → sidebar → panel → toolbar → content
  */
 (() => {
   "use strict";
@@ -45,19 +46,27 @@
     // Ensure panel drawer & modal system is ready on all pages
     Panel.injectPanel();
 
+    // Channel pages get the "Play oldest first" bar; every other page has
+    // the bar removed here, so channel → video → back never stacks two.
+    Toolbar.injectChannelBar();
+
     // 1. Overview playlist page (/playlist?list=...)
     if (Playlist.isOverviewPlaylistPage()) {
       stateReadyListId = null;
+      document.getElementById(TOOLBAR_ID)?.remove();
       Sidebar.disableReorderMode();
       Panel.togglePanel(false);
       activeListId = null;
       Toolbar.injectOverviewToolbar();
+      // Arrived from a channel's "Play oldest/newest first".
+      Toolbar.runPendingChannelPlay();
       return;
     }
 
     // 2. Not a watch page at all
     if (!Playlist.isWatchPage()) {
       stateReadyListId = null;
+      document.getElementById(TOOLBAR_ID)?.remove();
       Sidebar.disableReorderMode();
       Panel.togglePanel(false);
       activeListId = null;
@@ -230,6 +239,58 @@
     }
   }
 
+  // ── Keyboard shortcuts (manifest `commands`, via background.js) ──────────
+
+  // Each shortcut clicks the matching toolbar button, so it runs exactly the
+  // code a mouse click does — and still works when the user has hidden that
+  // button from the toolbar.
+  //
+  // The selector depends on the page type: YouTube keeps a hidden copy of the
+  // previous watch page in the DOM after in-app navigation, so a page-blind
+  // lookup clicked the *old* playlist's toolbar from an overview page.
+  const COMMAND_BUTTONS = {
+    watch: {
+      "toggle-reverse": "#ryp-toolbar #ryp-btn-reverse",
+      "toggle-shuffle": "#ryp-toolbar #ryp-btn-shuffle",
+      "load-all": "#ryp-toolbar .ryp-load-all-pill",
+    },
+    overview: {
+      "toggle-reverse": "#ryp-overview-toolbar #ryp-ov-reverse",
+      "toggle-shuffle": "#ryp-overview-toolbar #ryp-ov-shuffle",
+      "load-all": "#ryp-overview-toolbar .ryp-load-all-pill",
+    },
+  };
+
+  function runCommand(command) {
+    if (command === "add-to-list") {
+      if (Playlist.isWatchPage() && new URLSearchParams(location.search).get("v")) {
+        Panel.showAddToPlaylistModal(extractCurrentVideoInfo());
+      } else {
+        Panel.showToast(Panel.t("shortcutNeedsVideo"));
+      }
+      return;
+    }
+    const pageType = Playlist.isOverviewPlaylistPage()
+      ? "overview"
+      : Playlist.isPlaylistWatchPage() ? "watch" : null;
+    const selector = pageType && COMMAND_BUTTONS[pageType][command];
+    if (!selector) {
+      if (!pageType) Panel.showToast(Panel.t("shortcutNeedsPlaylist"));
+      return;
+    }
+    const btn = document.querySelector(selector);
+    if (btn && !btn.disabled) {
+      btn.click();
+    } else if (btn && btn.disabled) {
+      Panel.showToast(Panel.t("shortcutBusy")); // a load is already running
+    } else if (command === "load-all") {
+      // The pill removes itself once every row is rendered.
+      Panel.showToast(Panel.t("shortcutAllLoaded"));
+    } else {
+      Panel.showToast(Panel.t("shortcutNeedsPlaylist"));
+    }
+  }
+
   // ── Mutation observer ─────────────────────────────────────────────────────
 
   const OBSERVER_THROTTLE_MS = 180;
@@ -251,6 +312,10 @@
   }
 
   async function runDomPass() {
+    // The channel header renders after yt-navigate-finish, and is re-rendered
+    // in place when the SPA moves to another channel.
+    Toolbar.injectChannelBar();
+
     if (Playlist.isOverviewPlaylistPage()) {
       Toolbar.injectOverviewToolbar();
       return;
@@ -279,6 +344,9 @@
         Toolbar.syncButtonStates();
       }
 
+      // Rows of a long playlist render over time; map any legacy position
+      // entries of the stored order to video ids as their rows appear.
+      Playback.migrateLegacyOrder(Playlist.getPlaylistId());
       Sidebar.applyVisualOrder();
       Sidebar.applyWatchedBadges();
       Toolbar.updateDurationStats();
@@ -315,6 +383,7 @@
           if (Panel.isPanelVisible()) {
             Panel.renderList();
           }
+          window.RYP.Stats?.bump("save");
           sendResponse({ success: true });
         }).catch(err => {
           sendResponse({ success: false, error: err.message });
@@ -331,6 +400,12 @@
       return true;
     }
 
+    if (request.action === "RUN_COMMAND") {
+      runCommand(request.command);
+      sendResponse({ success: true });
+      return true;
+    }
+
     if (request.action === "OPEN_ADD_TO_PLAYLIST_MODAL") {
       const info = extractCurrentVideoInfo();
       Panel.showAddToPlaylistModal(info);
@@ -340,5 +415,13 @@
   });
 
   document.addEventListener("yt-navigate-finish", onNavigate);
+  if (Playlist.isMobile()) {
+    // m.youtube.com (Firefox for Android) never fires yt-navigate-finish; its
+    // in-app navigations end with state-navigateend on window, by which time
+    // location already holds the new URL (both seen live, 2026-11-05).
+    window.addEventListener("state-navigateend", onNavigate);
+    // Scopes the touch/narrow-screen CSS so desktop styling stays as it was.
+    document.documentElement.classList.add("ryp-mobile");
+  }
   onNavigate();
 })();

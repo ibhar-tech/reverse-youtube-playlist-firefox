@@ -1,6 +1,6 @@
 {
   "name": "reverse-youtube-playlist-order",
-  "version": "3.4.0",
+  "version": "3.6.0",
   "description": "Reverse, shuffle, sort, drag-reorder, and manage YouTube playlists locally and privately.",
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "build:edge": "./build-edge.sh",
     "build": "./build-chrome.sh && ./build-edge.sh",
     "test:e2e": "python3 tests/firefox_e2e.py",
-    "test:e2e:headed": "python3 tests/firefox_e2e.py --headed"
+    "test:e2e:headed": "python3 tests/firefox_e2e.py --headed",
+    "test:chromium": "node tests/chromium_offline_e2e.cjs"
   },
   "keywords": [
     "youtube",

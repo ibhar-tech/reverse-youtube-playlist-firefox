@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome — Playlist Tools</title>
+    <link rel="stylesheet" href="welcome.css">
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="hero">
+        <img src="../icons/icon-128.png" alt="" width="64" height="64">
+        <div>
+          <h1 data-i18n="title">Welcome to Playlist Tools</h1>
+          <p class="lede" data-i18n="lede">Reverse, shuffle, sort and save any YouTube playlist — free, private, no login.</p>
+        </div>
+      </header>
+
+      <section class="card" aria-labelledby="lang-h">
+        <h2 id="lang-h" data-i18n="langHeading">Language</h2>
+        <div class="lang-row" role="group" aria-labelledby="lang-h">
+          <button type="button" class="lang-btn" data-lang="en">English</button>
+          <button type="button" class="lang-btn" data-lang="fr">Français</button>
+          <button type="button" class="lang-btn" data-lang="ar">العربية</button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="steps-h">
+        <h2 id="steps-h" data-i18n="stepsHeading">How it works</h2>
+        <ol class="steps">
+          <li><strong data-i18n="step1Title">Open any YouTube playlist</strong><span data-i18n="step1Body">The toolbar appears at the top of the playlist panel, beside the video.</span></li>
+          <li><strong data-i18n="step2Title">Pick an order</strong><span data-i18n="step2Body">Reverse plays last to first, Shuffle keeps one random order, Sort goes by title, length, channel or watched.</span></li>
+          <li><strong data-i18n="step3Title">Build your own lists</strong><span data-i18n="step3Body">Click ＋ Add to Playlist under any video to collect it into a local playlist that lives only in your browser.</span></li>
+        </ol>
+      </section>
+
+      <section id="keys-card" class="card" aria-labelledby="keys-h">
+        <h2 id="keys-h" data-i18n="keysHeading">Keyboard shortcuts</h2>
+        <table class="keys">
+          <tbody id="keys-body"></tbody>
+        </table>
+        <button type="button" id="change-keys" class="secondary" data-i18n="changeKeys">Change shortcuts</button>
+      </section>
+
+      <section class="card" aria-labelledby="btns-h">
+        <h2 id="btns-h" data-i18n="buttonsHeading">Buttons to show</h2>
+        <p class="hint" data-i18n="buttonsHint">Untick the ones you never use. You can change this later in the popup's settings.</p>
+        <div id="btn-grid" class="btn-grid"></div>
+      </section>
+
+      <footer class="foot">
+        <p class="hint" data-i18n="privacy">Everything stays in your browser: no account, no YouTube API, no tracking.</p>
+        <a class="primary" href="https://www.youtube.com/" data-i18n="openYouTube">Open YouTube</a>
+      </footer>
+    </main>
+    <script src="welcome.js"></script>
+  </body>
+</html>

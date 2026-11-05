@@ -151,6 +151,8 @@
       "#secondary",
       "#columns #secondary",
       "ytd-watch-flexy #secondary",
+      // Mobile site: no sidebar — the panel goes above the watch-next feed.
+      Playlist.SEL.mobile.watchNextResults,
     ];
 
     let host = null;
@@ -208,6 +210,34 @@
 
   // ── Visual order ──────────────────────────────────────────────────────────
 
+  /** First position of each order entry — video ids, plus legacy indices. */
+  function orderPositions(order) {
+    const byVideoId = new Map();
+    const byIndex = new Map();
+    order.forEach((key, i) => {
+      const map = typeof key === "string" ? byVideoId : byIndex;
+      if (!map.has(key)) map.set(key, i);
+    });
+    return { byVideoId, byIndex };
+  }
+
+  /** The order the sidebar shows right now, as order keys. */
+  function visibleOrderKeys() {
+    const { reverseOn, customOrder } = Playback.getState();
+    if (customOrder && customOrder.length > 0) return [...customOrder];
+    const keys = Playlist.readItems().map(Playback.keyOfItem);
+    return reverseOn ? keys.reverse() : keys;
+  }
+
+  /** The entry of `order` that stands for this sidebar row, or null. */
+  function keyInOrder(order, element) {
+    const item = Playlist.readItems().find((it) => it.element === element);
+    const index = item ? item.index : Playlist.itemIndex(element);
+    if (item?.videoId && order.includes(item.videoId)) return item.videoId;
+    if (index !== null && order.includes(index)) return index;
+    return null;
+  }
+
   /** Reflect the current playback mode visually in the sidebar. */
   function applyVisualOrder() {
     const container = Playlist.getItemsContainer();
@@ -225,20 +255,18 @@
       container.style.display = "flex";
       container.style.flexDirection = "column";
 
-      const items = Playlist.readItems();
-      items.forEach((item) => {
-        const orderPos = customOrder.indexOf(item.index);
-        item.element.style.order = orderPos >= 0 ? orderPos : 9999;
+      const pos = orderPositions(customOrder);
+      Playlist.readItems().forEach((item) => {
+        if (!item.element) return; // remembered mobile row, not rendered
+        const p = pos.byVideoId.get(item.videoId) ?? pos.byIndex.get(item.index);
+        item.element.style.order = p !== undefined ? p : 9999;
       });
       visualStateApplied = true;
     } else {
       // Reset any CSS order overrides from a previous custom/shuffle mode.
-      const panel = document.querySelector(Playlist.SEL.panel);
-      if (panel) {
-        panel.querySelectorAll(Playlist.SEL.item).forEach((el) => {
-          el.style.order = "";
-        });
-      }
+      panelItems().forEach((el) => {
+        el.style.order = "";
+      });
       container.style.display = "";
       container.style.flexDirection = "";
 
@@ -252,7 +280,7 @@
   function scrollToCurrentItem() {
     const container = Playlist.getItemsContainer();
     if (!container) return;
-    const selected = container.querySelector(`${Playlist.SEL.item}[selected]`);
+    const selected = container.querySelector(Playlist.selectedRowSelector());
     if (!selected) return;
 
     let scroller = null;
@@ -326,9 +354,7 @@
   }
 
   function removeItemsDraggable() {
-    const panel = document.querySelector(Playlist.SEL.panel);
-    if (!panel) return;
-    panel.querySelectorAll(Playlist.SEL.item).forEach((el) => {
+    panelItems().forEach((el) => {
       el.removeAttribute("draggable");
       el.classList.remove("ryp-draggable", "ryp-drag-over", "ryp-dragging");
       el.removeEventListener("dragstart", onDragStart);
@@ -340,25 +366,21 @@
   }
 
   async function moveItemToPosition(element, position) {
-    const targetIdx = indexFromElement(element);
-    if (targetIdx === null) return;
+    const visibleOrder = visibleOrderKeys();
+    const targetKey = keyInOrder(visibleOrder, element);
+    if (targetKey === null) return;
 
-    const { reverseOn, customOrder } = Playback.getState();
-    const originalOrder = Playlist.readItems().map((item) => item.index);
-    const visibleOrder = customOrder && customOrder.length > 0
-      ? [...customOrder]
-      : reverseOn ? originalOrder.reverse() : originalOrder;
-
-    const filtered = visibleOrder.filter((idx) => idx !== targetIdx);
+    const filtered = visibleOrder.filter((key) => key !== targetKey);
     if (position === "top") {
-      filtered.unshift(targetIdx);
+      filtered.unshift(targetKey);
     } else {
-      filtered.push(targetIdx);
+      filtered.push(targetKey);
     }
 
     const listId = Playlist.getPlaylistId();
     if (listId && filtered.length > 0) {
       await Playback.applyCustomOrder(listId, filtered);
+      window.RYP.Stats?.bump("reorder");
       applyVisualOrder();
       window.RYP.Toolbar?.syncButtonStates();
       scrollToCurrentItem();
@@ -375,20 +397,15 @@
   function onDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    const panel = document.querySelector(Playlist.SEL.panel);
-    if (panel) {
-      panel
-        .querySelectorAll(Playlist.SEL.item)
-        .forEach((el) => el.classList.remove("ryp-drag-over"));
-    }
+    panelItems().forEach((el) => el.classList.remove("ryp-drag-over"));
     this.classList.add("ryp-drag-over");
     return false;
   }
 
-  function indexFromElement(element) {
-    const href = element.querySelector(Playlist.SEL.itemLink)?.getAttribute("href");
-    const index = parseInt(new URL(href || "", location.origin).searchParams.get("index") || "", 10);
-    return Number.isFinite(index) ? index : null;
+  /** Rows of whichever panel is active — YouTube's or our local-playlist one. */
+  function panelItems() {
+    const container = Playlist.getItemsContainer();
+    return container ? container.querySelectorAll(Playlist.rowSelector()) : [];
   }
 
   async function onDrop(e) {
@@ -399,38 +416,30 @@
     const container = Playlist.getItemsContainer();
     if (!container) return;
 
-    const { reverseOn, customOrder } = Playback.getState();
-    const originalOrder = Playlist.readItems().map((item) => item.index);
-    const visibleOrder = customOrder && customOrder.length > 0
-      ? [...customOrder]
-      : reverseOn ? originalOrder.reverse() : originalOrder;
-    const sourceIndex = indexFromElement(dragSrcElement);
-    const targetIndex = indexFromElement(this);
-    const srcPos = visibleOrder.indexOf(sourceIndex);
-    const dstPos = visibleOrder.indexOf(targetIndex);
-    if (srcPos === -1 || dstPos === -1) return;
+    const visibleOrder = visibleOrderKeys();
+    const sourceKey = keyInOrder(visibleOrder, dragSrcElement);
+    const targetKey = keyInOrder(visibleOrder, this);
+    const srcPos = visibleOrder.indexOf(sourceKey);
+    const dstPos = visibleOrder.indexOf(targetKey);
+    if (sourceKey === null || targetKey === null || srcPos === -1 || dstPos === -1) return;
 
-    const newOrder = visibleOrder.filter((index) => index !== sourceIndex);
-    const targetPosition = newOrder.indexOf(targetIndex);
-    newOrder.splice(srcPos < dstPos ? targetPosition + 1 : targetPosition, 0, sourceIndex);
+    const newOrder = visibleOrder.filter((key) => key !== sourceKey);
+    const targetPosition = newOrder.indexOf(targetKey);
+    newOrder.splice(srcPos < dstPos ? targetPosition + 1 : targetPosition, 0, sourceKey);
 
     const listId = Playlist.getPlaylistId();
     if (listId && newOrder.length > 0) {
       await Playback.applyCustomOrder(listId, newOrder);
+      window.RYP.Stats?.bump("reorder");
       applyVisualOrder();
       window.RYP.Toolbar?.syncButtonStates();
     }
   }
 
   function onDragEnd() {
-    const panel = document.querySelector(Playlist.SEL.panel);
-    if (panel) {
-      panel
-        .querySelectorAll(Playlist.SEL.item)
-        .forEach((el) =>
-          el.classList.remove("ryp-dragging", "ryp-drag-over")
-        );
-    }
+    panelItems().forEach((el) =>
+      el.classList.remove("ryp-dragging", "ryp-drag-over")
+    );
     dragSrcElement = null;
   }
 
@@ -444,6 +453,7 @@
     const watched = await Playback.getWatched(listId);
     if (Playlist.getPlaylistId() !== listId || Playlist.getItemsContainer() !== container) return;
     Playlist.readItems().forEach((item) => {
+      if (!item.element) return; // remembered mobile row, not rendered
       item.element.classList.toggle(
         "ryp-watched",
         watched.includes(item.videoId) || watched.includes(item.index)
@@ -455,6 +465,8 @@
 
   window.RYP.Sidebar = {
     applyVisualOrder,
+    visibleOrderKeys,
+    keyInOrder,
     applyWatchedBadges,
     scrollToCurrentItem,
     injectVirtualPlaylistPanel,
