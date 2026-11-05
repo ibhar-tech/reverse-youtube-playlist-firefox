@@ -128,7 +128,7 @@
   }
   // Toggles for buttons the mobile toolbar never shows would do nothing.
   const shownButtonKeys = isAndroid
-    ? BUTTON_KEYS.filter((k) => k !== "reorder" && k !== "addVideo")
+    ? BUTTON_KEYS.filter((k) => k !== "reorder" && k !== "addVideo" && k !== "channelPlay")
     : BUTTON_KEYS;
 
   async function renderKeys() {

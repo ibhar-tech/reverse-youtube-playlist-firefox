@@ -21,6 +21,7 @@
 | **⏱️ Watch Time** | Live duration calculator showing total time, watched time, remaining time, and 1.25x/1.5x/2x speed estimates. |
 | **＋ Add to List** | Add the video you're watching to a local playlist — a list you build yourself, held entirely in local storage and played from the extension's own sidebar. Available under the player and from the popup. |
 | **🎵 My Lists** | Opens a slide-in panel to name and save a snapshot of the current order. Playing a snapshot restores its exact saved order — your lists are permanent. |
+| **📺 Channel oldest first** | On any channel page: ▶ Play oldest first / ▶ Play newest first, through the channel's uploads playlist (videos only, no Shorts). |
 | **📄 Export list** | Copy a playlist as text, or download it as .txt / .csv, in the order you're playing it. Works on playlists, playlist pages and saved lists. |
 | **📤 Import / Export** | Back up all saved playlists to a JSON file and restore them anywhere — portable across devices and browser profiles. |
 | **⏯️ Resume** | A one-click prompt jumps back to the video and timestamp where you left off in any playlist. |
@@ -98,6 +99,7 @@ icons/
 ## 📋 Changelog
 
 ### v3.6.0 — 2026-11
+- ✨ **Play a channel oldest first** (or newest first) — a bar on every channel page plays all of the channel's videos from its first upload, using the channel's own uploads playlist (videos only: no Shorts or live streams). No API, no account. Checked on live YouTube against the channel's "Oldest" sort. Desktop only.
 - 📱 **Firefox for Android** — Reverse, Shuffle, Sort, Save, My Lists, Export and the duration pill work on mobile YouTube (m.youtube.com), from a compact toolbar in the playlist sheet; playback keeps following the order with the sheet closed. Drag-to-reorder and keyboard shortcuts don't exist on a phone, so they are left out there.
 - ✨ **Export a playlist as text or CSV** — copy to the clipboard or download .txt / .csv, in the order shown (Reverse, Shuffle, Sort or custom), from the playlist toolbar, the playlist page, or any saved list in My Lists. The CSV opens correctly in Excel, Arabic included, and is protected against formula injection.
 - 🐛 **My Lists card icons** — the delete (trash) icon had no size and was invisible, and the Play triangle overflowed its button.

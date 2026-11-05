@@ -435,7 +435,9 @@ function mobilePage() {
       hidden: !!bars[0]?.classList.contains('ryp-hidden'),
       labels: [...document.querySelectorAll('#ryp-channel-bar button')].map((b) => b.textContent.trim()) };
   });
-  await store({ [`customOrder:${FAKE_UULF}`]: ['u3', 'u5'], ryp_stats: null });
+  // Fresh stats *and* rating state: the export and mobile checks above count
+  // well over five actions, which legitimately spends the one-time prompt.
+  await store({ [`customOrder:${FAKE_UULF}`]: ['u3', 'u5'], ryp_stats: null, ryp_rating: null });
   await p.goto('https://www.youtube.com/@fakechan/videos');
   await p.waitForSelector('#ryp-channel-bar', { timeout: 8000 });
   let bar = await barState();

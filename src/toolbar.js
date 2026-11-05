@@ -1091,7 +1091,9 @@
     const { Channel } = window.RYP;
     const existing = document.getElementById(CHANNEL_BAR_ID);
     const root = Channel?.channelRoot(location.pathname);
-    if (!root) {
+    // Not on mobile YouTube: the flow ends on the /playlist page's Play
+    // Reverse, and the mobile site has no overview toolbar to run it.
+    if (!root || Playlist.isMobile()) {
       existing?.remove();
       return false;
     }
