@@ -10,7 +10,7 @@
 
   const api = typeof browser !== "undefined" ? browser : chrome;
 
-  const BUTTON_KEYS = ["reverse", "shuffle", "sort", "reorder", "reset", "save", "myLists", "duration", "loadAll", "addVideo"];
+  const BUTTON_KEYS = ["reverse", "shuffle", "sort", "reorder", "reset", "save", "myLists", "duration", "loadAll", "addVideo", "export"];
 
   const TRANSLATIONS = {
     en: {
@@ -34,6 +34,7 @@
       openYouTube: "Open YouTube",
       reverse: "Reverse", shuffle: "Shuffle", sort: "Sort", reorder: "Reorder", reset: "Reset",
       save: "Save", myLists: "My Lists", duration: "Duration", loadAll: "Load All", addVideo: "Add to Playlist",
+      export: "Export list",
     },
     fr: {
       pageTitle: "Bienvenue — Outils Playlist",
@@ -56,6 +57,7 @@
       openYouTube: "Ouvrir YouTube",
       reverse: "Inverser", shuffle: "Mélanger", sort: "Trier", reorder: "Réorganiser", reset: "Réinitialiser",
       save: "Enregistrer", myLists: "Mes listes", duration: "Durée", loadAll: "Tout charger", addVideo: "Ajouter à la playlist",
+      export: "Exporter la liste",
     },
     ar: {
       pageTitle: "مرحبًا — أدوات قائمة التشغيل",
@@ -78,6 +80,7 @@
       openYouTube: "افتح يوتيوب",
       reverse: "عكس", shuffle: "خلط", sort: "فرز", reorder: "إعادة ترتيب", reset: "إعادة تعيين",
       save: "حفظ", myLists: "قوائمي", duration: "المدة", loadAll: "تحميل الكل", addVideo: "إضافة إلى قائمة التشغيل",
+      export: "تصدير القائمة",
     },
   };
 

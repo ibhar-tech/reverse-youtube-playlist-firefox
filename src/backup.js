@@ -36,6 +36,7 @@
     "duration",
     "loadAll",
     "addVideo",
+    "export",
   ];
 
   function freshId() {

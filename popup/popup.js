@@ -40,6 +40,7 @@
     duration: true,
     loadAll: true,
     addVideo: true,
+    export: true,
   };
 
   /** Mirrors Panel.isLocalPlaylist (src/panel.js): no real playlist behind it. */
@@ -153,6 +154,7 @@
       btnVisDuration: "Duration",
       btnVisLoadAll: "Load All",
       btnVisAddVideo: "Add to Playlist",
+      btnVisExport: "Export list",
       backupSectionTitle: "Backup & Restore",
       exportBackup: "Export Playlists & Settings",
       importBackup: "Import Backup File",
@@ -245,6 +247,7 @@
       btnVisDuration: "Durée",
       btnVisLoadAll: "Tout charger",
       btnVisAddVideo: "Ajouter à la playlist",
+      btnVisExport: "Exporter la liste",
       backupSectionTitle: "Sauvegarde et Restauration",
       exportBackup: "Exporter playlists et paramètres",
       importBackup: "Importer un fichier de sauvegarde",
@@ -337,6 +340,7 @@
       btnVisDuration: "المدة",
       btnVisLoadAll: "تحميل الكل",
       btnVisAddVideo: "إضافة إلى القائمة",
+      btnVisExport: "تصدير القائمة",
       backupSectionTitle: "النسخ الاحتياطي والاستعادة",
       exportBackup: "تصدير قوائم التشغيل والإعدادات",
       importBackup: "استيراد ملف النسخ الاحتياطي",

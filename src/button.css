@@ -216,6 +216,38 @@ html[dark], [dark] {
   transform: translateX(-2px);
 }
 
+.ryp-dropdown-item:focus-visible {
+  background: var(--ryp-btn-hover-bg);
+  color: var(--ryp-accent-start);
+}
+
+/* Non-interactive caption at the top of a menu (Export: "in the order shown"). */
+.ryp-dropdown-hint {
+  padding: 4px 12px 6px;
+  font-family: var(--ryp-font);
+  font-size: 11px;
+  color: var(--ryp-sub);
+  border-bottom: 1px solid var(--ryp-border);
+  margin-bottom: 2px;
+}
+
+/* ── Export (icon-only menu button) ──────────────────────────────────────── */
+
+/* Icon + chevron only, so adding Export does not widen the toolbar by a
+   whole labelled pill. The empty label still shows load progress. */
+.ryp-btn.ryp-icon-only {
+  gap: 3px;
+  padding: 6px 9px;
+}
+
+.ryp-icon-only .ryp-label:empty {
+  display: none;
+}
+
+.ryp-icon-only .ryp-chevron {
+  margin-left: 0;
+}
+
 /* ── Duration Stats Pill & Tooltip ───────────────────────────────────────── */
 
 .ryp-duration-pill {
@@ -929,6 +961,94 @@ html[dark] .ryp-search-input {
 .ryp-action-delete:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
+}
+
+/* ── Card list export (text / CSV) ───────────────────────────────────────── */
+
+/* Wraps so the export choices can open as a full-width row under the card. */
+.ryp-saved-card {
+  flex-wrap: wrap;
+}
+
+/* With wrapping on, a long name would push the buttons onto their own line
+   instead of shrinking; keep the info column the one that gives way. */
+.ryp-saved-info {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ryp-action-export {
+  align-self: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  color: var(--ryp-sub);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.ryp-action-export svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.ryp-action-export:hover,
+.ryp-action-export[aria-expanded="true"] {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--ryp-accent-start);
+}
+
+.ryp-card-export-row {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ryp-border);
+}
+
+/* `hidden` loses to the display above without this. */
+.ryp-card-export-row[hidden] {
+  display: none;
+}
+
+.ryp-card-export-choice {
+  padding: 5px 10px;
+  font-family: var(--ryp-font);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ryp-btn-text);
+  background: var(--ryp-btn-bg);
+  border: 1px solid var(--ryp-border);
+  border-radius: var(--ryp-radius-pill);
+  cursor: pointer;
+}
+
+.ryp-card-export-choice:hover,
+.ryp-card-export-choice:focus-visible {
+  color: var(--ryp-accent-start);
+  border-color: var(--ryp-accent-start);
+}
+
+/* Copy fallback: wide enough to read a line of the list. */
+.ryp-export-modal-content {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.ryp-export-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ryp-sub);
+}
+
+.ryp-export-textarea {
+  min-height: 180px;
+  resize: vertical;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
 }
 
 /* ── Toast Notifications ─────────────────────────────────────────────────── */

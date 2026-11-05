@@ -71,6 +71,7 @@
       "js": [
         "src/backup.js",
         "src/links.js",
+        "src/export.js",
         "src/state.js",
         "src/playlist.js",
         "src/stats.js",

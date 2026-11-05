@@ -2,7 +2,7 @@
  * YouTube Playlist Tools — toolbar.js
  *
  * Injects and manages the playlist toolbar on watch pages and overview pages:
- *   [Reverse] [Shuffle] [Sort ▾] [Reorder] [Reset] [Save] [My Lists]
+ *   [Reverse] [Shuffle] [Sort ▾] [Reorder] [Reset] [Save] [Export ▾] [My Lists]
  *   [⚡ Load All] [⏱️ Duration Pill]
  *
  * Each button reflects live state (active / inactive) from Playback and
@@ -25,13 +25,16 @@
   const BUTTON_SELECTORS = {
     reverse: ["#ryp-btn-reverse", "#ryp-ov-reverse"],
     shuffle: ["#ryp-btn-shuffle", "#ryp-ov-shuffle"],
-    sort: [".ryp-dropdown-wrapper"],
+    // By id, not .ryp-dropdown-wrapper: Export is a dropdown too, and hiding
+    // Sort must not take it along.
+    sort: ["#ryp-sort-wrapper"],
     reorder: ["#ryp-btn-reorder"],
     reset: ["#ryp-btn-reset"],
     save: ["#ryp-btn-save", "#ryp-ov-save"],
     myLists: ["#ryp-btn-playlists"],
     duration: ["#ryp-duration-pill", "#ryp-overview-duration-pill"],
     loadAll: [".ryp-load-all-pill"],
+    export: ["#ryp-export-wrapper", "#ryp-ov-export-wrapper"],
   };
 
   function applyButtonVisibility() {
@@ -93,6 +96,12 @@
       playReverse: "Play Reverse",
       playShuffle: "Play Shuffle",
       saveOverviewSnapshot: "Save Snapshot",
+      export: "Export",
+      exportTitle: "Export this list as text or CSV, in the order shown",
+      exportMenuHint: "All videos, in the order shown",
+      exportCopy: "Copy as text",
+      exportTxt: "Download .txt",
+      exportCsv: "Download .csv",
     },
     fr: {
       reverse: "Inverser",
@@ -139,6 +148,12 @@
       playReverse: "Lire à l'envers",
       playShuffle: "Lire en aléatoire",
       saveOverviewSnapshot: "Enregistrer",
+      export: "Exporter",
+      exportTitle: "Exporter cette liste en texte ou en CSV, dans l'ordre affiché",
+      exportMenuHint: "Toutes les vidéos, dans l'ordre affiché",
+      exportCopy: "Copier en texte",
+      exportTxt: "Télécharger en .txt",
+      exportCsv: "Télécharger en .csv",
     },
     ar: {
       reverse: "عكس",
@@ -185,6 +200,12 @@
       playReverse: "تشغيل بالعكس",
       playShuffle: "تشغيل عشوائي",
       saveOverviewSnapshot: "حفظ كلقطة",
+      export: "تصدير",
+      exportTitle: "تصدير هذه القائمة كنص أو كملف CSV بالترتيب المعروض",
+      exportMenuHint: "كل الفيديوهات بالترتيب المعروض",
+      exportCopy: "نسخ كنص",
+      exportTxt: "تنزيل كملف نصي (TXT)",
+      exportCsv: "تنزيل كملف CSV",
     }
   };
 
@@ -276,6 +297,12 @@
     lightning: () => svg("0 0 24 24", 2, [
       { tag: "polygon", attrs: { points: "13 2 3 14 12 14 11 22 21 10 12 10 13 2" } }
     ]),
+    // Arrow out of a tray — "send this list somewhere".
+    export: () => svg("0 0 24 24", 2.2, [
+      { tag: "path", attrs: { d: "M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" } },
+      { tag: "polyline", attrs: { points: "16 6 12 2 8 6" } },
+      { tag: "line", attrs: { x1: "12", y1: "2", x2: "12", y2: "15" } }
+    ]),
   };
 
   // ── Button factory ────────────────────────────────────────────────────────
@@ -314,9 +341,12 @@
 
   function createSortDropdown(dict) {
     const wrapper = document.createElement("div");
+    wrapper.id = "ryp-sort-wrapper";
     wrapper.className = "ryp-dropdown-wrapper";
 
     const sortBtn = makeButton("ryp-btn-sort", "sort", dict.sort, dict.sortTitle);
+    sortBtn.setAttribute("aria-haspopup", "menu");
+    sortBtn.setAttribute("aria-expanded", "false");
     const chevron = document.createElement("span");
     chevron.className = "ryp-chevron";
     chevron.textContent = " ▾";
@@ -361,7 +391,7 @@
     sortBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      toggleSortDropdown();
+      toggleMenu(menu, undefined, e.detail === 0);
     });
 
     wrapper.append(sortBtn, menu);
@@ -370,12 +400,29 @@
 
   // State lives on the menu element, not in a variable: the toolbar is
   // re-injected on every SPA navigation, which would desync a module flag.
-  function toggleSortDropdown(forceState) {
-    const menu = document.getElementById("ryp-sort-menu");
+  function toggleMenu(menu, forceState, focusFirst = false) {
     if (!menu) return;
     const open = forceState !== undefined ? forceState : !menu.classList.contains("ryp-menu-show");
+    // Sort and Export sit side by side; two open menus would overlap.
+    if (open) closeMenus(menu);
     menu.classList.toggle("ryp-menu-show", open);
-    if (open) keepDropdownOnScreen(menu);
+    menu.parentElement?.querySelector(".ryp-btn")?.setAttribute("aria-expanded", String(open));
+    if (!open) return;
+    keepDropdownOnScreen(menu);
+    // Enter/Space on the button arrive as a click with detail 0. Put focus
+    // in the menu then, or a keyboard user has to tab past the toolbar to
+    // reach the items they just opened.
+    if (focusFirst) menu.querySelector(".ryp-dropdown-item")?.focus();
+  }
+
+  function toggleSortDropdown(forceState) {
+    toggleMenu(document.getElementById("ryp-sort-menu"), forceState);
+  }
+
+  function closeMenus(except = null) {
+    document.querySelectorAll(".ryp-dropdown-menu.ryp-menu-show").forEach((menu) => {
+      if (menu !== except) toggleMenu(menu, false);
+    });
   }
 
   // The menu hangs off the Sort button, which lands anywhere along a toolbar
@@ -399,8 +446,125 @@
   }
 
   document.addEventListener("click", (e) => {
-    if (!e.target.closest?.(".ryp-dropdown-wrapper")) closeSortDropdown();
+    const wrapper = e.target.closest?.(".ryp-dropdown-wrapper");
+    closeMenus(wrapper ? wrapper.querySelector(".ryp-dropdown-menu") : null);
   });
+
+  // Escape closes the open menu and hands focus back to its button, so a
+  // keyboard user is not left on an item that just disappeared.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const open = document.querySelector?.(".ryp-dropdown-menu.ryp-menu-show");
+    if (!open) return;
+    const hadFocus = open.contains(document.activeElement);
+    closeMenus();
+    if (hadFocus) open.parentElement?.querySelector(".ryp-btn")?.focus();
+  });
+
+  // ── Export Dropdown Menu ──────────────────────────────────────────────────
+
+  const EXPORT_LABELS = { copy: "exportCopy", txt: "exportTxt", csv: "exportCsv" };
+
+  /**
+   * Export ▾ — copy or download the list in the order the user sees.
+   * Icon-only, so the toolbar does not grow by another labelled pill. The
+   * label span stays, empty, because ensureAllItemsLoaded writes its
+   * "Loading 120/300..." progress there while a long playlist loads.
+   */
+  function createExportDropdown(dict, overview) {
+    const prefix = overview ? "ryp-ov-" : "ryp-";
+    const wrapper = document.createElement("div");
+    wrapper.id = `${prefix}export-wrapper`;
+    wrapper.className = "ryp-dropdown-wrapper ryp-export-wrapper";
+
+    const btn = makeButton(overview ? "ryp-ov-export" : "ryp-btn-export", "export", "", dict.exportTitle);
+    btn.classList.add("ryp-icon-only");
+    btn.removeAttribute("aria-pressed"); // a menu button, not a toggle
+    btn.setAttribute("aria-label", dict.export);
+    btn.setAttribute("aria-haspopup", "menu");
+    btn.setAttribute("aria-expanded", "false");
+    const chevron = document.createElement("span");
+    chevron.className = "ryp-chevron";
+    chevron.textContent = "▾";
+    btn.appendChild(chevron);
+
+    const menu = document.createElement("div");
+    menu.id = `${prefix}export-menu`;
+    menu.className = "ryp-dropdown-menu ryp-export-menu";
+    menu.setAttribute("role", "menu");
+
+    const hint = document.createElement("div");
+    hint.className = "ryp-dropdown-hint";
+    hint.textContent = dict.exportMenuHint;
+    menu.appendChild(hint);
+
+    for (const kind of Object.keys(EXPORT_LABELS)) {
+      const item = document.createElement("button");
+      item.className = "ryp-dropdown-item";
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.dataset.exportKind = kind;
+      item.textContent = dict[EXPORT_LABELS[kind]];
+      item.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeMenus();
+        await exportCurrentList(kind, btn);
+      });
+      menu.appendChild(item);
+    }
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleMenu(menu, undefined, e.detail === 0);
+    });
+
+    wrapper.append(btn, menu);
+    return wrapper;
+  }
+
+  /** Best-effort playlist name, for the text heading and the file name. */
+  function currentPlaylistTitle() {
+    const selectors = Playlist.isVirtualPlaylist()
+      ? ["#ryp-virtual-playlist-panel .ryp-virtual-title"]
+      : [
+          "ytd-playlist-panel-renderer #header-description .title",
+          "ytd-playlist-panel-renderer .title",
+          "ytd-playlist-header-renderer .yt-dynamic-sizing-formatted-string",
+          "yt-page-header-view-model h1",
+        ];
+    for (const sel of selectors) {
+      const text = document.querySelector(sel)?.textContent?.replace(/\s+/g, " ").trim();
+      if (text) return text;
+    }
+    // On /playlist the tab title is the playlist's ("(3) Name - YouTube");
+    // on a watch page it is the video's, so it is no use there.
+    if (Playlist.isOverviewPlaylistPage()) {
+      const fromTab = (document.title || "").replace(/^\(\d+\)\s*/, "").replace(/\s+-\s+YouTube$/, "").trim();
+      if (fromTab) return fromTab;
+    }
+    return Playlist.getPlaylistId() || "";
+  }
+
+  async function exportCurrentList(kind, btn) {
+    if (btn?.disabled) return;
+    const onWatchPage = Playlist.isPlaylistWatchPage();
+    // Every row first, or a long playlist exports only YouTube's rendered
+    // window. The overview bar always runs the loader, like its other
+    // buttons: without a count in its header a partial table looks complete.
+    if (onWatchPage) await loadAllBefore(btn);
+    else await ensureAllItemsLoaded(btn);
+
+    // The watch sidebar may be reversed, shuffled, sorted or hand-ordered;
+    // export what it shows. The overview page has no active mode — and
+    // Playback may still hold the last watch page's state — so its order is
+    // YouTube's.
+    const items = onWatchPage
+      ? window.RYP.Export.orderItems(Playlist.readItems(), Sidebar.visibleOrderKeys())
+      : Playlist.readOverviewItems();
+    await Panel.exportVideos(kind, items, currentPlaylistTitle());
+  }
 
   // ── Duration Stats Pill ───────────────────────────────────────────────────
 
@@ -666,7 +830,9 @@
     durationPill.id = "ryp-duration-pill";
     durationPill.className = "ryp-duration-pill";
 
-    toolbar.append(reverseBtn, shuffleBtn, sortDropdown, reorderBtn, resetBtn, saveBtn, playlistsBtn, durationPill);
+    const exportDropdown = createExportDropdown(dict, false);
+
+    toolbar.append(reverseBtn, shuffleBtn, sortDropdown, reorderBtn, resetBtn, saveBtn, exportDropdown, playlistsBtn, durationPill);
     container.appendChild(toolbar);
 
     checkLazyLoadState(toolbar);
@@ -709,7 +875,9 @@
     durationPill.id = "ryp-overview-duration-pill";
     durationPill.className = "ryp-duration-pill";
 
-    toolbar.append(playReverseBtn, playShuffleBtn, saveBtn, durationPill);
+    const exportDropdown = createExportDropdown(dict, true);
+
+    toolbar.append(playReverseBtn, playShuffleBtn, saveBtn, exportDropdown, durationPill);
     container.prepend(toolbar);
 
     checkLazyLoadState(toolbar);
@@ -817,6 +985,21 @@
       saveBtn.title = dict.saveTitle;
       const labelEl = saveBtn.querySelector(".ryp-label");
       if (labelEl) labelEl.textContent = dict.save;
+    }
+
+    // Language switches reach here without a re-injection. The label span is
+    // left alone: it is empty except while it shows load progress.
+    for (const id of ["ryp-btn-export", "ryp-ov-export"]) {
+      const exportBtn = document.getElementById(id);
+      if (!exportBtn) continue;
+      exportBtn.title = dict.exportTitle;
+      exportBtn.setAttribute("aria-label", dict.export);
+      const menu = exportBtn.parentElement?.querySelector(".ryp-export-menu");
+      const hint = menu?.querySelector(".ryp-dropdown-hint");
+      if (hint) hint.textContent = dict.exportMenuHint;
+      menu?.querySelectorAll(".ryp-dropdown-item").forEach((item) => {
+        item.textContent = dict[EXPORT_LABELS[item.dataset.exportKind]];
+      });
     }
 
     setActive(

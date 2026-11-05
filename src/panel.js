@@ -21,6 +21,7 @@
   const { State, Playlist, Playback } = window.RYP;
 
   const PANEL_ID = "ryp-saved-panel";
+  const EXPORT_MODAL_ID = "ryp-export-text-modal";
   let panelVisible = false;
   let activeLang = "en";
 
@@ -79,6 +80,16 @@
       shortcutNeedsVideo: "Open a YouTube video to use this shortcut.",
       shortcutAllLoaded: "Every video in this playlist is already loaded.",
       shortcutBusy: "Still loading the playlist — one moment.",
+      exportList: "Export list (text or CSV)",
+      exportCopy: "Copy as text",
+      exportTxt: "Download .txt",
+      exportCsv: "Download .csv",
+      exportCopied: "✓ Copied {count} videos to the clipboard",
+      exportDownloaded: "✓ Saved {count} videos to {file}",
+      exportNothing: "No videos to export.",
+      exportCopyTitle: "Copy the list",
+      exportCopyHint: "Your browser blocked automatic copying. The list is selected below — press Ctrl+C (⌘C on a Mac), or click Copy.",
+      copy: "Copy",
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -134,6 +145,16 @@
       shortcutNeedsVideo: "Ouvrez une vidéo YouTube pour utiliser ce raccourci.",
       shortcutAllLoaded: "Toutes les vidéos de cette playlist sont déjà chargées.",
       shortcutBusy: "Chargement de la playlist en cours — un instant.",
+      exportList: "Exporter la liste (texte ou CSV)",
+      exportCopy: "Copier en texte",
+      exportTxt: "Télécharger en .txt",
+      exportCsv: "Télécharger en .csv",
+      exportCopied: "✓ {count} vidéos copiées dans le presse-papiers",
+      exportDownloaded: "✓ {count} vidéos enregistrées dans {file}",
+      exportNothing: "Aucune vidéo à exporter.",
+      exportCopyTitle: "Copier la liste",
+      exportCopyHint: "Votre navigateur a bloqué la copie automatique. La liste est sélectionnée ci-dessous : appuyez sur Ctrl+C (⌘C sur Mac) ou cliquez sur Copier.",
+      copy: "Copier",
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -189,6 +210,16 @@
       shortcutNeedsVideo: "افتح فيديو على يوتيوب لاستخدام هذا الاختصار.",
       shortcutAllLoaded: "جميع فيديوهات قائمة التشغيل هذه محمّلة بالفعل.",
       shortcutBusy: "جارٍ تحميل قائمة التشغيل — لحظة من فضلك.",
+      exportList: "تصدير القائمة (نص أو CSV)",
+      exportCopy: "نسخ كنص",
+      exportTxt: "تنزيل كملف نصي (TXT)",
+      exportCsv: "تنزيل كملف CSV",
+      exportCopied: "✓ تم نسخ {count} فيديو إلى الحافظة",
+      exportDownloaded: "✓ تم حفظ {count} فيديو في {file}",
+      exportNothing: "لا توجد فيديوهات للتصدير.",
+      exportCopyTitle: "نسخ القائمة",
+      exportCopyHint: "منع المتصفح النسخ التلقائي. القائمة محددة بالأسفل — اضغط Ctrl+C (أو ⌘C على ماك)، أو انقر على نسخ.",
+      copy: "نسخ",
     }
   };
 
@@ -353,6 +384,14 @@
       { tag: "path", attrs: { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" } },
       { tag: "polyline", attrs: { points: "17 8 12 3 7 8" } },
       { tag: "line", attrs: { x1: "12", y1: "3", x2: "12", y2: "15" } }
+    ]),
+    // A text file: the card's "export as list" action, kept visually apart
+    // from the JSON backup's download arrow.
+    listExport: () => svg("ryp-list-export-icon-svg", "0 0 24 24", 2, [
+      { tag: "path", attrs: { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" } },
+      { tag: "polyline", attrs: { points: "14 2 14 8 20 8" } },
+      { tag: "line", attrs: { x1: "8", y1: "13", x2: "16", y2: "13" } },
+      { tag: "line", attrs: { x1: "8", y1: "17", x2: "14", y2: "17" } }
     ])
   };
 
@@ -593,7 +632,10 @@
         panelVisible &&
         !panel.contains(e.target) &&
         e.target.id !== "ryp-btn-playlists" &&
-        !e.target.closest("#ryp-btn-playlists")
+        !e.target.closest("#ryp-btn-playlists") &&
+        // The copy fallback opened from a card lives on <body>; selecting its
+        // text must not close the panel the user is still working in.
+        !e.target.closest("#" + EXPORT_MODAL_ID)
       ) {
         togglePanel(false);
       }
@@ -1125,8 +1167,41 @@
       deleteBtn.appendChild(ICONS.trash());
       deleteBtn.dataset.id = pl.id;
 
-      const actionsCol = el("div", { className: "ryp-saved-actions" }, [playBtn, deleteBtn]);
-      const card = el("div", { className: "ryp-saved-card" }, [infoCol, actionsCol]);
+      const exportBtn = el("button", {
+        className: "ryp-action-export",
+        title: dict.exportList,
+        "aria-label": `${dict.exportList}: ${pl.name}`,
+        "aria-expanded": "false",
+      });
+      exportBtn.appendChild(ICONS.listExport());
+
+      // The export choices open inline under the card rather than as a
+      // dropdown: the list scrolls (overflow-y: auto), which would clip a
+      // floating menu on the last cards.
+      const exportRow = el("div", { className: "ryp-card-export-row", role: "group" });
+      exportRow.hidden = true;
+      for (const [kind, label] of [["copy", dict.exportCopy], ["txt", dict.exportTxt], ["csv", dict.exportCsv]]) {
+        const choice = el("button", { className: "ryp-card-export-choice", textContent: label });
+        choice.dataset.exportKind = kind;
+        choice.addEventListener("click", async () => {
+          exportRow.hidden = true;
+          exportBtn.setAttribute("aria-expanded", "false");
+          await exportVideos(kind, window.RYP.Export.snapshotItems(pl), pl.name);
+        });
+        exportRow.appendChild(choice);
+      }
+      exportBtn.addEventListener("click", () => {
+        const open = exportRow.hidden;
+        // One open row at a time, so the list doesn't fill up with them.
+        listEl.querySelectorAll(".ryp-card-export-row").forEach((row) => { row.hidden = true; });
+        listEl.querySelectorAll(".ryp-action-export").forEach((btn) => btn.setAttribute("aria-expanded", "false"));
+        exportRow.hidden = !open;
+        exportBtn.setAttribute("aria-expanded", String(open));
+        if (open) exportRow.querySelector("button")?.focus();
+      });
+
+      const actionsCol = el("div", { className: "ryp-saved-actions" }, [playBtn, exportBtn, deleteBtn]);
+      const card = el("div", { className: "ryp-saved-card" }, [infoCol, actionsCol, exportRow]);
 
       playBtn.addEventListener("click", async () => {
         if (!pl || !pl.videos || pl.videos.length === 0) return;
@@ -1296,6 +1371,106 @@
     toast.classList.add("ryp-toast-show");
   }
 
+  // ── List export (text / CSV) ──────────────────────────────────────────────
+
+  /**
+   * Copy or download `items` (already in the order to export) as text or
+   * CSV. Shared by the toolbar's Export menu and the cards in this panel so
+   * both say the same thing when it works and when it does not.
+   * kind: "copy" | "txt" | "csv". Resolves true when something was exported.
+   */
+  async function exportVideos(kind, items, name) {
+    const { Export } = window.RYP;
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    const rows = Export.toRows(items);
+    if (rows.length === 0) {
+      showToast(dict.exportNothing);
+      return false;
+    }
+    const count = String(rows.length);
+
+    if (kind === "copy") {
+      const text = Export.formatText(rows, { title: name });
+      if (await Export.copyText(text)) {
+        showToast(dict.exportCopied.replace("{count}", count));
+      } else {
+        showExportTextModal(text, count);
+      }
+    } else {
+      const csv = kind === "csv";
+      const file = Export.fileName(name, csv ? "csv" : "txt");
+      Export.download(
+        csv ? Export.formatCsv(rows) : Export.formatText(rows, { title: name }),
+        file,
+        csv ? "text/csv;charset=utf-8" : "text/plain;charset=utf-8"
+      );
+      showToast(dict.exportDownloaded.replace("{count}", count).replace("{file}", file));
+    }
+    window.RYP.Stats?.bump("export");
+    return true;
+  }
+
+  /**
+   * Clipboard writes need a fresh user gesture, and loading a long playlist
+   * before copying can take longer than the browser keeps one. Rather than
+   * fail silently, show the text selected, with a Copy button that is itself
+   * a new gesture.
+   */
+  function showExportTextModal(text, count) {
+    document.getElementById(EXPORT_MODAL_ID)?.remove();
+    const dict = TRANSLATIONS[activeLang] || TRANSLATIONS.en;
+    const overlay = el("div", { id: EXPORT_MODAL_ID, className: "ryp-modal-overlay" });
+    overlay.dir = activeLang === "ar" ? "rtl" : "ltr";
+
+    const titleEl = el("h3", { className: "ryp-modal-title", textContent: dict.exportCopyTitle });
+    const hintEl = el("p", { className: "ryp-modal-text ryp-export-hint", textContent: dict.exportCopyHint });
+    // dir=auto: the list mixes Latin URLs with titles in any script, so let
+    // the first strong character pick the direction instead of the UI's.
+    const area = el("textarea", {
+      className: "ryp-modal-input ryp-export-textarea",
+      readonly: "",
+      rows: "10",
+      dir: "auto",
+      spellcheck: "false",
+    });
+    area.value = text;
+
+    const closeBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-cancel", textContent: dict.close });
+    const copyBtn = el("button", { className: "ryp-modal-btn ryp-modal-btn-confirm", textContent: dict.copy });
+    const buttonsRow = el("div", { className: "ryp-modal-buttons" }, [closeBtn, copyBtn]);
+    const modal = el("div", { className: "ryp-modal-content ryp-export-modal-content" }, [titleEl, hintEl, area, buttonsRow]);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const escListener = (e) => {
+      if (e.key === "Escape") close();
+    };
+    const close = () => {
+      window.removeEventListener("keydown", escListener);
+      overlay.classList.add("ryp-modal-closing");
+      setTimeout(() => overlay.remove(), 220);
+    };
+
+    copyBtn.addEventListener("click", async () => {
+      if (await window.RYP.Export.copyText(text)) {
+        showToast(dict.exportCopied.replace("{count}", count));
+        close();
+      } else {
+        area.focus();
+        area.select();
+      }
+    });
+    closeBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+    window.addEventListener("keydown", escListener);
+
+    area.focus();
+    area.select();
+  }
+
   // ── Custom Modal ──────────────────────────────────────────────────────────
 
   function showSaveModal({ title, placeholder, tagsPlaceholder, defaultValue, defaultTags, confirmLabel, onConfirm }) {
@@ -1444,6 +1619,7 @@
     showRatingToast,
     t: (key) => (TRANSLATIONS[activeLang] || TRANSLATIONS.en)[key] || key,
     saveCurrentOrder,
+    exportVideos,
     renderList,
     showSaveModal,
     showSaveOptionsModal,
