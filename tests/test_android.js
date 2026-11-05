@@ -368,8 +368,10 @@ describe("Firefox for Android — manifest and desktop-only APIs", async () => {
       assert.match(i18nNodes[0].textContent, /phone/);
       assert.equal(i18nNodes[1].attrs["data-i18n"], "step3BodyMobile");
       const labels = grid.children.map((label) => label.children[1].textContent);
-      assert.equal(labels.length, 8);
+      // Every button key except the two that don't exist on mobile.
+      assert.equal(labels.length, window.RYP?.Backup?.BUTTON_KEYS ? window.RYP.Backup.BUTTON_KEYS.length - 2 : 9);
       assert.ok(!labels.includes("Reorder") && !labels.includes("Add to Playlist"));
+      assert.ok(labels.includes("Export list"), "export works on mobile, so it stays");
     } finally {
       document.getElementById = saved.getElementById;
       document.querySelector = saved.querySelector;

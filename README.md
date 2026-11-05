@@ -3,7 +3,7 @@
 > **Reverse, shuffle, drag-reorder, and save YouTube playlists — locally, privately, with zero logins.**
 
 [![Version](https://img.shields.io/badge/version-3.6.0-blue?style=flat-square)](https://github.com/ibhar/YTB_REV_PLAYLIST/releases)
-[![Firefox](https://img.shields.io/badge/Firefox-≥140-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
+[![Firefox](https://img.shields.io/badge/Firefox-≥140%20·%20Android%20≥142-orange?style=flat-square&logo=firefox)](https://addons.mozilla.org/firefox/addon/reverse-youtube-playlist-order/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](./LICENSE)
 [![Privacy: No data collected](https://img.shields.io/badge/Privacy-No%20data%20collected-brightgreen?style=flat-square)]()
 
@@ -98,6 +98,7 @@ icons/
 ## 📋 Changelog
 
 ### v3.6.0 — 2026-11
+- 📱 **Firefox for Android** — Reverse, Shuffle, Sort, Save, My Lists, Export and the duration pill work on mobile YouTube (m.youtube.com), from a compact toolbar in the playlist sheet; playback keeps following the order with the sheet closed. Drag-to-reorder and keyboard shortcuts don't exist on a phone, so they are left out there.
 - ✨ **Export a playlist as text or CSV** — copy to the clipboard or download .txt / .csv, in the order shown (Reverse, Shuffle, Sort or custom), from the playlist toolbar, the playlist page, or any saved list in My Lists. The CSV opens correctly in Excel, Arabic included, and is protected against formula injection.
 - 🐛 **My Lists card icons** — the delete (trash) icon had no size and was invisible, and the Play triangle overflowed its button.
 - 🧱 **Orders are keyed by video id.** Custom, shuffle and sort orders used to store playlist positions, which pointed at the wrong videos as soon as the playlist owner added or removed one (Watch Later shifts on every add). Saved orders now survive edits; old ones are converted automatically as their rows appear, and snapshots replay by id.
