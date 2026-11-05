@@ -221,6 +221,46 @@ describe("3.6 design fixes", async () => {
     assert.equal(Playlist.currentIndex(), 3);
   });
 
+  // Review findings: the real lifecycle calls loadState() on every
+  // navigation, which used to wipe the position state.
+  const navigate = async () => {
+    await window.RYP.Playback.loadState("PLx");
+    window.RYP.Playback.handleNavigation();
+  };
+
+  test("review: a duplicate video still continues correctly when loadState runs on each navigation", async () => {
+    const { Playback } = window.RYP;
+    rows = [item(1, "aaa", clicks), item(2, "bbb", clicks), item(3, "ccc", clicks)];
+    at("bbb", 2);
+    await Playback.applyCustomOrder("PLx", ["aaa", "bbb", "aaa", "ccc"]);
+    await navigate();
+    assert.equal(Playback._stepNext(), true);
+    at("aaa", 1);
+    await navigate();
+    assert.equal(Playback.nextIndexInMode("aaa"), "ccc");
+  });
+
+  test("review: the fallback redirect works for custom orders when loadState runs on each navigation", async () => {
+    const { Playback } = window.RYP;
+    rows = [item(1, "aaa", clicks), item(2, "bbb", clicks), item(3, "ccc", clicks)];
+    at("aaa", 1);
+    await Playback.applyCustomOrder("PLx", ["aaa", "ccc", "bbb"]);
+    await navigate();
+    const v = { duration: 100, currentTime: 99.5 };
+    document.querySelector = (sel) => (sel.includes("video") ? v : null);
+    Playback._onNavigateStart();
+    at("bbb", 2); // YouTube's own +1 advance slipped through
+    await navigate();
+    assert.deepEqual(clicks, ["ccc"]);
+  });
+
+  test("review: a quiet stats bump never spends the one-time rating prompt", async () => {
+    await import("../src/stats.js");
+    const { Stats } = window.RYP;
+    for (let i = 0; i < 6; i++) assert.equal(await Stats.bump("reverse", { quiet: true }), false);
+    assert.equal(globalThis.browser.storage.local.data.ryp_rating, undefined);
+  });
+
   test("our own synthetic clicks don't count as the user", () => {
     const { Playback } = window.RYP;
     const row = { closest: () => ({}) };

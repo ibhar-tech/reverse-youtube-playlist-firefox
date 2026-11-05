@@ -48,6 +48,7 @@
     // 1. Overview playlist page (/playlist?list=...)
     if (Playlist.isOverviewPlaylistPage()) {
       stateReadyListId = null;
+      document.getElementById(TOOLBAR_ID)?.remove();
       Sidebar.disableReorderMode();
       Panel.togglePanel(false);
       activeListId = null;
@@ -58,6 +59,7 @@
     // 2. Not a watch page at all
     if (!Playlist.isWatchPage()) {
       stateReadyListId = null;
+      document.getElementById(TOOLBAR_ID)?.remove();
       Sidebar.disableReorderMode();
       Panel.togglePanel(false);
       activeListId = null;
@@ -235,10 +237,21 @@
   // Each shortcut clicks the matching toolbar button, so it runs exactly the
   // code a mouse click does — and still works when the user has hidden that
   // button from the toolbar.
+  //
+  // The selector depends on the page type: YouTube keeps a hidden copy of the
+  // previous watch page in the DOM after in-app navigation, so a page-blind
+  // lookup clicked the *old* playlist's toolbar from an overview page.
   const COMMAND_BUTTONS = {
-    "toggle-reverse": ["#ryp-btn-reverse", "#ryp-ov-reverse"],
-    "toggle-shuffle": ["#ryp-btn-shuffle", "#ryp-ov-shuffle"],
-    "load-all": [".ryp-load-all-pill"],
+    watch: {
+      "toggle-reverse": "#ryp-toolbar #ryp-btn-reverse",
+      "toggle-shuffle": "#ryp-toolbar #ryp-btn-shuffle",
+      "load-all": "#ryp-toolbar .ryp-load-all-pill",
+    },
+    overview: {
+      "toggle-reverse": "#ryp-overview-toolbar #ryp-ov-reverse",
+      "toggle-shuffle": "#ryp-overview-toolbar #ryp-ov-shuffle",
+      "load-all": "#ryp-overview-toolbar .ryp-load-all-pill",
+    },
   };
 
   function runCommand(command) {
@@ -250,12 +263,21 @@
       }
       return;
     }
-    const selectors = COMMAND_BUTTONS[command];
-    if (!selectors) return;
-    const btn = selectors.map((sel) => document.querySelector(sel)).find(Boolean);
+    const pageType = Playlist.isOverviewPlaylistPage()
+      ? "overview"
+      : Playlist.isPlaylistWatchPage() ? "watch" : null;
+    const selector = pageType && COMMAND_BUTTONS[pageType][command];
+    if (!selector) {
+      if (!pageType) Panel.showToast(Panel.t("shortcutNeedsPlaylist"));
+      return;
+    }
+    const btn = document.querySelector(selector);
     if (btn && !btn.disabled) {
       btn.click();
-    } else if (command === "load-all" && document.getElementById(TOOLBAR_ID)) {
+    } else if (btn && btn.disabled) {
+      Panel.showToast(Panel.t("shortcutBusy")); // a load is already running
+    } else if (command === "load-all") {
+      // The pill removes itself once every row is rendered.
       Panel.showToast(Panel.t("shortcutAllLoaded"));
     } else {
       Panel.showToast(Panel.t("shortcutNeedsPlaylist"));

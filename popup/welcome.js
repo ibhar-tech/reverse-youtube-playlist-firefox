@@ -132,9 +132,12 @@
       const box = document.createElement("input");
       box.type = "checkbox";
       box.checked = vis[key] !== false;
-      box.addEventListener("change", () => {
-        const next = { ...(settings.buttonVisibility || {}), [key]: box.checked };
-        saveSettings({ buttonVisibility: next });
+      box.addEventListener("change", async () => {
+        // Build on the stored value, not this page's copy: the popup may
+        // have changed other buttons while this tab was open.
+        const latest = (await api.storage.local.get("ryp_settings")).ryp_settings || {};
+        const next = { ...(latest.buttonVisibility || {}), [key]: box.checked };
+        await saveSettings({ buttonVisibility: next });
       });
       const text = document.createElement("span");
       text.textContent = dict()[key];

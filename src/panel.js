@@ -78,6 +78,7 @@
       shortcutNeedsPlaylist: "Open a YouTube playlist to use this shortcut.",
       shortcutNeedsVideo: "Open a YouTube video to use this shortcut.",
       shortcutAllLoaded: "Every video in this playlist is already loaded.",
+      shortcutBusy: "Still loading the playlist — one moment.",
     },
     fr: {
       extensionName: "Outils Playlist",
@@ -132,6 +133,7 @@
       shortcutNeedsPlaylist: "Ouvrez une playlist YouTube pour utiliser ce raccourci.",
       shortcutNeedsVideo: "Ouvrez une vidéo YouTube pour utiliser ce raccourci.",
       shortcutAllLoaded: "Toutes les vidéos de cette playlist sont déjà chargées.",
+      shortcutBusy: "Chargement de la playlist en cours — un instant.",
     },
     ar: {
       extensionName: "أدوات قائمة التشغيل",
@@ -186,6 +188,7 @@
       shortcutNeedsPlaylist: "افتح قائمة تشغيل على يوتيوب لاستخدام هذا الاختصار.",
       shortcutNeedsVideo: "افتح فيديو على يوتيوب لاستخدام هذا الاختصار.",
       shortcutAllLoaded: "جميع فيديوهات قائمة التشغيل هذه محمّلة بالفعل.",
+      shortcutBusy: "جارٍ تحميل قائمة التشغيل — لحظة من فضلك.",
     }
   };
 

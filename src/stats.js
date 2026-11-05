@@ -88,10 +88,16 @@
     return true;
   }
 
-  /** Count one user action (reverse, shuffle, sort, reorder, save, addVideo, loadAll). */
-  function bump(action) {
+  /**
+   * Count one user action (reverse, shuffle, sort, reorder, save, addVideo,
+   * loadAll). `quiet` skips the rating check — for actions followed by a page
+   * load, where the prompt would be marked as asked but never seen; the next
+   * action on a page that stays will ask instead.
+   */
+  function bump(action, { quiet = false } = {}) {
     pending.actions[action] = (pending.actions[action] || 0) + 1;
-    return flush().then(maybeAskForRating).catch(() => false);
+    const written = flush();
+    return quiet ? written.then(() => false) : written.then(maybeAskForRating).catch(() => false);
   }
 
   function recordFinished() {

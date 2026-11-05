@@ -346,7 +346,9 @@
         e.preventDefault();
         e.stopPropagation();
         closeSortDropdown();
+        const listId = Playlist.getPlaylistId();
         await loadAllBefore(sortBtn);
+        if (Playlist.getPlaylistId() !== listId) return; // see Reverse
         await opt.action();
         window.RYP.Stats?.bump("sort");
         Sidebar.applyVisualOrder();
@@ -722,7 +724,9 @@
       const lastVideo = items[items.length - 1].videoId;
       await State.set(State.keys.reverse(listId), true);
       await State.set(State.keys.shuffle(listId), false);
-      await window.RYP.Stats?.bump("reverse");
+      // Counted without the rating prompt: this page is about to unload,
+      // and the one-time prompt would be spent without ever being seen.
+      await window.RYP.Stats?.bump("reverse", { quiet: true });
       // No &index=: overview links carry no playlist position, so ours is
       // positional and one unrendered row would make it wrong — and YouTube
       // silently resets to position 1 when the index doesn't match. Given
@@ -746,7 +750,7 @@
       await State.set(State.keys.reverse(listId), false);
       await State.set(State.keys.shuffle(listId), true);
       await State.set(State.keys.customOrder(listId), ids);
-      await window.RYP.Stats?.bump("shuffle");
+      await window.RYP.Stats?.bump("shuffle", { quiet: true }); // see Play Reverse
       location.href = `https://www.youtube.com/watch?v=${ids[0]}&list=${encodeURIComponent(listId)}`;
     });
 
@@ -835,6 +839,10 @@
         await Playback.disableReverse(listId);
       } else {
         await loadAllBefore(reverseBtn);
+        // Loading takes seconds; if the user moved to another playlist
+        // meanwhile, acting now would write this list's state from that
+        // list's rows.
+        if (Playlist.getPlaylistId() !== listId) return;
         await Playback.enableReverse(listId);
         window.RYP.Stats?.bump("reverse");
       }
@@ -852,6 +860,7 @@
         await Playback.disableShuffle(listId);
       } else {
         await loadAllBefore(shuffleBtn);
+        if (Playlist.getPlaylistId() !== listId) return; // see Reverse above
         await Playback.enableShuffle(listId);
         window.RYP.Stats?.bump("shuffle");
       }
@@ -881,7 +890,9 @@
 
     saveBtn.addEventListener("click", async (e) => {
       e.preventDefault(); e.stopPropagation();
+      const listId = Playlist.getPlaylistId();
       await loadAllBefore(saveBtn);
+      if (Playlist.getPlaylistId() !== listId) return; // see Reverse
       openSaveFlow();
     });
 

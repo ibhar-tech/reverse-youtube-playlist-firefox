@@ -44,6 +44,7 @@
   let customOrder = null; // (videoId | legacy index)[] — play order, or null
   let lastIndex = null;
   let lastVideoId = null;
+  let loadedListId = null;
   // Order entry and position of the previous video (custom orders only).
   let lastKey = null;
   let lastPos = null;
@@ -364,6 +365,11 @@
     const left = v.duration - v.currentTime;
     if (left > STOP_LEAD) return;
     if (!isActive() && !disableAutoplay) return;
+    // A video that is not in the order (e.g. added to Watch Later after the
+    // shuffle) has no "next" in it. Stopping there halted playback for no
+    // reason: let YouTube advance, and the order picks up again from the
+    // first video that is in it.
+    if (!disableAutoplay && hasOrder() && currentOrderPos() < 0) return;
 
     const next = disableAutoplay ? null : nextFromCurrent();
     // Navigating can wait for the last second; pausing cannot (see STOP_LEAD).
@@ -417,12 +423,16 @@
       ? Playlist.readItems().find((it) => it.index === indexOrVideoId)
       : null;
     const entry = typeof indexOrVideoId === "string" ? indexOrVideoId : (item?.videoId || indexOrVideoId);
-    if (!cachedWatched.includes(entry)) cachedWatched = [...cachedWatched, entry];
+    // Decided synchronously: the near-end trigger and `ended` can both mark
+    // the same video before either storage write lands, and each would see
+    // it as new and count it twice in the stats.
+    const isNew = !cachedWatched.includes(entry);
+    if (isNew) cachedWatched = [...cachedWatched, entry];
     const watched = (await State.get(State.keys.watched(listId))) || [];
     if (!watched.includes(entry)) {
       watched.push(entry);
       await State.set(State.keys.watched(listId), watched);
-      window.RYP.Stats?.recordFinished();
+      if (isNew) window.RYP.Stats?.recordFinished();
     }
     if (Playlist.getPlaylistId() === listId) {
       cachedWatched = watched;
@@ -595,9 +605,18 @@
       reverseOn = !!savedReverse;
       shuffleOn = !!savedShuffle && savedOrder != null;
       customOrder = Array.isArray(savedOrder) && savedOrder.length ? savedOrder : null;
-      orderPos = null;
-      lastKey = null;
-      lastPos = null;
+      // onNavigate calls this on *every* navigation, including from one video
+      // of the playlist to the next. Clearing the position state there lost
+      // the duplicate-video hint (a video listed twice looped back to its
+      // first copy) and the previous position, so the fallback redirect
+      // never fired in shuffle/sort/custom orders. Only a different playlist
+      // starts from scratch.
+      if (listId !== loadedListId) {
+        orderPos = null;
+        lastKey = null;
+        lastPos = null;
+        loadedListId = listId;
+      }
       cachedWatched = loadedWatched;
       await this.migrateLegacyOrder(listId);
       return true;
